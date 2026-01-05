@@ -63,6 +63,10 @@
                 <span class="nav-icon">🧾</span>
                 <span class="nav-text">Billing</span>
             </button>
+            <button class="nav-btn" data-view="settings" id="settings-nav-sidebar">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-text">Settings</span>
+            </button>
         </div>
     </div>
 
@@ -597,6 +601,54 @@
                 </select>
                 <button type="submit" class="btn btn-primary">Add Product</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Settings View -->
+    <div id="settings-view" class="view">
+        <div class="view-header">
+            <h1>⚙️ Business Settings</h1>
+        </div>
+
+        <div class="settings-container">
+            <!-- Company Details Card -->
+            <div class="settings-card">
+                <h2>🏢 Company Details</h2>
+                <form id="company-details-form" onsubmit="saveCompanyDetails(event)">
+                    <input type="text" id="company-name" placeholder="Company Name *" required>
+                    <textarea id="company-address" placeholder="Company Address *" rows="3" required></textarea>
+                    <input type="text" id="company-phone" placeholder="Phone Number *" required>
+                    <input type="email" id="company-email" placeholder="Email Address">
+                    <input type="text" id="company-gst" placeholder="GST Number">
+                    <input type="text" id="company-pan" placeholder="PAN Number">
+                    <input type="text" id="company-website" placeholder="Website URL">
+                    <button type="submit" class="btn btn-primary">💾 Save Company Details</button>
+                </form>
+            </div>
+
+            <!-- Banking Details Card -->
+            <div class="settings-card">
+                <h2>🏦 Banking Details</h2>
+                <form id="banking-details-form" onsubmit="saveBankingDetails(event)">
+                    <input type="text" id="bank-name" placeholder="Bank Name *" required>
+                    <input type="text" id="bank-account-name" placeholder="Account Holder Name *" required>
+                    <input type="text" id="bank-account-number" placeholder="Account Number *" required>
+                    <input type="text" id="bank-ifsc" placeholder="IFSC Code *" required>
+                    <input type="text" id="bank-branch" placeholder="Branch Name">
+                    <input type="text" id="upi-id" placeholder="UPI ID (Optional)">
+                    <button type="submit" class="btn btn-primary">💾 Save Banking Details</button>
+                </form>
+            </div>
+
+            <!-- Current Settings Display -->
+            <div class="settings-card">
+                <h2>📋 Current Settings</h2>
+                <div id="current-settings-display">
+                    <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                        No settings saved yet. Fill in the forms above to save your business details.
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 

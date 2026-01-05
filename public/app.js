@@ -66,6 +66,13 @@ function switchView(viewName) {
         renderSales();
     } else if (viewName === 'purchases') {
         renderPurchases();
+    } else if (viewName === 'settings') {
+        if (!isOwner()) {
+            alert('Access Denied: Settings are only available to the Owner.');
+            switchView('inventory');
+            return;
+        }
+        loadSettings();
     }
 }
 
@@ -3312,3 +3319,127 @@ function downloadBillPDF(billId) {
         alert('Bill not found!');
     }
 }
+
+// Settings Management
+let companyDetails = {};
+let bankingDetails = {};
+
+// Load settings from localStorage
+function loadSettings() {
+    const savedCompany = localStorage.getItem('companyDetails');
+    const savedBanking = localStorage.getItem('bankingDetails');
+    
+    if (savedCompany) {
+        companyDetails = JSON.parse(savedCompany);
+        populateCompanyForm();
+    }
+    
+    if (savedBanking) {
+        bankingDetails = JSON.parse(savedBanking);
+        populateBankingForm();
+    }
+    
+    displayCurrentSettings();
+}
+
+// Populate company form with saved data
+function populateCompanyForm() {
+    document.getElementById('company-name').value = companyDetails.name || '';
+    document.getElementById('company-address').value = companyDetails.address || '';
+    document.getElementById('company-phone').value = companyDetails.phone || '';
+    document.getElementById('company-email').value = companyDetails.email || '';
+    document.getElementById('company-gst').value = companyDetails.gst || '';
+    document.getElementById('company-pan').value = companyDetails.pan || '';
+    document.getElementById('company-website').value = companyDetails.website || '';
+}
+
+// Populate banking form with saved data
+function populateBankingForm() {
+    document.getElementById('bank-name').value = bankingDetails.bankName || '';
+    document.getElementById('bank-account-name').value = bankingDetails.accountName || '';
+    document.getElementById('bank-account-number').value = bankingDetails.accountNumber || '';
+    document.getElementById('bank-ifsc').value = bankingDetails.ifsc || '';
+    document.getElementById('bank-branch').value = bankingDetails.branch || '';
+    document.getElementById('upi-id').value = bankingDetails.upiId || '';
+}
+
+// Save company details
+function saveCompanyDetails(event) {
+    event.preventDefault();
+    
+    if (!checkOwnerPermission()) return;
+    
+    companyDetails = {
+        name: document.getElementById('company-name').value,
+        address: document.getElementById('company-address').value,
+        phone: document.getElementById('company-phone').value,
+        email: document.getElementById('company-email').value,
+        gst: document.getElementById('company-gst').value,
+        pan: document.getElementById('company-pan').value,
+        website: document.getElementById('company-website').value
+    };
+    
+    localStorage.setItem('companyDetails', JSON.stringify(companyDetails));
+    displayCurrentSettings();
+    alert('✅ Company details saved successfully!');
+}
+
+// Save banking details
+function saveBankingDetails(event) {
+    event.preventDefault();
+    
+    if (!checkOwnerPermission()) return;
+    
+    bankingDetails = {
+        bankName: document.getElementById('bank-name').value,
+        accountName: document.getElementById('bank-account-name').value,
+        accountNumber: document.getElementById('bank-account-number').value,
+        ifsc: document.getElementById('bank-ifsc').value,
+        branch: document.getElementById('bank-branch').value,
+        upiId: document.getElementById('upi-id').value
+    };
+    
+    localStorage.setItem('bankingDetails', JSON.stringify(bankingDetails));
+    displayCurrentSettings();
+    alert('✅ Banking details saved successfully!');
+}
+
+// Display current settings
+function displayCurrentSettings() {
+    const container = document.getElementById('current-settings-display');
+    
+    if (Object.keys(companyDetails).length === 0 && Object.keys(bankingDetails).length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No settings saved yet. Fill in the forms above to save your business details.</p>';
+        return;
+    }
+    
+    let html = '';
+    
+    if (Object.keys(companyDetails).length > 0) {
+        html += '<h3 style="color: var(--primary); margin-bottom: 1rem;">🏢 Company Details</h3>';
+        if (companyDetails.name) html += `<div class="setting-item"><strong>Company Name</strong><span>${companyDetails.name}</span></div>`;
+        if (companyDetails.address) html += `<div class="setting-item"><strong>Address</strong><span>${companyDetails.address}</span></div>`;
+        if (companyDetails.phone) html += `<div class="setting-item"><strong>Phone</strong><span>${companyDetails.phone}</span></div>`;
+        if (companyDetails.email) html += `<div class="setting-item"><strong>Email</strong><span>${companyDetails.email}</span></div>`;
+        if (companyDetails.gst) html += `<div class="setting-item"><strong>GST Number</strong><span>${companyDetails.gst}</span></div>`;
+        if (companyDetails.pan) html += `<div class="setting-item"><strong>PAN Number</strong><span>${companyDetails.pan}</span></div>`;
+        if (companyDetails.website) html += `<div class="setting-item"><strong>Website</strong><span>${companyDetails.website}</span></div>`;
+    }
+    
+    if (Object.keys(bankingDetails).length > 0) {
+        html += '<h3 style="color: var(--primary); margin: 2rem 0 1rem;">🏦 Banking Details</h3>';
+        if (bankingDetails.bankName) html += `<div class="setting-item"><strong>Bank Name</strong><span>${bankingDetails.bankName}</span></div>`;
+        if (bankingDetails.accountName) html += `<div class="setting-item"><strong>Account Holder</strong><span>${bankingDetails.accountName}</span></div>`;
+        if (bankingDetails.accountNumber) html += `<div class="setting-item"><strong>Account Number</strong><span>${bankingDetails.accountNumber}</span></div>`;
+        if (bankingDetails.ifsc) html += `<div class="setting-item"><strong>IFSC Code</strong><span>${bankingDetails.ifsc}</span></div>`;
+        if (bankingDetails.branch) html += `<div class="setting-item"><strong>Branch</strong><span>${bankingDetails.branch}</span></div>`;
+        if (bankingDetails.upiId) html += `<div class="setting-item"><strong>UPI ID</strong><span>${bankingDetails.upiId}</span></div>`;
+    }
+    
+    container.innerHTML = html;
+}
+
+// Load settings on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadSettings();
+});
