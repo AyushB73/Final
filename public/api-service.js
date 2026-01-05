@@ -16,12 +16,16 @@ class APIService {
             });
             
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                console.error('API Error Response:', errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
             }
             
             return await response.json();
         } catch (error) {
             console.error('API Error:', error);
+            console.error('Endpoint:', endpoint);
+            console.error('API Base URL:', API_BASE_URL);
             throw error;
         }
     }

@@ -33,13 +33,19 @@ async function initializeDatabase() {
     const dbName = process.env.MYSQLDATABASE || process.env.DB_NAME || 'plastiwood_inventory';
     const dbPort = process.env.MYSQLPORT || process.env.DB_PORT || 3306;
     
-    // Debug: Log environment variables
+    // Debug: Log environment variables (hide password)
     console.log('🔍 Database Configuration:');
     console.log('Host:', dbHost);
     console.log('User:', dbUser);
     console.log('Database:', dbName);
     console.log('Port:', dbPort);
     console.log('Password:', dbPassword ? '***SET***' : 'EMPTY');
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    
+    // Validate required environment variables
+    if (!dbHost || !dbUser || !dbName) {
+      throw new Error('Missing required database environment variables. Please check Railway environment variables.');
+    }
     
     pool = mysql.createPool({
       host: dbHost,
@@ -51,10 +57,12 @@ async function initializeDatabase() {
       connectionLimit: 10,
       queueLimit: 0,
       enableKeepAlive: true,
-      keepAliveInitialDelay: 0
+      keepAliveInitialDelay: 0,
+      connectTimeout: 10000 // 10 seconds timeout
     });
 
     // Test connection
+    console.log('🔄 Testing database connection...');
     const connection = await pool.getConnection();
     console.log('✅ Connected to MySQL Database');
     connection.release();
@@ -63,7 +71,12 @@ async function initializeDatabase() {
     await createTables();
   } catch (error) {
     console.error('❌ MySQL connection error:', error);
-    process.exit(1);
+    console.error('Error details:', error.message);
+    console.error('Please check:');
+    console.error('1. Railway MySQL service is running');
+    console.error('2. Environment variables are set correctly in Railway dashboard');
+    console.error('3. MySQL service is linked to this deployment');
+    throw error; // Re-throw to prevent server from starting with bad DB connection
   }
 }
 
@@ -171,6 +184,28 @@ async function query(sql, params) {
 }
 
 // API Routes
+
+// Health check endpoint
+app.get('/api/health', async (req, res) => {
+  try {
+    // Test database connection
+    const connection = await pool.getConnection();
+    connection.release();
+    
+    res.json({ 
+      status: 'healthy',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(503).json({ 
+      status: 'unhealthy',
+      database: 'disconnected',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 
 // Inventory Routes
 app.get('/api/inventory', async (req, res) => {
