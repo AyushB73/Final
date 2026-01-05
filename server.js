@@ -442,6 +442,9 @@ app.get('/api/purchases', async (req, res) => {
       ...purchase,
       items: JSON.parse(purchase.items || '[]'),
       paymentTracking: JSON.parse(purchase.paymentTracking || '{}'),
+      subtotal: parseFloat(purchase.subtotal) || 0,
+      totalGST: parseFloat(purchase.totalGST) || 0,
+      total: parseFloat(purchase.total) || 0,
       supplier: {
         name: purchase.supplierName,
         phone: purchase.supplierPhone,

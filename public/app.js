@@ -1022,6 +1022,11 @@ async function addPurchase(event) {
         alert(`Purchase #${newPurchase.id} added successfully!\nTotal: ₹${total.toFixed(2)}${stockMessage}`);
         
         closePurchaseModal();
+        
+        // Switch to purchases view to show the new purchase
+        switchView('purchases');
+        
+        // Render updated data
         renderPurchases();
         renderInventory();
         updateProductSelect();
@@ -1516,16 +1521,16 @@ function renderSupplierReports() {
         );
         
         const totalPurchases = supplierPurchases.length;
-        const totalAmount = supplierPurchases.reduce((sum, p) => sum + p.total, 0);
+        const totalAmount = supplierPurchases.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
         const paidAmount = supplierPurchases
             .filter(p => p.paymentStatus === 'paid')
-            .reduce((sum, p) => sum + p.total, 0);
+            .reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
         const pendingAmount = supplierPurchases
             .filter(p => p.paymentStatus === 'pending')
-            .reduce((sum, p) => sum + p.total, 0);
+            .reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
         const partialAmount = supplierPurchases
             .filter(p => p.paymentStatus === 'partial')
-            .reduce((sum, p) => sum + p.total, 0);
+            .reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
         
         const lastPurchase = supplierPurchases.length > 0 
             ? new Date(Math.max(...supplierPurchases.map(p => new Date(p.createdAt)))).toLocaleDateString('en-IN')
@@ -1586,10 +1591,10 @@ function viewSupplierDetails(supplierName) {
     );
     
     const totalPurchases = supplierPurchases.length;
-    const totalAmount = supplierPurchases.reduce((sum, p) => sum + p.total, 0);
-    const paidAmount = supplierPurchases.filter(p => p.paymentStatus === 'paid').reduce((sum, p) => sum + p.total, 0);
-    const pendingAmount = supplierPurchases.filter(p => p.paymentStatus === 'pending').reduce((sum, p) => sum + p.total, 0);
-    const partialAmount = supplierPurchases.filter(p => p.paymentStatus === 'partial').reduce((sum, p) => sum + p.total, 0);
+    const totalAmount = supplierPurchases.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
+    const paidAmount = supplierPurchases.filter(p => p.paymentStatus === 'paid').reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
+    const pendingAmount = supplierPurchases.filter(p => p.paymentStatus === 'pending').reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
+    const partialAmount = supplierPurchases.filter(p => p.paymentStatus === 'partial').reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
     const outstandingAmount = pendingAmount + partialAmount;
     
     // Generate purchase history HTML
