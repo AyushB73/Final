@@ -171,6 +171,7 @@ function renderInventory() {
         const actionsHtml = userRole === 'owner' ? `
             <td>
                 <button class="action-btn" onclick="showAddStockModal(${item.id})">+ Stock</button>
+                <button class="action-btn" onclick="showRemoveStockModal(${item.id})">- Stock</button>
                 <button class="action-btn" onclick="editItem(${item.id})">Edit</button>
                 <button class="action-btn delete" onclick="deleteItem(${item.id})">Delete</button>
             </td>
@@ -214,7 +215,13 @@ function showAddItemModal() {
     if (!checkOwnerPermission()) return;
     editingItemId = null; // Reset editing mode
     document.getElementById('add-item-form').reset();
-    document.getElementById('modal-title').textContent = 'Add New Product';
+    
+    // Update modal title if element exists
+    const modalTitle = document.querySelector('#add-item-modal h2');
+    if (modalTitle) {
+        modalTitle.textContent = 'Add New Product';
+    }
+    
     document.getElementById('add-item-modal').classList.add('active');
 }
 
@@ -266,6 +273,63 @@ async function addStock(event) {
     } catch (error) {
         console.error('Error adding stock:', error);
         alert('Failed to add stock. Please try again.');
+    }
+}
+
+// Remove Stock Management
+function showRemoveStockModal(itemId) {
+    if (!checkOwnerPermission()) return;
+    
+    const item = inventory.find(i => i.id === itemId);
+    if (!item) return;
+    
+    if (item.quantity === 0) {
+        alert('Cannot remove stock. Current stock is already 0.');
+        return;
+    }
+    
+    const quantityToRemove = prompt(`Remove stock from: ${item.name} (${item.size} ${item.unit})\n\nCurrent Stock: ${item.quantity}\n\nEnter quantity to remove:`, '0');
+    
+    if (quantityToRemove === null) return; // User cancelled
+    
+    const qty = parseInt(quantityToRemove);
+    
+    if (isNaN(qty) || qty <= 0) {
+        alert('Please enter a valid positive number');
+        return;
+    }
+    
+    if (qty > item.quantity) {
+        alert(`Cannot remove ${qty} units. Only ${item.quantity} units available in stock.`);
+        return;
+    }
+    
+    const reason = prompt(`Reason for removing ${qty} units:\n(e.g., Damaged, Expired, Returned, etc.)`, 'Stock Adjustment');
+    
+    if (reason === null) return; // User cancelled
+    
+    removeStock(itemId, qty, reason || 'Stock Adjustment');
+}
+
+async function removeStock(itemId, quantityToRemove, reason) {
+    const item = inventory.find(i => i.id === itemId);
+    if (!item) return;
+    
+    try {
+        // Update quantity
+        const oldQuantity = item.quantity;
+        item.quantity -= quantityToRemove;
+        
+        // Save to database
+        await APIService.updateInventoryItem(itemId, { quantity: item.quantity });
+        
+        // Update local state
+        await loadInventory();
+        
+        alert(`Successfully removed ${quantityToRemove} units from ${item.name}.\nReason: ${reason}\nOld Stock: ${oldQuantity}\nNew Stock: ${item.quantity}`);
+    } catch (error) {
+        console.error('Error removing stock:', error);
+        alert('Failed to remove stock. Please try again.');
     }
 }
 
@@ -390,8 +454,14 @@ function editItem(id) {
     document.getElementById('product-price').value = item.price;
     document.getElementById('product-gst').value = item.gst || 18;
     
-    // Update modal title
-    document.getElementById('modal-title').textContent = 'Edit Product';
+    // Update modal title if element exists
+    const modalTitle = document.querySelector('#add-item-modal h2');
+    if (modalTitle) {
+        modalTitle.textContent = 'Edit Product';
+    }
+    
+    document.getElementById('add-item-modal').classList.add('active');
+}
     document.getElementById('add-item-modal').classList.add('active');
 }
 
