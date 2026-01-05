@@ -438,21 +438,46 @@ app.delete('/api/bills/:id', async (req, res) => {
 app.get('/api/purchases', async (req, res) => {
   try {
     const purchases = await query('SELECT * FROM purchases ORDER BY id DESC');
-    const parsedPurchases = purchases.map(purchase => ({
-      ...purchase,
-      items: JSON.parse(purchase.items || '[]'),
-      paymentTracking: JSON.parse(purchase.paymentTracking || '{}'),
-      subtotal: parseFloat(purchase.subtotal) || 0,
-      totalGST: parseFloat(purchase.totalGST) || 0,
-      total: parseFloat(purchase.total) || 0,
-      supplier: {
-        name: purchase.supplierName,
-        phone: purchase.supplierPhone,
-        gst: purchase.supplierGst
+    console.log(`📦 Fetched ${purchases.length} purchases from database`);
+    
+    const parsedPurchases = purchases.map((purchase, index) => {
+      try {
+        return {
+          ...purchase,
+          items: JSON.parse(purchase.items || '[]'),
+          paymentTracking: JSON.parse(purchase.paymentTracking || '{}'),
+          subtotal: parseFloat(purchase.subtotal) || 0,
+          totalGST: parseFloat(purchase.totalGST) || 0,
+          total: parseFloat(purchase.total) || 0,
+          supplier: {
+            name: purchase.supplierName,
+            phone: purchase.supplierPhone,
+            gst: purchase.supplierGst
+          }
+        };
+      } catch (parseError) {
+        console.error(`❌ Error parsing purchase #${purchase.id}:`, parseError.message);
+        // Return purchase with safe defaults if parsing fails
+        return {
+          ...purchase,
+          items: [],
+          paymentTracking: {},
+          subtotal: parseFloat(purchase.subtotal) || 0,
+          totalGST: parseFloat(purchase.totalGST) || 0,
+          total: parseFloat(purchase.total) || 0,
+          supplier: {
+            name: purchase.supplierName || 'Unknown',
+            phone: purchase.supplierPhone || null,
+            gst: purchase.supplierGst || null
+          }
+        };
       }
-    }));
+    });
+    
     res.json(parsedPurchases);
   } catch (error) {
+    console.error('❌ Error fetching purchases:', error.message);
+    console.error('Stack:', error.stack);
     res.status(500).json({ error: error.message });
   }
 });
