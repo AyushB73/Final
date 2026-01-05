@@ -2118,43 +2118,56 @@ function updateSalesSummary() {
 }
 
 function viewBillDetailsModal(billId) {
-    const bill = bills.find(b => b.id === billId);
-    if (!bill) return;
+    console.log('viewBillDetailsModal called with billId:', billId, 'type:', typeof billId);
+    console.log('Available bills:', bills.map(b => ({ id: b.id, type: typeof b.id })));
+    
+    const bill = bills.find(b => b.id == billId); // Use == instead of === for type coercion
+    
+    if (!bill) {
+        console.error('Bill not found with ID:', billId);
+        alert('Bill not found!');
+        return;
+    }
+    
+    console.log('Found bill:', bill);
     
     const date = new Date(bill.createdAt).toLocaleDateString('en-IN');
     const time = new Date(bill.createdAt).toLocaleTimeString('en-IN');
     
-    let itemsHtml = bill.items.map((item, idx) => `
+    // Ensure items is an array
+    const items = Array.isArray(bill.items) ? bill.items : [];
+    
+    let itemsHtml = items.map((item, idx) => `
         <tr>
             <td>${idx + 1}</td>
-            <td>${item.name}</td>
-            <td>${item.size} ${item.unit}</td>
-            <td>${item.quantity}</td>
-            <td>₹${item.price.toFixed(2)}</td>
-            <td>₹${item.amount.toFixed(2)}</td>
-            <td>${item.gst}%</td>
-            <td>₹${item.gstAmount.toFixed(2)}</td>
-            <td>₹${item.total.toFixed(2)}</td>
+            <td>${item.name || 'N/A'}</td>
+            <td>${item.size || ''} ${item.unit || ''}</td>
+            <td>${item.quantity || 0}</td>
+            <td>₹${(item.price || 0).toFixed(2)}</td>
+            <td>₹${(item.amount || 0).toFixed(2)}</td>
+            <td>${item.gst || 0}%</td>
+            <td>₹${(item.gstAmount || 0).toFixed(2)}</td>
+            <td>₹${(item.total || 0).toFixed(2)}</td>
         </tr>
     `).join('');
     
     let gstBreakdownHtml = '';
-    if (bill.gstBreakdown.type === 'SGST+CGST') {
+    if (bill.gstBreakdown && bill.gstBreakdown.type === 'SGST+CGST') {
         gstBreakdownHtml = `
             <div class="summary-row">
                 <span>SGST:</span>
-                <span>₹${bill.gstBreakdown.sgst.toFixed(2)}</span>
+                <span>₹${(bill.gstBreakdown.sgst || 0).toFixed(2)}</span>
             </div>
             <div class="summary-row">
                 <span>CGST:</span>
-                <span>₹${bill.gstBreakdown.cgst.toFixed(2)}</span>
+                <span>₹${(bill.gstBreakdown.cgst || 0).toFixed(2)}</span>
             </div>
         `;
-    } else {
+    } else if (bill.gstBreakdown) {
         gstBreakdownHtml = `
             <div class="summary-row">
                 <span>IGST:</span>
-                <span>₹${bill.gstBreakdown.igst.toFixed(2)}</span>
+                <span>₹${(bill.gstBreakdown.igst || 0).toFixed(2)}</span>
             </div>
         `;
     }
@@ -2163,11 +2176,11 @@ function viewBillDetailsModal(billId) {
         <div class="bill-info">
             <h3>Bill #${bill.id}</h3>
             <p><strong>Date:</strong> ${date} ${time}</p>
-            <p><strong>Customer:</strong> ${bill.customer.name}</p>
-            <p><strong>Phone:</strong> ${bill.customer.phone || 'N/A'}</p>
-            <p><strong>GST Number:</strong> ${bill.customer.gst || 'N/A'}</p>
-            <p><strong>Address:</strong> ${bill.customer.address || 'N/A'}</p>
-            <p><strong>State:</strong> ${bill.customer.state === 'same' ? 'Same State (SGST+CGST)' : 'Other State (IGST)'}</p>
+            <p><strong>Customer:</strong> ${bill.customer?.name || 'N/A'}</p>
+            <p><strong>Phone:</strong> ${bill.customer?.phone || 'N/A'}</p>
+            <p><strong>GST Number:</strong> ${bill.customer?.gst || 'N/A'}</p>
+            <p><strong>Address:</strong> ${bill.customer?.address || 'N/A'}</p>
+            <p><strong>State:</strong> ${bill.customer?.state === 'same' ? 'Same State (SGST+CGST)' : 'Other State (IGST)'}</p>
             <p><strong>Payment Status:</strong> ${bill.paymentStatus === 'paid' ? '✅ Paid' : bill.paymentStatus === 'pending' ? '⏳ Pending' : bill.paymentStatus === 'partial' ? '💰 Partial' : '✅ Paid'}</p>
         </div>
         
@@ -2213,12 +2226,17 @@ function closeBillDetailsModal() {
 }
 
 async function deleteBill(billId) {
+    console.log('deleteBill called with billId:', billId);
+    
     if (!confirm('Are you sure you want to delete this bill? This action cannot be undone.')) return;
     
     try {
         await APIService.deleteBill(billId);
-        bills = bills.filter(b => b.id !== billId);
+        bills = bills.filter(b => b.id != billId); // Use != for type coercion
         renderSales();
+        // Re-setup event listeners after re-render
+        setTimeout(() => setupSalesTableActions(), 100);
+        alert('Bill deleted successfully!');
     } catch (error) {
         console.error('Error deleting bill:', error);
         alert('Failed to delete bill. Please try again.');
@@ -2226,8 +2244,14 @@ async function deleteBill(billId) {
 }
 
 function updatePaymentStatus(billId) {
-    const bill = bills.find(b => b.id === billId);
-    if (!bill) return;
+    console.log('updatePaymentStatus called with billId:', billId);
+    const bill = bills.find(b => b.id == billId); // Use == for type coercion
+    
+    if (!bill) {
+        console.error('Bill not found with ID:', billId);
+        alert('Bill not found!');
+        return;
+    }
     
     const currentStatus = bill.paymentStatus || 'paid';
     const statusLabels = {
@@ -3443,10 +3467,12 @@ function numberToWords(num) {
 
 // Function to download PDF for existing bills
 function downloadBillPDF(billId) {
-    const bill = bills.find(b => b.id === billId);
+    console.log('downloadBillPDF called with billId:', billId);
+    const bill = bills.find(b => b.id == billId); // Use == for type coercion
     if (bill) {
         generateBillPDF(bill);
     } else {
+        console.error('Bill not found with ID:', billId);
         alert('Bill not found!');
     }
 }
