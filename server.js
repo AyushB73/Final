@@ -406,6 +406,13 @@ app.post('/api/purchases', async (req, res) => {
   try {
     const { supplier, invoiceNo, purchaseDate, items, subtotal, totalGST, total, paymentStatus, paymentTracking } = req.body;
     
+    console.log('📦 Adding purchase:', { supplier, invoiceNo, purchaseDate, itemCount: items?.length });
+    
+    // Validate required fields
+    if (!supplier || !supplier.name || !invoiceNo || !purchaseDate || !items || items.length === 0) {
+      throw new Error('Missing required fields: supplier, invoiceNo, purchaseDate, or items');
+    }
+    
     const result = await query(
       `INSERT INTO purchases (supplierName, supplierPhone, supplierGst, invoiceNo, purchaseDate,
        items, subtotal, totalGST, total, paymentStatus, paymentTracking) 
@@ -423,8 +430,10 @@ app.post('/api/purchases', async (req, res) => {
       createdAt: new Date()
     };
     
+    console.log('✅ Purchase added successfully:', purchase.id);
     res.json(purchase);
   } catch (error) {
+    console.error('❌ Error adding purchase:', error.message);
     res.status(500).json({ error: error.message });
   }
 });

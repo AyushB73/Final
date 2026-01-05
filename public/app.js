@@ -912,8 +912,10 @@ async function addPurchase(event) {
         if (productId && quantity && rate) {
             const product = inventory.find(p => p.id === productId);
             if (product) {
+                // Ensure gst is a number
+                const gst = parseFloat(product.gst) || 0;
                 const amount = quantity * rate;
-                const gstAmount = (amount * product.gst) / 100;
+                const gstAmount = (amount * gst) / 100;
                 
                 items.push({
                     id: productId,
@@ -923,7 +925,7 @@ async function addPurchase(event) {
                     quantity: quantity,
                     rate: rate,
                     amount: amount,
-                    gst: product.gst,
+                    gst: gst,
                     gstAmount: gstAmount,
                     total: amount + gstAmount
                 });
@@ -932,9 +934,8 @@ async function addPurchase(event) {
                 totalGST += gstAmount;
                 
                 // Update inventory stock
-                const oldQuantity = product.quantity;
-                product.quantity += quantity;
-                const newQuantity = product.quantity;
+                const oldQuantity = parseInt(product.quantity) || 0;
+                const newQuantity = oldQuantity + quantity;
                 
                 // Track stock update for notification
                 stockUpdates.push({
@@ -1011,7 +1012,12 @@ async function addPurchase(event) {
         updateProductSelect();
     } catch (error) {
         console.error('Error adding purchase:', error);
-        alert('Failed to add purchase. Please try again.');
+        console.error('Error details:', error.message);
+        console.error('Purchase data:', {
+            supplier: { name: supplierName, phone: supplierPhone, gst: supplierGst },
+            invoiceNo, purchaseDate, items, subtotal, totalGST, total, paymentStatus
+        });
+        alert('Failed to add purchase. Please try again.\n\nError: ' + error.message);
     }
 }
 
