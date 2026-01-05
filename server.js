@@ -423,38 +423,63 @@ app.post('/api/purchases', async (req, res) => {
   try {
     const { supplier, invoiceNo, purchaseDate, items, subtotal, totalGST, total, paymentStatus, paymentTracking } = req.body;
     
-    console.log('📦 Adding purchase:', { supplier, invoiceNo, purchaseDate, itemCount: items?.length });
+    console.log('📦 Raw request body:', JSON.stringify(req.body, null, 2));
     
     // Validate required fields
     if (!supplier || !supplier.name || !invoiceNo || !purchaseDate || !items || items.length === 0) {
-      throw new Error('Missing required fields: supplier, invoiceNo, purchaseDate, or items');
+      const missingFields = [];
+      if (!supplier || !supplier.name) missingFields.push('supplier.name');
+      if (!invoiceNo) missingFields.push('invoiceNo');
+      if (!purchaseDate) missingFields.push('purchaseDate');
+      if (!items || items.length === 0) missingFields.push('items');
+      
+      console.error('❌ Missing fields:', missingFields);
+      throw new Error('Missing required fields: ' + missingFields.join(', '));
     }
     
     // Ensure all values are defined (use null instead of undefined or empty string)
     const supplierName = supplier.name || null;
-    const supplierPhone = supplier.phone && supplier.phone.trim() !== '' ? supplier.phone : null;
-    const supplierGst = supplier.gst && supplier.gst.trim() !== '' ? supplier.gst : null;
-    const paymentTrackingData = paymentTracking || null;
+    const supplierPhone = (supplier.phone && supplier.phone.trim() !== '') ? supplier.phone.trim() : null;
+    const supplierGst = (supplier.gst && supplier.gst.trim() !== '') ? supplier.gst.trim() : null;
+    const paymentTrackingData = paymentTracking || {};
     
-    console.log('Processed values:', { supplierName, supplierPhone, supplierGst });
+    // Prepare parameters array
+    const params = [
+      supplierName,
+      supplierPhone,
+      supplierGst,
+      invoiceNo,
+      purchaseDate,
+      JSON.stringify(items),
+      subtotal || 0,
+      totalGST || 0,
+      total || 0,
+      paymentStatus || 'pending',
+      JSON.stringify(paymentTrackingData)
+    ];
+    
+    // Check for undefined values
+    const undefinedIndexes = [];
+    params.forEach((param, index) => {
+      if (param === undefined) {
+        undefinedIndexes.push(index);
+      }
+    });
+    
+    if (undefinedIndexes.length > 0) {
+      const fieldNames = ['supplierName', 'supplierPhone', 'supplierGst', 'invoiceNo', 'purchaseDate', 'items', 'subtotal', 'totalGST', 'total', 'paymentStatus', 'paymentTracking'];
+      console.error('❌ Undefined parameters at indexes:', undefinedIndexes);
+      console.error('❌ Undefined fields:', undefinedIndexes.map(i => fieldNames[i]));
+      throw new Error('Undefined parameters: ' + undefinedIndexes.map(i => fieldNames[i]).join(', '));
+    }
+    
+    console.log('✅ All parameters valid:', params.map((p, i) => typeof p));
     
     const result = await query(
       `INSERT INTO purchases (supplierName, supplierPhone, supplierGst, invoiceNo, purchaseDate,
        items, subtotal, totalGST, total, paymentStatus, paymentTracking) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        supplierName,
-        supplierPhone,
-        supplierGst,
-        invoiceNo,
-        purchaseDate,
-        JSON.stringify(items),
-        subtotal || 0,
-        totalGST || 0,
-        total || 0,
-        paymentStatus || 'pending',
-        JSON.stringify(paymentTrackingData || {})
-      ]
+      params
     );
     
     const purchase = {
