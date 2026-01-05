@@ -2177,6 +2177,12 @@ async function quickUpdatePaymentStatus(billId, newStatus) {
         return;
     }
     
+    // If partial payment is selected, show payment details card
+    if (newStatus === 'partial') {
+        showPartialPaymentCard(billId, bill);
+        return;
+    }
+    
     // Show loading state
     const dropdown = document.querySelector(`select[data-bill-id="${billId}"]`);
     if (dropdown) {
@@ -2221,17 +2227,6 @@ async function quickUpdatePaymentStatus(billId, newStatus) {
                 amountPending: bill.total,
                 payments: []
             };
-        } else if (newStatus === 'partial') {
-            // For partial, keep existing tracking or initialize
-            if (!paymentTracking.totalAmount) {
-                paymentTracking.totalAmount = bill.total;
-            }
-            if (!paymentTracking.amountPaid) {
-                paymentTracking.amountPaid = 0;
-            }
-            if (!paymentTracking.amountPending) {
-                paymentTracking.amountPending = bill.total;
-            }
         }
         
         // Prepare update data
@@ -2273,8 +2268,7 @@ async function quickUpdatePaymentStatus(billId, newStatus) {
         // Show success message
         const statusLabels = {
             'paid': '✅ Paid',
-            'pending': '⏳ Pending',
-            'partial': '💰 Partial'
+            'pending': '⏳ Pending'
         };
         alert(`Payment status updated to: ${statusLabels[newStatus]}`);
         
@@ -2285,6 +2279,284 @@ async function quickUpdatePaymentStatus(billId, newStatus) {
         // Reload to reset the dropdown
         await loadBills();
         renderSales();
+    }
+}
+
+// Show partial payment card
+function showPartialPaymentCard(billId, bill) {
+    // Remove any existing card
+    const existingCard = document.getElementById('partial-payment-card');
+    if (existingCard) {
+        existingCard.remove();
+    }
+    
+    // Initialize payment tracking if not exists
+    const paymentTracking = bill.paymentTracking || {
+        totalAmount: bill.total || 0,
+        amountPaid: 0,
+        amountPending: bill.total || 0,
+        payments: []
+    };
+    
+    // Create the card
+    const card = document.createElement('div');
+    card.id = 'partial-payment-card';
+    card.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        z-index: 10000;
+        min-width: 400px;
+        max-width: 90%;
+    `;
+    
+    card.innerHTML = `
+        <h3 style="margin: 0 0 1.5rem 0; color: #667eea;">💰 Partial Payment - Bill #${billId}</h3>
+        
+        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="font-weight: 600;">Total Amount:</span>
+                <span style="font-size: 1.1rem; font-weight: 700;">₹${paymentTracking.totalAmount.toFixed(2)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="color: #28a745;">Already Paid:</span>
+                <span style="color: #28a745; font-weight: 600;">₹${paymentTracking.amountPaid.toFixed(2)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-top: 0.5rem; border-top: 2px solid #dee2e6;">
+                <span style="color: #dc3545; font-weight: 600;">Remaining:</span>
+                <span style="color: #dc3545; font-size: 1.2rem; font-weight: 700;">₹${paymentTracking.amountPending.toFixed(2)}</span>
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">
+                Amount Received Now:
+            </label>
+            <input 
+                type="number" 
+                id="partial-amount-input-${billId}" 
+                placeholder="Enter amount received" 
+                step="0.01" 
+                min="0.01" 
+                max="${paymentTracking.amountPending}"
+                style="width: 100%; padding: 0.75rem; border: 2px solid #667eea; border-radius: 8px; font-size: 1rem;"
+                oninput="updatePartialPaymentPreview(${billId})"
+            >
+        </div>
+        
+        <div id="payment-preview-${billId}" style="background: #e7f3ff; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: none;">
+            <div style="display: flex; justify-content: space-between;">
+                <span style="font-weight: 600;">New Remaining:</span>
+                <span id="new-remaining-${billId}" style="font-size: 1.1rem; font-weight: 700; color: #0066cc;">₹0.00</span>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 1rem;">
+            <button 
+                onclick="confirmPartialPaymentUpdate(${billId})"
+                style="flex: 1; padding: 0.875rem; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem;"
+            >
+                ✅ Confirm Payment
+            </button>
+            <button 
+                onclick="closePartialPaymentCard(${billId})"
+                style="flex: 1; padding: 0.875rem; background: #6c757d; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem;"
+            >
+                ❌ Cancel
+            </button>
+        </div>
+    `;
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'partial-payment-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 9999;
+    `;
+    overlay.onclick = () => closePartialPaymentCard(billId);
+    
+    // Add to page
+    document.body.appendChild(overlay);
+    document.body.appendChild(card);
+    
+    // Focus on input
+    setTimeout(() => {
+        document.getElementById(`partial-amount-input-${billId}`).focus();
+    }, 100);
+}
+
+// Update preview when amount changes
+function updatePartialPaymentPreview(billId) {
+    const bill = bills.find(b => b.id == billId);
+    if (!bill) return;
+    
+    const paymentTracking = bill.paymentTracking || {
+        totalAmount: bill.total || 0,
+        amountPaid: 0,
+        amountPending: bill.total || 0,
+        payments: []
+    };
+    
+    const input = document.getElementById(`partial-amount-input-${billId}`);
+    const preview = document.getElementById(`payment-preview-${billId}`);
+    const newRemainingSpan = document.getElementById(`new-remaining-${billId}`);
+    
+    const amountReceived = parseFloat(input.value) || 0;
+    
+    if (amountReceived > 0) {
+        const newRemaining = paymentTracking.amountPending - amountReceived;
+        newRemainingSpan.textContent = `₹${Math.max(0, newRemaining).toFixed(2)}`;
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Confirm partial payment
+async function confirmPartialPaymentUpdate(billId) {
+    const bill = bills.find(b => b.id == billId);
+    if (!bill) {
+        alert('Bill not found!');
+        return;
+    }
+    
+    const input = document.getElementById(`partial-amount-input-${billId}`);
+    const amountReceived = parseFloat(input.value);
+    
+    if (!amountReceived || amountReceived <= 0) {
+        alert('Please enter a valid amount received');
+        input.focus();
+        return;
+    }
+    
+    const paymentTracking = bill.paymentTracking || {
+        totalAmount: bill.total || 0,
+        amountPaid: 0,
+        amountPending: bill.total || 0,
+        payments: []
+    };
+    
+    if (amountReceived > paymentTracking.amountPending) {
+        alert(`Amount cannot be more than remaining amount: ₹${paymentTracking.amountPending.toFixed(2)}`);
+        input.focus();
+        return;
+    }
+    
+    // Disable button to prevent double-click
+    event.target.disabled = true;
+    event.target.textContent = 'Processing...';
+    
+    try {
+        // Update payment tracking
+        const newAmountPaid = paymentTracking.amountPaid + amountReceived;
+        const newAmountPending = paymentTracking.amountPending - amountReceived;
+        
+        const updatedPaymentTracking = {
+            totalAmount: paymentTracking.totalAmount,
+            amountPaid: newAmountPaid,
+            amountPending: newAmountPending,
+            payments: [
+                ...(paymentTracking.payments || []),
+                {
+                    amount: amountReceived,
+                    date: new Date().toISOString(),
+                    note: 'Partial payment received'
+                }
+            ]
+        };
+        
+        // Determine final status
+        const finalStatus = newAmountPending <= 0.01 ? 'paid' : 'partial';
+        
+        // Normalize bill data
+        const customer = bill.customer || {
+            name: bill.customerName,
+            phone: bill.customerPhone,
+            gst: bill.customerGst,
+            address: bill.customerAddress,
+            state: bill.customerState
+        };
+        
+        // Prepare update data
+        const updateData = {
+            customer: {
+                name: customer.name,
+                phone: customer.phone || null,
+                gst: customer.gst || null,
+                address: customer.address || null,
+                state: customer.state || null
+            },
+            items: Array.isArray(bill.items) ? bill.items.map(item => ({
+                id: item.id,
+                name: item.name || '',
+                size: item.size || '',
+                unit: item.unit || '',
+                quantity: parseFloat(item.quantity) || 0,
+                price: parseFloat(item.price) || 0,
+                amount: parseFloat(item.amount) || 0,
+                gst: parseFloat(item.gst) || 0,
+                gstAmount: parseFloat(item.gstAmount) || 0,
+                total: parseFloat(item.total) || 0
+            })) : [],
+            subtotal: parseFloat(bill.subtotal) || 0,
+            gstBreakdown: bill.gstBreakdown || {},
+            totalGST: parseFloat(bill.totalGST) || 0,
+            total: parseFloat(bill.total) || 0,
+            paymentStatus: finalStatus,
+            paymentTracking: updatedPaymentTracking
+        };
+        
+        // Update via API
+        await APIService.updateBill(billId, updateData);
+        
+        // Close card
+        closePartialPaymentCard(billId);
+        
+        // Reload bills and re-render
+        await loadBills();
+        renderSales();
+        
+        // Show success message
+        if (finalStatus === 'paid') {
+            alert(`✅ Payment completed!\n\nTotal Received: ₹${newAmountPaid.toFixed(2)}\nBill is now fully paid.`);
+        } else {
+            alert(`💰 Partial payment recorded!\n\nReceived: ₹${amountReceived.toFixed(2)}\nRemaining: ₹${newAmountPending.toFixed(2)}`);
+        }
+        
+    } catch (error) {
+        console.error('Error updating partial payment:', error);
+        alert('Failed to update payment. Please try again.');
+        event.target.disabled = false;
+        event.target.textContent = '✅ Confirm Payment';
+    }
+}
+
+// Close partial payment card
+function closePartialPaymentCard(billId) {
+    const card = document.getElementById('partial-payment-card');
+    const overlay = document.getElementById('partial-payment-overlay');
+    
+    if (card) card.remove();
+    if (overlay) overlay.remove();
+    
+    // Reset dropdown to current status
+    const bill = bills.find(b => b.id == billId);
+    if (bill) {
+        const dropdown = document.querySelector(`select[data-bill-id="${billId}"]`);
+        if (dropdown) {
+            dropdown.value = bill.paymentStatus || 'paid';
+        }
     }
 }
 
@@ -4128,6 +4400,9 @@ window.downloadBillPDF = downloadBillPDF;
 window.closeBillDetailsModal = closeBillDetailsModal;
 window.deleteBill = deleteBill;
 window.quickUpdatePaymentStatus = quickUpdatePaymentStatus;
+window.updatePartialPaymentPreview = updatePartialPaymentPreview;
+window.confirmPartialPaymentUpdate = confirmPartialPaymentUpdate;
+window.closePartialPaymentCard = closePartialPaymentCard;
 window.filterSales = filterSales;
 window.switchView = switchView;
 window.showAddPurchaseModal = showAddPurchaseModal;
