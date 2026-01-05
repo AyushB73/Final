@@ -332,22 +332,52 @@ app.delete('/api/inventory/:id', async (req, res) => {
 app.get('/api/bills', async (req, res) => {
   try {
     const bills = await query('SELECT * FROM bills ORDER BY id DESC');
-    // Parse JSON fields
-    const parsedBills = bills.map(bill => ({
-      ...bill,
-      items: JSON.parse(bill.items || '[]'),
-      gstBreakdown: JSON.parse(bill.gstBreakdown || '{}'),
-      paymentTracking: JSON.parse(bill.paymentTracking || '{}'),
-      customer: {
-        name: bill.customerName,
-        phone: bill.customerPhone,
-        gst: bill.customerGst,
-        address: bill.customerAddress,
-        state: bill.customerState
+    console.log(`📊 Fetched ${bills.length} bills from database`);
+    
+    // Parse JSON fields and ensure numeric types
+    const parsedBills = bills.map((bill, index) => {
+      try {
+        return {
+          ...bill,
+          items: JSON.parse(bill.items || '[]'),
+          gstBreakdown: JSON.parse(bill.gstBreakdown || '{}'),
+          paymentTracking: JSON.parse(bill.paymentTracking || '{}'),
+          subtotal: parseFloat(bill.subtotal) || 0,
+          totalGST: parseFloat(bill.totalGST) || 0,
+          total: parseFloat(bill.total) || 0,
+          customer: {
+            name: bill.customerName,
+            phone: bill.customerPhone,
+            gst: bill.customerGst,
+            address: bill.customerAddress,
+            state: bill.customerState
+          }
+        };
+      } catch (parseError) {
+        console.error(`❌ Error parsing bill #${bill.id}:`, parseError.message);
+        // Return bill with safe defaults
+        return {
+          ...bill,
+          items: [],
+          gstBreakdown: {},
+          paymentTracking: {},
+          subtotal: parseFloat(bill.subtotal) || 0,
+          totalGST: parseFloat(bill.totalGST) || 0,
+          total: parseFloat(bill.total) || 0,
+          customer: {
+            name: bill.customerName || 'Unknown',
+            phone: bill.customerPhone || null,
+            gst: bill.customerGst || null,
+            address: bill.customerAddress || null,
+            state: bill.customerState || null
+          }
+        };
       }
-    }));
+    });
+    
     res.json(parsedBills);
   } catch (error) {
+    console.error('❌ Error fetching bills:', error.message);
     res.status(500).json({ error: error.message });
   }
 });

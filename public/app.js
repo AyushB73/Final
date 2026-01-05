@@ -1817,6 +1817,7 @@ async function deleteSupplier(supplierId, supplierName) {
 async function loadBills() {
     try {
         bills = await APIService.getBills();
+        console.log(`✅ Loaded ${bills.length} bills`);
     } catch (error) {
         console.error('Error loading bills:', error);
         bills = [];
@@ -1849,6 +1850,7 @@ function viewBillHistory() {
 
 // Sales Management
 function renderSales() {
+    console.log(`🔄 Rendering sales table with ${bills.length} bills`);
     const tbody = document.getElementById('sales-tbody');
     tbody.innerHTML = '';
     
