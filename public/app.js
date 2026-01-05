@@ -2220,6 +2220,9 @@ function viewBillDetailsModal(billId) {
     }
     
     console.log('Found bill:', bill);
+    console.log('Bill items:', bill.items);
+    console.log('Bill items type:', typeof bill.items);
+    console.log('Bill items is array:', Array.isArray(bill.items));
     
     // Normalize bill format - handle both old and new formats
     const customer = bill.customer || {
@@ -2233,41 +2236,79 @@ function viewBillDetailsModal(billId) {
     const date = new Date(bill.createdAt).toLocaleDateString('en-IN');
     const time = new Date(bill.createdAt).toLocaleTimeString('en-IN');
     
-    // Ensure items is an array
-    const items = Array.isArray(bill.items) ? bill.items : [];
+    // Ensure items is an array - handle string JSON or already parsed array
+    let items = [];
+    if (typeof bill.items === 'string') {
+        try {
+            items = JSON.parse(bill.items);
+        } catch (e) {
+            console.error('Error parsing items JSON:', e);
+            items = [];
+        }
+    } else if (Array.isArray(bill.items)) {
+        items = bill.items;
+    }
     
-    let itemsHtml = items.map((item, idx) => `
-        <tr>
-            <td>${idx + 1}</td>
-            <td>${item.name || 'N/A'}</td>
-            <td>${item.size || ''} ${item.unit || ''}</td>
-            <td>${item.quantity || 0}</td>
-            <td>₹${(item.price || 0).toFixed(2)}</td>
-            <td>₹${(item.amount || 0).toFixed(2)}</td>
-            <td>${item.gst || 0}%</td>
-            <td>₹${(item.gstAmount || 0).toFixed(2)}</td>
-            <td>₹${(item.total || 0).toFixed(2)}</td>
-        </tr>
-    `).join('');
+    console.log('Parsed items:', items);
+    console.log('Items count:', items.length);
     
-    const gstBreakdown = bill.gstBreakdown || {};
+    let itemsHtml = '';
+    if (items.length === 0) {
+        itemsHtml = '<tr><td colspan="9" style="text-align: center; padding: 1rem; color: var(--text-secondary);">No items found</td></tr>';
+    } else {
+        itemsHtml = items.map((item, idx) => `
+            <tr>
+                <td>${idx + 1}</td>
+                <td>${item.name || 'N/A'}</td>
+                <td>${item.size || ''} ${item.unit || ''}</td>
+                <td>${item.quantity || 0}</td>
+                <td>₹${(parseFloat(item.price) || 0).toFixed(2)}</td>
+                <td>₹${(parseFloat(item.amount) || 0).toFixed(2)}</td>
+                <td>${parseFloat(item.gst) || 0}%</td>
+                <td>₹${(parseFloat(item.gstAmount) || 0).toFixed(2)}</td>
+                <td>₹${(parseFloat(item.total) || 0).toFixed(2)}</td>
+            </tr>
+        `).join('');
+    }
+    
+    // Parse gstBreakdown if it's a string
+    let gstBreakdown = bill.gstBreakdown;
+    if (typeof gstBreakdown === 'string') {
+        try {
+            gstBreakdown = JSON.parse(gstBreakdown);
+        } catch (e) {
+            console.error('Error parsing gstBreakdown JSON:', e);
+            gstBreakdown = {};
+        }
+    }
+    
+    console.log('GST Breakdown:', gstBreakdown);
+    
     let gstBreakdownHtml = '';
-    if (gstBreakdown.type === 'SGST+CGST') {
+    if (gstBreakdown && gstBreakdown.type === 'SGST+CGST') {
         gstBreakdownHtml = `
             <div class="summary-row">
                 <span>SGST:</span>
-                <span>₹${(gstBreakdown.sgst || 0).toFixed(2)}</span>
+                <span>₹${(parseFloat(gstBreakdown.sgst) || 0).toFixed(2)}</span>
             </div>
             <div class="summary-row">
                 <span>CGST:</span>
-                <span>₹${(gstBreakdown.cgst || 0).toFixed(2)}</span>
+                <span>₹${(parseFloat(gstBreakdown.cgst) || 0).toFixed(2)}</span>
             </div>
         `;
-    } else if (gstBreakdown.type === 'IGST') {
+    } else if (gstBreakdown && gstBreakdown.type === 'IGST') {
         gstBreakdownHtml = `
             <div class="summary-row">
                 <span>IGST:</span>
-                <span>₹${(gstBreakdown.igst || 0).toFixed(2)}</span>
+                <span>₹${(parseFloat(gstBreakdown.igst) || 0).toFixed(2)}</span>
+            </div>
+        `;
+    } else {
+        // If no breakdown type, show total GST
+        gstBreakdownHtml = `
+            <div class="summary-row">
+                <span>Total GST:</span>
+                <span>₹${(parseFloat(bill.totalGST) || 0).toFixed(2)}</span>
             </div>
         `;
     }
@@ -2307,12 +2348,12 @@ function viewBillDetailsModal(billId) {
         <div class="bill-summary-box">
             <div class="summary-row">
                 <span>Subtotal:</span>
-                <span>₹${bill.subtotal.toFixed(2)}</span>
+                <span>₹${(parseFloat(bill.subtotal) || 0).toFixed(2)}</span>
             </div>
             ${gstBreakdownHtml}
             <div class="summary-row total">
                 <span>Total Amount:</span>
-                <span>₹${bill.total.toFixed(2)}</span>
+                <span>₹${(parseFloat(bill.total) || 0).toFixed(2)}</span>
             </div>
         </div>
         
