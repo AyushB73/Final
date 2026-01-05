@@ -2067,15 +2067,15 @@ function renderSales() {
         
         const stateText = customer.state === 'same' ? 'Same State' : 'Other State';
         
-        let paymentStatusBadge = '';
-        const paymentStatus = bill.paymentStatus || 'paid'; // Default to paid for old bills
-        if (paymentStatus === 'paid') {
-            paymentStatusBadge = '<span class="badge badge-success">✅ Paid</span>';
-        } else if (paymentStatus === 'pending') {
-            paymentStatusBadge = '<span class="badge badge-danger">⏳ Pending</span>';
-        } else {
-            paymentStatusBadge = '<span class="badge badge-warning">💰 Partial</span>';
-        }
+        // Create payment status dropdown
+        const paymentStatus = bill.paymentStatus || 'paid';
+        const paymentDropdown = `
+            <select class="payment-status-select" data-bill-id="${bill.id}" onchange="quickUpdatePaymentStatus(${bill.id}, this.value)" style="padding: 0.5rem; border-radius: 5px; border: 2px solid ${paymentStatus === 'paid' ? '#28a745' : paymentStatus === 'pending' ? '#dc3545' : '#ffc107'}; background: ${paymentStatus === 'paid' ? '#d4edda' : paymentStatus === 'pending' ? '#f8d7da' : '#fff3cd'}; color: ${paymentStatus === 'paid' ? '#155724' : paymentStatus === 'pending' ? '#721c24' : '#856404'}; font-weight: 600; cursor: pointer;">
+                <option value="paid" ${paymentStatus === 'paid' ? 'selected' : ''}>✅ Paid</option>
+                <option value="pending" ${paymentStatus === 'pending' ? 'selected' : ''}>⏳ Pending</option>
+                <option value="partial" ${paymentStatus === 'partial' ? 'selected' : ''}>💰 Partial</option>
+            </select>
+        `;
         
         row.innerHTML = `
             <td><strong>#${bill.id}</strong></td>
@@ -2088,10 +2088,9 @@ function renderSales() {
             <td>₹${(bill.subtotal || 0).toFixed(2)}</td>
             <td>₹${(bill.totalGST || 0).toFixed(2)}</td>
             <td><strong>₹${(bill.total || 0).toFixed(2)}</strong></td>
-            <td>${paymentStatusBadge}</td>
+            <td>${paymentDropdown}</td>
             <td class="actions-cell">
                 <button class="action-btn action-btn-sm btn-view" data-bill-id="${bill.id}" title="View Details">👁️</button>
-                <button class="action-btn action-btn-sm btn-payment" data-bill-id="${bill.id}" title="Update Payment">💳</button>
                 <button class="action-btn action-btn-sm delete btn-delete" data-bill-id="${bill.id}" title="Delete">🗑️</button>
             </td>
         `;
@@ -2156,9 +2155,6 @@ function setupSalesTableActions() {
         if (target.classList.contains('btn-view')) {
             console.log('View button clicked for bill:', billId);
             viewBillDetailsModal(billId);
-        } else if (target.classList.contains('btn-payment')) {
-            console.log('Payment button clicked for bill:', billId);
-            updatePaymentStatus(billId);
         } else if (target.classList.contains('btn-delete')) {
             console.log('Delete button clicked for bill:', billId);
             deleteBill(billId);
@@ -2169,6 +2165,127 @@ function setupSalesTableActions() {
     salesTbody.dataset.listenerAttached = 'true';
     
     console.log('✅ Sales table actions setup complete');
+}
+
+// Simple function to update payment status from dropdown
+async function quickUpdatePaymentStatus(billId, newStatus) {
+    console.log(`Updating bill #${billId} to status: ${newStatus}`);
+    
+    const bill = bills.find(b => b.id == billId);
+    if (!bill) {
+        alert('Bill not found!');
+        return;
+    }
+    
+    // Show loading state
+    const dropdown = document.querySelector(`select[data-bill-id="${billId}"]`);
+    if (dropdown) {
+        dropdown.disabled = true;
+        dropdown.style.opacity = '0.6';
+    }
+    
+    try {
+        // Normalize bill data
+        const customer = bill.customer || {
+            name: bill.customerName,
+            phone: bill.customerPhone,
+            gst: bill.customerGst,
+            address: bill.customerAddress,
+            state: bill.customerState
+        };
+        
+        // Initialize payment tracking
+        let paymentTracking = bill.paymentTracking || {
+            totalAmount: bill.total || 0,
+            amountPaid: 0,
+            amountPending: bill.total || 0,
+            payments: []
+        };
+        
+        // Update payment tracking based on status
+        if (newStatus === 'paid') {
+            paymentTracking = {
+                totalAmount: bill.total,
+                amountPaid: bill.total,
+                amountPending: 0,
+                payments: [{
+                    amount: bill.total,
+                    date: new Date().toISOString(),
+                    note: 'Marked as paid'
+                }]
+            };
+        } else if (newStatus === 'pending') {
+            paymentTracking = {
+                totalAmount: bill.total,
+                amountPaid: 0,
+                amountPending: bill.total,
+                payments: []
+            };
+        } else if (newStatus === 'partial') {
+            // For partial, keep existing tracking or initialize
+            if (!paymentTracking.totalAmount) {
+                paymentTracking.totalAmount = bill.total;
+            }
+            if (!paymentTracking.amountPaid) {
+                paymentTracking.amountPaid = 0;
+            }
+            if (!paymentTracking.amountPending) {
+                paymentTracking.amountPending = bill.total;
+            }
+        }
+        
+        // Prepare update data
+        const updateData = {
+            customer: {
+                name: customer.name,
+                phone: customer.phone || null,
+                gst: customer.gst || null,
+                address: customer.address || null,
+                state: customer.state || null
+            },
+            items: Array.isArray(bill.items) ? bill.items.map(item => ({
+                id: item.id,
+                name: item.name || '',
+                size: item.size || '',
+                unit: item.unit || '',
+                quantity: parseFloat(item.quantity) || 0,
+                price: parseFloat(item.price) || 0,
+                amount: parseFloat(item.amount) || 0,
+                gst: parseFloat(item.gst) || 0,
+                gstAmount: parseFloat(item.gstAmount) || 0,
+                total: parseFloat(item.total) || 0
+            })) : [],
+            subtotal: parseFloat(bill.subtotal) || 0,
+            gstBreakdown: bill.gstBreakdown || {},
+            totalGST: parseFloat(bill.totalGST) || 0,
+            total: parseFloat(bill.total) || 0,
+            paymentStatus: newStatus,
+            paymentTracking: paymentTracking
+        };
+        
+        // Update via API
+        await APIService.updateBill(billId, updateData);
+        
+        // Reload bills and re-render
+        await loadBills();
+        renderSales();
+        
+        // Show success message
+        const statusLabels = {
+            'paid': '✅ Paid',
+            'pending': '⏳ Pending',
+            'partial': '💰 Partial'
+        };
+        alert(`Payment status updated to: ${statusLabels[newStatus]}`);
+        
+    } catch (error) {
+        console.error('Error updating payment status:', error);
+        alert('Failed to update payment status. Please try again.');
+        
+        // Reload to reset the dropdown
+        await loadBills();
+        renderSales();
+    }
 }
 
 function filterSales() {
@@ -4010,12 +4127,7 @@ window.viewBillDetailsModal = viewBillDetailsModal;
 window.downloadBillPDF = downloadBillPDF;
 window.closeBillDetailsModal = closeBillDetailsModal;
 window.deleteBill = deleteBill;
-window.updatePaymentStatus = updatePaymentStatus;
-window.closeUpdatePaymentModal = closeUpdatePaymentModal;
-window.selectPaymentStatus = selectPaymentStatus;
-window.confirmPartialPayment = confirmPartialPayment;
-window.cancelPartialPayment = cancelPartialPayment;
-window.calculateBillPending = calculateBillPending;
+window.quickUpdatePaymentStatus = quickUpdatePaymentStatus;
 window.filterSales = filterSales;
 window.switchView = switchView;
 window.showAddPurchaseModal = showAddPurchaseModal;
