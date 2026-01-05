@@ -321,14 +321,30 @@ app.post('/api/bills', async (req, res) => {
   try {
     const { customer, items, subtotal, gstBreakdown, totalGST, total, paymentStatus, paymentTracking } = req.body;
     
+    // Ensure all values are defined (use null instead of undefined)
+    const customerName = customer?.name || null;
+    const customerPhone = customer?.phone || null;
+    const customerGst = customer?.gst || null;
+    const customerAddress = customer?.address || null;
+    const customerState = customer?.state || null;
+    
     const result = await query(
       `INSERT INTO bills (customerName, customerPhone, customerGst, customerAddress, customerState, 
        items, subtotal, gstBreakdown, totalGST, total, paymentStatus, paymentTracking) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        customer.name, customer.phone, customer.gst, customer.address, customer.state,
-        JSON.stringify(items), subtotal, JSON.stringify(gstBreakdown), totalGST, total,
-        paymentStatus, JSON.stringify(paymentTracking || {})
+        customerName,
+        customerPhone,
+        customerGst,
+        customerAddress,
+        customerState,
+        JSON.stringify(items),
+        subtotal || 0,
+        JSON.stringify(gstBreakdown || {}),
+        totalGST || 0,
+        total || 0,
+        paymentStatus || 'pending',
+        JSON.stringify(paymentTracking || {})
       ]
     );
     
@@ -347,6 +363,7 @@ app.post('/api/bills', async (req, res) => {
     
     res.json(bill);
   } catch (error) {
+    console.error('❌ Error adding bill:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -413,14 +430,28 @@ app.post('/api/purchases', async (req, res) => {
       throw new Error('Missing required fields: supplier, invoiceNo, purchaseDate, or items');
     }
     
+    // Ensure all values are defined (use null instead of undefined)
+    const supplierName = supplier.name || null;
+    const supplierPhone = supplier.phone || null;
+    const supplierGst = supplier.gst || null;
+    const paymentTrackingData = paymentTracking || null;
+    
     const result = await query(
       `INSERT INTO purchases (supplierName, supplierPhone, supplierGst, invoiceNo, purchaseDate,
        items, subtotal, totalGST, total, paymentStatus, paymentTracking) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        supplier.name, supplier.phone, supplier.gst, invoiceNo, purchaseDate,
-        JSON.stringify(items), subtotal, totalGST, total, paymentStatus,
-        JSON.stringify(paymentTracking || {})
+        supplierName,
+        supplierPhone,
+        supplierGst,
+        invoiceNo,
+        purchaseDate,
+        JSON.stringify(items),
+        subtotal || 0,
+        totalGST || 0,
+        total || 0,
+        paymentStatus || 'pending',
+        JSON.stringify(paymentTrackingData || {})
       ]
     );
     
@@ -443,19 +474,35 @@ app.put('/api/purchases/:id', async (req, res) => {
     const { supplier, invoiceNo, purchaseDate, items, subtotal, totalGST, total, paymentStatus, paymentTracking } = req.body;
     const id = parseInt(req.params.id);
     
+    // Ensure all values are defined (use null instead of undefined)
+    const supplierName = supplier?.name || null;
+    const supplierPhone = supplier?.phone || null;
+    const supplierGst = supplier?.gst || null;
+    const paymentTrackingData = paymentTracking || null;
+    
     await query(
       `UPDATE purchases SET supplierName=?, supplierPhone=?, supplierGst=?, invoiceNo=?, purchaseDate=?,
        items=?, subtotal=?, totalGST=?, total=?, paymentStatus=?, paymentTracking=? WHERE id=?`,
       [
-        supplier.name, supplier.phone, supplier.gst, invoiceNo, purchaseDate,
-        JSON.stringify(items), subtotal, totalGST, total, paymentStatus,
-        JSON.stringify(paymentTracking || {}), id
+        supplierName,
+        supplierPhone,
+        supplierGst,
+        invoiceNo,
+        purchaseDate,
+        JSON.stringify(items),
+        subtotal || 0,
+        totalGST || 0,
+        total || 0,
+        paymentStatus || 'pending',
+        JSON.stringify(paymentTrackingData || {}),
+        id
       ]
     );
     
     const [purchase] = await query('SELECT * FROM purchases WHERE id=?', [id]);
     res.json(purchase);
   } catch (error) {
+    console.error('❌ Error updating purchase:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
