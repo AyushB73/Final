@@ -2431,7 +2431,12 @@ async function selectPaymentStatus(newStatus) {
         },
         items: Array.isArray(bill.items) ? bill.items : [],
         gstBreakdown: bill.gstBreakdown || {},
-        paymentTracking: bill.paymentTracking || {}
+        paymentTracking: bill.paymentTracking || {
+            totalAmount: bill.total || 0,
+            amountPaid: 0,
+            amountPending: bill.total || 0,
+            payments: []
+        }
     };
     
     // If partial payment, show input form
@@ -2443,14 +2448,18 @@ async function selectPaymentStatus(newStatus) {
         const partialInput = document.getElementById('partial-payment-input');
         partialInput.style.display = 'block';
         
-        // Initialize payment tracking if not exists
-        if (!bill.paymentTracking) {
-            bill.paymentTracking = {
-                totalAmount: bill.total,
-                amountPaid: 0,
-                amountPending: bill.total,
-                payments: []
-            };
+        // Ensure payment tracking is properly initialized
+        if (!bill.paymentTracking.totalAmount) {
+            bill.paymentTracking.totalAmount = bill.total;
+        }
+        if (!bill.paymentTracking.amountPaid) {
+            bill.paymentTracking.amountPaid = 0;
+        }
+        if (!bill.paymentTracking.amountPending) {
+            bill.paymentTracking.amountPending = bill.total;
+        }
+        if (!bill.paymentTracking.payments) {
+            bill.paymentTracking.payments = [];
         }
         
         // Display amounts
@@ -2470,21 +2479,16 @@ async function selectPaymentStatus(newStatus) {
     
     // For paid status, mark as fully paid
     if (newStatus === 'paid') {
-        if (!bill.paymentTracking) {
-            bill.paymentTracking = {
-                totalAmount: bill.total,
-                amountPaid: bill.total,
-                amountPending: 0,
-                payments: [{
-                    amount: bill.total,
-                    date: new Date().toISOString(),
-                    note: 'Marked as paid'
-                }]
-            };
-        } else {
-            bill.paymentTracking.amountPaid = bill.paymentTracking.totalAmount;
-            bill.paymentTracking.amountPending = 0;
-        }
+        bill.paymentTracking = {
+            totalAmount: bill.total,
+            amountPaid: bill.total,
+            amountPending: 0,
+            payments: [{
+                amount: bill.total,
+                date: new Date().toISOString(),
+                note: 'Marked as paid'
+            }]
+        };
     }
     
     // For pending status, reset payments
@@ -2500,14 +2504,18 @@ async function selectPaymentStatus(newStatus) {
     bill.paymentStatus = newStatus;
     
     try {
-        // Ensure all numeric values are valid
+        // Ensure all numeric values are valid and customer name is not empty
+        if (!bill.customer || !bill.customer.name) {
+            throw new Error('Customer name is required');
+        }
+        
         const updateData = {
             customer: {
-                name: bill.customer?.name || '',
-                phone: bill.customer?.phone || null,
-                gst: bill.customer?.gst || null,
-                address: bill.customer?.address || null,
-                state: bill.customer?.state || null
+                name: bill.customer.name,
+                phone: bill.customer.phone || null,
+                gst: bill.customer.gst || null,
+                address: bill.customer.address || null,
+                state: bill.customer.state || null
             },
             items: Array.isArray(bill.items) ? bill.items.map(item => ({
                 id: item.id,
@@ -2526,10 +2534,15 @@ async function selectPaymentStatus(newStatus) {
             totalGST: parseFloat(bill.totalGST) || 0,
             total: parseFloat(bill.total) || 0,
             paymentStatus: newStatus,
-            paymentTracking: bill.paymentTracking || {}
+            paymentTracking: {
+                totalAmount: parseFloat(bill.paymentTracking.totalAmount) || parseFloat(bill.total) || 0,
+                amountPaid: parseFloat(bill.paymentTracking.amountPaid) || 0,
+                amountPending: parseFloat(bill.paymentTracking.amountPending) || parseFloat(bill.total) || 0,
+                payments: Array.isArray(bill.paymentTracking.payments) ? bill.paymentTracking.payments : []
+            }
         };
         
-        console.log('Sending update data:', updateData);
+        console.log('Sending update data:', JSON.stringify(updateData, null, 2));
         
         // Send the complete bill object to the server
         await APIService.updateBill(bill.id, updateData);
@@ -2584,8 +2597,27 @@ async function confirmPartialPayment() {
         },
         items: Array.isArray(bill.items) ? bill.items : [],
         gstBreakdown: bill.gstBreakdown || {},
-        paymentTracking: bill.paymentTracking || {}
+        paymentTracking: bill.paymentTracking || {
+            totalAmount: bill.total || 0,
+            amountPaid: 0,
+            amountPending: bill.total || 0,
+            payments: []
+        }
     };
+    
+    // Ensure payment tracking fields exist
+    if (!bill.paymentTracking.totalAmount) {
+        bill.paymentTracking.totalAmount = bill.total;
+    }
+    if (!bill.paymentTracking.amountPaid) {
+        bill.paymentTracking.amountPaid = 0;
+    }
+    if (!bill.paymentTracking.amountPending) {
+        bill.paymentTracking.amountPending = bill.total;
+    }
+    if (!bill.paymentTracking.payments) {
+        bill.paymentTracking.payments = [];
+    }
     
     const amountReceived = parseFloat(document.getElementById('partial-amount-input').value);
     
@@ -2618,16 +2650,43 @@ async function confirmPartialPayment() {
     }
     
     try {
-        // Send the complete bill object to the server
+        // Ensure customer name is not empty
+        if (!bill.customer || !bill.customer.name) {
+            throw new Error('Customer name is required');
+        }
+        
+        // Send the complete bill object to the server with properly formatted data
         await APIService.updateBill(bill.id, {
-            customer: bill.customer,
-            items: bill.items,
-            subtotal: bill.subtotal,
-            gstBreakdown: bill.gstBreakdown,
-            totalGST: bill.totalGST,
-            total: bill.total,
+            customer: {
+                name: bill.customer.name,
+                phone: bill.customer.phone || null,
+                gst: bill.customer.gst || null,
+                address: bill.customer.address || null,
+                state: bill.customer.state || null
+            },
+            items: Array.isArray(bill.items) ? bill.items.map(item => ({
+                id: item.id,
+                name: item.name || '',
+                size: item.size || '',
+                unit: item.unit || '',
+                quantity: parseFloat(item.quantity) || 0,
+                price: parseFloat(item.price) || 0,
+                amount: parseFloat(item.amount) || 0,
+                gst: parseFloat(item.gst) || 0,
+                gstAmount: parseFloat(item.gstAmount) || 0,
+                total: parseFloat(item.total) || 0
+            })) : [],
+            subtotal: parseFloat(bill.subtotal) || 0,
+            gstBreakdown: bill.gstBreakdown || {},
+            totalGST: parseFloat(bill.totalGST) || 0,
+            total: parseFloat(bill.total) || 0,
             paymentStatus: bill.paymentStatus,
-            paymentTracking: bill.paymentTracking 
+            paymentTracking: {
+                totalAmount: parseFloat(bill.paymentTracking.totalAmount) || 0,
+                amountPaid: parseFloat(bill.paymentTracking.amountPaid) || 0,
+                amountPending: parseFloat(bill.paymentTracking.amountPending) || 0,
+                payments: Array.isArray(bill.paymentTracking.payments) ? bill.paymentTracking.payments : []
+            }
         });
         
         // Reload bills to get fresh data
