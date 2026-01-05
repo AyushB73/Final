@@ -871,8 +871,23 @@ function fillCustomerDetails(customer) {
 async function loadPurchases() {
     try {
         purchases = await APIService.getPurchases();
+        console.log(`✅ Loaded ${purchases.length} purchases`);
+        console.log('Purchases data:', purchases);
+        
+        // Log each purchase structure
+        purchases.forEach(purchase => {
+            console.log(`Purchase #${purchase.id}:`, {
+                id: purchase.id,
+                hasSupplier: !!purchase.supplier,
+                hasItems: !!purchase.items,
+                itemsCount: purchase.items?.length || 0,
+                supplier: purchase.supplier,
+                items: purchase.items
+            });
+        });
     } catch (error) {
         console.error('Error loading purchases:', error);
+        purchases = [];
     }
 }
 
