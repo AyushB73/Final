@@ -40,6 +40,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Setup customer search
     setupCustomerSearch();
+    
+    // Setup event delegation for sales table action buttons
+    setupSalesTableActions();
 });
 
 // Navigation
@@ -1989,16 +1992,40 @@ function renderSales() {
             <td><strong>₹${bill.total.toFixed(2)}</strong></td>
             <td>${paymentStatusBadge}</td>
             <td class="actions-cell">
-                <button class="action-btn action-btn-sm" onclick="viewBillDetailsModal(${bill.id})" title="View Details">👁️</button>
-                <button class="action-btn action-btn-sm" onclick="downloadBillPDF(${bill.id})" title="Download PDF">📄</button>
-                <button class="action-btn action-btn-sm" onclick="updatePaymentStatus(${bill.id})" title="Update Payment">💳</button>
-                <button class="action-btn action-btn-sm delete" onclick="deleteBill(${bill.id})" title="Delete">🗑️</button>
+                <button class="action-btn action-btn-sm btn-view" data-bill-id="${bill.id}" title="View Details">👁️</button>
+                <button class="action-btn action-btn-sm btn-pdf" data-bill-id="${bill.id}" title="Download PDF">📄</button>
+                <button class="action-btn action-btn-sm btn-payment" data-bill-id="${bill.id}" title="Update Payment">💳</button>
+                <button class="action-btn action-btn-sm delete btn-delete" data-bill-id="${bill.id}" title="Delete">🗑️</button>
             </td>
         `;
         tbody.appendChild(row);
     });
     
     updateSalesSummary();
+}
+
+// Setup event delegation for sales table action buttons
+function setupSalesTableActions() {
+    const salesTbody = document.getElementById('sales-tbody');
+    if (!salesTbody) return;
+    
+    salesTbody.addEventListener('click', (e) => {
+        const target = e.target;
+        if (!target.classList.contains('action-btn')) return;
+        
+        const billId = parseInt(target.dataset.billId);
+        if (!billId) return;
+        
+        if (target.classList.contains('btn-view')) {
+            viewBillDetailsModal(billId);
+        } else if (target.classList.contains('btn-pdf')) {
+            downloadBillPDF(billId);
+        } else if (target.classList.contains('btn-payment')) {
+            updatePaymentStatus(billId);
+        } else if (target.classList.contains('btn-delete')) {
+            deleteBill(billId);
+        }
+    });
 }
 
 function filterSales() {
