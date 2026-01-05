@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test - Update Payments</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        h1 { color: #333; }
+        h2 { color: #667eea; }
+    </style>
+</head>
+<body>
+    <h1>🔧 API Connection Test</h1>
+    <p>This page tests if your Update Payments functionality is working correctly.</p>
+
+    <div class="test-section">
+        <h2>Test 1: Check Backend Health</h2>
+        <button onclick="testHealth()">Test Backend Connection</button>
+        <div id="health-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Load Bills</h2>
+        <button onclick="testLoadBills()">Load Bills from API</button>
+        <div id="bills-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Update Payment Status</h2>
+        <p>First load bills, then enter a bill ID to test updating:</p>
+        <input type="number" id="billId" placeholder="Enter Bill ID" style="padding: 8px; margin: 5px;">
+        <select id="newStatus" style="padding: 8px; margin: 5px;">
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+            <option value="partial">Partial</option>
+        </select>
+        <button onclick="testUpdatePayment()">Update Payment Status</button>
+        <div id="update-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Check Global Functions</h2>
+        <button onclick="testGlobalFunctions()">Check if Functions Exist</button>
+        <div id="functions-result" class="result"></div>
+    </div>
+
+    <script src="api-service.js"></script>
+    <script>
+        const API_URL = 'https://final-production-4f72.up.railway.app';
+        let loadedBills = [];
+
+        async function testHealth() {
+            const resultDiv = document.getElementById('health-result');
+            resultDiv.textContent = 'Testing...';
+            resultDiv.className = 'result';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/health`);
+                const data = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ Backend is healthy!\n\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Backend connection failed!\n\n' + error.message;
+            }
+        }
+
+        async function testLoadBills() {
+            const resultDiv = document.getElementById('bills-result');
+            resultDiv.textContent = 'Loading bills...';
+            resultDiv.className = 'result';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/bills`);
+                const bills = await response.json();
+                loadedBills = bills;
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Loaded ${bills.length} bills!\n\n`;
+                
+                if (bills.length > 0) {
+                    resultDiv.textContent += 'First 3 bills:\n';
+                    bills.slice(0, 3).forEach(bill => {
+                        resultDiv.textContent += `\nBill #${bill.id}:\n`;
+                        resultDiv.textContent += `  Customer: ${bill.customer?.name || bill.customerName}\n`;
+                        resultDiv.textContent += `  Total: ₹${bill.total}\n`;
+                        resultDiv.textContent += `  Status: ${bill.paymentStatus}\n`;
+                        resultDiv.textContent += `  Items: ${Array.isArray(bill.items) ? bill.items.length : 'N/A'}\n`;
+                    });
+                } else {
+                    resultDiv.textContent += '\nNo bills found in database.';
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Failed to load bills!\n\n' + error.message;
+            }
+        }
+
+        async function testUpdatePayment() {
+            const resultDiv = document.getElementById('update-result');
+            const billId = document.getElementById('billId').value;
+            const newStatus = document.getElementById('newStatus').value;
+            
+            if (!billId) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Please enter a Bill ID';
+                return;
+            }
+            
+            resultDiv.textContent = 'Updating payment status...';
+            resultDiv.className = 'result';
+            
+            try {
+                // Find the bill
+                const bill = loadedBills.find(b => b.id == billId);
+                
+                if (!bill) {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Bill #${billId} not found!\n\nLoad bills first, then use a valid bill ID.`;
+                    return;
+                }
+                
+                // Prepare update data
+                const updateData = {
+                    customer: bill.customer || {
+                        name: bill.customerName,
+                        phone: bill.customerPhone,
+                        gst: bill.customerGst,
+                        address: bill.customerAddress,
+                        state: bill.customerState
+                    },
+                    items: Array.isArray(bill.items) ? bill.items : [],
+                    subtotal: parseFloat(bill.subtotal) || 0,
+                    gstBreakdown: bill.gstBreakdown || {},
+                    totalGST: parseFloat(bill.totalGST) || 0,
+                    total: parseFloat(bill.total) || 0,
+                    paymentStatus: newStatus,
+                    paymentTracking: bill.paymentTracking || {
+                        totalAmount: bill.total,
+                        amountPaid: newStatus === 'paid' ? bill.total : 0,
+                        amountPending: newStatus === 'paid' ? 0 : bill.total,
+                        payments: []
+                    }
+                };
+                
+                // Update via API
+                const response = await fetch(`${API_URL}/api/bills/${billId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                }
+                
+                const updatedBill = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Payment status updated successfully!\n\n`;
+                resultDiv.textContent += `Bill #${billId}\n`;
+                resultDiv.textContent += `New Status: ${newStatus}\n`;
+                resultDiv.textContent += `Customer: ${updateData.customer.name}\n`;
+                resultDiv.textContent += `Total: ₹${updateData.total}\n\n`;
+                resultDiv.textContent += 'Full response:\n' + JSON.stringify(updatedBill, null, 2);
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Failed to update payment status!\n\n' + error.message;
+            }
+        }
+
+        function testGlobalFunctions() {
+            const resultDiv = document.getElementById('functions-result');
+            
+            const functions = [
+                'updatePaymentStatus',
+                'closeUpdatePaymentModal',
+                'selectPaymentStatus',
+                'confirmPartialPayment',
+                'cancelPartialPayment'
+            ];
+            
+            let result = 'Checking global functions:\n\n';
+            let allExist = true;
+            
+            functions.forEach(funcName => {
+                const exists = typeof window[funcName] === 'function';
+                result += `${exists ? '✅' : '❌'} window.${funcName}: ${exists ? 'EXISTS' : 'MISSING'}\n`;
+                if (!exists) allExist = false;
+            });
+            
+            result += '\nAPIService: ' + (typeof window.APIService !== 'undefined' ? '✅ EXISTS' : '❌ MISSING');
+            
+            resultDiv.className = allExist ? 'result success' : 'result error';
+            resultDiv.textContent = result;
+        }
+
+        // Auto-run health check on load
+        window.addEventListener('load', () => {
+            testHealth();
+        });
+    </script>
+</body>
+</html>
