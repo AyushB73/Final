@@ -2028,10 +2028,8 @@ function renderSales() {
             <td><strong>₹${(bill.total || 0).toFixed(2)}</strong></td>
             <td>${paymentStatusBadge}</td>
             <td class="actions-cell">
-                <button class="action-btn action-btn-sm btn-view" data-bill-id="${bill.id}" title="View Details">👁️</button>
-                <button class="action-btn action-btn-sm btn-pdf" data-bill-id="${bill.id}" title="Download PDF">📄</button>
-                <button class="action-btn action-btn-sm btn-payment" data-bill-id="${bill.id}" title="Update Payment">💳</button>
-                <button class="action-btn action-btn-sm delete btn-delete" data-bill-id="${bill.id}" title="Delete">🗑️</button>
+                <button class="action-btn action-btn-sm btn-pdf" data-bill-id="${bill.id}" title="Download PDF">�</bubtton>
+                <button class="action-btn action-btn-sm delete btn-delete" data-bill-id="${bill.id}" title="Delete">�️<o/button>
             </td>
         `;
         tbody.appendChild(row);
@@ -2085,15 +2083,9 @@ function setupSalesTableActions() {
             return;
         }
         
-        if (target.classList.contains('btn-view')) {
-            console.log('View button clicked');
-            viewBillDetailsModal(billId);
-        } else if (target.classList.contains('btn-pdf')) {
+        if (target.classList.contains('btn-pdf')) {
             console.log('PDF button clicked');
             downloadBillPDF(billId);
-        } else if (target.classList.contains('btn-payment')) {
-            console.log('Payment button clicked');
-            updatePaymentStatus(billId);
         } else if (target.classList.contains('btn-delete')) {
             console.log('Delete button clicked');
             deleteBill(billId);
