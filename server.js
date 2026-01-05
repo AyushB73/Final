@@ -342,14 +342,17 @@ app.get('/api/bills', async (req, res) => {
         const parsedItems = JSON.parse(bill.items || '[]');
         console.log(`Bill #${bill.id} parsed items count:`, parsedItems.length);
         
+        // Create clean bill object without spreading old fields
         return {
-          ...bill,
+          id: bill.id,
+          createdAt: bill.createdAt,
           items: parsedItems,
           gstBreakdown: JSON.parse(bill.gstBreakdown || '{}'),
           paymentTracking: JSON.parse(bill.paymentTracking || '{}'),
           subtotal: parseFloat(bill.subtotal) || 0,
           totalGST: parseFloat(bill.totalGST) || 0,
           total: parseFloat(bill.total) || 0,
+          paymentStatus: bill.paymentStatus || 'paid',
           customer: {
             name: bill.customerName,
             phone: bill.customerPhone,
@@ -362,13 +365,15 @@ app.get('/api/bills', async (req, res) => {
         console.error(`❌ Error parsing bill #${bill.id}:`, parseError.message);
         // Return bill with safe defaults
         return {
-          ...bill,
+          id: bill.id,
+          createdAt: bill.createdAt,
           items: [],
           gstBreakdown: {},
           paymentTracking: {},
           subtotal: parseFloat(bill.subtotal) || 0,
           totalGST: parseFloat(bill.totalGST) || 0,
           total: parseFloat(bill.total) || 0,
+          paymentStatus: bill.paymentStatus || 'paid',
           customer: {
             name: bill.customerName || 'Unknown',
             phone: bill.customerPhone || null,
