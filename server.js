@@ -703,6 +703,17 @@ app.put('/api/suppliers/:id', async (req, res) => {
   }
 });
 
+app.delete('/api/suppliers/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await query('DELETE FROM suppliers WHERE id=?', [id]);
+    res.json({ success: true, message: 'Supplier deleted successfully' });
+  } catch (error) {
+    console.error('❌ Error deleting supplier:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Initialize sample data
 app.post('/api/initialize', async (req, res) => {
   try {

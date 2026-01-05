@@ -143,6 +143,12 @@ class APIService {
         });
     }
 
+    static async deleteSupplier(id) {
+        return await this.request(`/api/suppliers/${id}`, {
+            method: 'DELETE'
+        });
+    }
+
     // Initialize database with sample data
     static async initializeDatabase() {
         return await this.request('/api/initialize', {
