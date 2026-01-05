@@ -2317,11 +2317,32 @@ async function deleteBill(billId) {
 
 function updatePaymentStatus(billId) {
     console.log('updatePaymentStatus called with billId:', billId);
+    console.log('Available bills:', bills.map(b => ({ id: b.id, type: typeof b.id })));
+    
     const bill = bills.find(b => b.id == billId); // Use == for type coercion
     
     if (!bill) {
         console.error('Bill not found with ID:', billId);
-        alert('Bill not found!');
+        alert('Bill not found! Please refresh the page and try again.');
+        return;
+    }
+    
+    console.log('Found bill:', bill);
+    
+    // Check if modal exists
+    const modal = document.getElementById('update-payment-modal');
+    if (!modal) {
+        console.error('Update payment modal not found in DOM');
+        alert('Error: Payment update modal not found. Please refresh the page.');
+        return;
+    }
+    
+    const billIdElement = document.getElementById('update-bill-id');
+    const statusElement = document.getElementById('update-current-status');
+    
+    if (!billIdElement || !statusElement) {
+        console.error('Modal elements not found:', { billIdElement, statusElement });
+        alert('Error: Modal elements not found. Please refresh the page.');
         return;
     }
     
@@ -2336,11 +2357,13 @@ function updatePaymentStatus(billId) {
     window.currentBillIdForUpdate = billId;
     
     // Populate modal
-    document.getElementById('update-bill-id').textContent = billId;
-    document.getElementById('update-current-status').innerHTML = `<span class="badge badge-${currentStatus === 'paid' ? 'success' : currentStatus === 'pending' ? 'danger' : 'warning'}">${statusLabels[currentStatus]}</span>`;
+    billIdElement.textContent = billId;
+    statusElement.innerHTML = `<span class="badge badge-${currentStatus === 'paid' ? 'success' : currentStatus === 'pending' ? 'danger' : 'warning'}">${statusLabels[currentStatus]}</span>`;
+    
+    console.log('Opening payment modal for bill:', billId);
     
     // Show modal
-    document.getElementById('update-payment-modal').classList.add('active');
+    modal.classList.add('active');
 }
 
 function closeUpdatePaymentModal() {
