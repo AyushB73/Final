@@ -2738,19 +2738,10 @@ function renderDashboard() {
     // Calculate metrics
     const totalRevenue = filteredBills.reduce((sum, bill) => sum + (parseFloat(bill.total) || 0), 0);
     const totalPurchases = filteredPurchases.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
+    const totalBillsCount = filteredBills.length;
     
-    // Calculate actual money received (paid bills only)
-    const moneyReceived = filteredBills
-        .filter(b => (b.paymentStatus || 'paid') === 'paid')
-        .reduce((sum, bill) => sum + (parseFloat(bill.total) || 0), 0);
-    
-    // Calculate actual money paid to suppliers
-    const moneyPaid = filteredPurchases
-        .filter(p => p.paymentStatus === 'paid')
-        .reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
-    
-    // Cash Flow = Money Received - Money Paid
-    const cashFlow = moneyReceived - moneyPaid;
+    // Calculate Average Order Value (AOV)
+    const averageOrderValue = totalBillsCount > 0 ? (totalRevenue / totalBillsCount) : 0;
     
     const inventoryValue = inventory.reduce((sum, item) => sum + (item.quantity * (parseFloat(item.price) || 0)), 0);
     
@@ -2766,23 +2757,7 @@ function renderDashboard() {
     
     // Update metric cards
     document.getElementById('dash-total-revenue').textContent = `₹${totalRevenue.toFixed(2)}`;
-    
-    // Update Cash Flow card with color indicator
-    const cashFlowElement = document.getElementById('dash-cash-flow');
-    const cashFlowLabelElement = document.getElementById('dash-cash-flow-label');
-    cashFlowElement.textContent = `₹${cashFlow.toFixed(2)}`;
-    
-    if (cashFlow > 0) {
-        cashFlowElement.style.color = '#10b981'; // Green for positive
-        cashFlowLabelElement.textContent = `✅ Positive cash flow`;
-    } else if (cashFlow < 0) {
-        cashFlowElement.style.color = '#ef4444'; // Red for negative
-        cashFlowLabelElement.textContent = `⚠️ Negative cash flow`;
-    } else {
-        cashFlowElement.style.color = '#6b7280'; // Gray for zero
-        cashFlowLabelElement.textContent = `Money in - Money out`;
-    }
-    
+    document.getElementById('dash-aov').textContent = `₹${averageOrderValue.toFixed(2)}`;
     document.getElementById('dash-inventory-value').textContent = `₹${inventoryValue.toFixed(2)}`;
     document.getElementById('dash-pending-payments').textContent = `₹${pendingPayments.toFixed(2)}`;
     
