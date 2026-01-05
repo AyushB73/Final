@@ -2736,24 +2736,53 @@ function renderDashboard() {
     updatePeriodInfo(period);
     
     // Calculate metrics
-    const totalRevenue = filteredBills.reduce((sum, bill) => sum + bill.total, 0);
-    const totalPurchases = filteredPurchases.reduce((sum, p) => sum + p.total, 0);
-    const estimatedProfit = totalRevenue - totalPurchases;
-    const inventoryValue = inventory.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    const totalRevenue = filteredBills.reduce((sum, bill) => sum + (parseFloat(bill.total) || 0), 0);
+    const totalPurchases = filteredPurchases.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
+    
+    // Calculate actual money received (paid bills only)
+    const moneyReceived = filteredBills
+        .filter(b => (b.paymentStatus || 'paid') === 'paid')
+        .reduce((sum, bill) => sum + (parseFloat(bill.total) || 0), 0);
+    
+    // Calculate actual money paid to suppliers
+    const moneyPaid = filteredPurchases
+        .filter(p => p.paymentStatus === 'paid')
+        .reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
+    
+    // Cash Flow = Money Received - Money Paid
+    const cashFlow = moneyReceived - moneyPaid;
+    
+    const inventoryValue = inventory.reduce((sum, item) => sum + (item.quantity * (parseFloat(item.price) || 0)), 0);
     
     // Calculate actual pending payments using payment tracking
     let pendingPayments = 0;
     filteredBills.forEach(bill => {
         if (bill.paymentStatus === 'pending') {
-            pendingPayments += bill.total;
+            pendingPayments += parseFloat(bill.total) || 0;
         } else if (bill.paymentStatus === 'partial' && bill.paymentTracking) {
-            pendingPayments += bill.paymentTracking.amountPending;
+            pendingPayments += parseFloat(bill.paymentTracking.amountPending) || 0;
         }
     });
     
     // Update metric cards
     document.getElementById('dash-total-revenue').textContent = `₹${totalRevenue.toFixed(2)}`;
-    document.getElementById('dash-profit').textContent = `₹${estimatedProfit.toFixed(2)}`;
+    
+    // Update Cash Flow card with color indicator
+    const cashFlowElement = document.getElementById('dash-cash-flow');
+    const cashFlowLabelElement = document.getElementById('dash-cash-flow-label');
+    cashFlowElement.textContent = `₹${cashFlow.toFixed(2)}`;
+    
+    if (cashFlow > 0) {
+        cashFlowElement.style.color = '#10b981'; // Green for positive
+        cashFlowLabelElement.textContent = `✅ Positive cash flow`;
+    } else if (cashFlow < 0) {
+        cashFlowElement.style.color = '#ef4444'; // Red for negative
+        cashFlowLabelElement.textContent = `⚠️ Negative cash flow`;
+    } else {
+        cashFlowElement.style.color = '#6b7280'; // Gray for zero
+        cashFlowLabelElement.textContent = `Money in - Money out`;
+    }
+    
     document.getElementById('dash-inventory-value').textContent = `₹${inventoryValue.toFixed(2)}`;
     document.getElementById('dash-pending-payments').textContent = `₹${pendingPayments.toFixed(2)}`;
     
