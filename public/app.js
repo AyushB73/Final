@@ -1963,10 +1963,19 @@ function renderSales() {
     }
     
     bills.slice().reverse().forEach(bill => {
+        console.log('Bill data:', bill);
+        console.log('Bill items:', bill.items);
+        console.log('Items type:', typeof bill.items, 'Is array:', Array.isArray(bill.items));
+        
         const row = document.createElement('tr');
         const date = new Date(bill.createdAt).toLocaleDateString('en-IN');
         const time = new Date(bill.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-        const itemCount = bill.items.length;
+        
+        // Ensure items is an array
+        const items = Array.isArray(bill.items) ? bill.items : [];
+        const itemCount = items.length;
+        console.log('Item count:', itemCount);
+        
         const stateText = bill.customer.state === 'same' ? 'Same State' : 'Other State';
         
         let paymentStatusBadge = '';
