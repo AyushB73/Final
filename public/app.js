@@ -100,13 +100,7 @@ function toggleMenu() {
     console.log('Sidebar computed left:', window.getComputedStyle(sidebar).left);
 }
 
-// Make functions available globally
-window.toggleMenu = toggleMenu;
-window.viewBillDetailsModal = viewBillDetailsModal;
-window.downloadBillPDF = downloadBillPDF;
-window.closeBillDetailsModal = closeBillDetailsModal;
-window.deleteBill = deleteBill;
-window.updatePaymentStatus = updatePaymentStatus;
+// Make functions available globally (moved to end of file after all functions are defined)
 
 // Role-based access control
 function applyRoleRestrictions(role) {
@@ -3500,3 +3494,11 @@ function displayCurrentSettings() {
 document.addEventListener('DOMContentLoaded', () => {
     loadSettings();
 });
+
+// Expose functions globally for onclick handlers
+window.toggleMenu = toggleMenu;
+window.viewBillDetailsModal = viewBillDetailsModal;
+window.downloadBillPDF = downloadBillPDF;
+window.closeBillDetailsModal = closeBillDetailsModal;
+window.deleteBill = deleteBill;
+window.updatePaymentStatus = updatePaymentStatus;
