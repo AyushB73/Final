@@ -207,14 +207,21 @@ function filterInventory() {
     });
 }
 
+// Global variable to track if we're editing
+let editingItemId = null;
+
 function showAddItemModal() {
     if (!checkOwnerPermission()) return;
+    editingItemId = null; // Reset editing mode
+    document.getElementById('add-item-form').reset();
+    document.getElementById('modal-title').textContent = 'Add New Product';
     document.getElementById('add-item-modal').classList.add('active');
 }
 
 function closeModal() {
     document.getElementById('add-item-modal').classList.remove('active');
     document.getElementById('add-item-form').reset();
+    editingItemId = null;
 }
 
 // Stock Management
@@ -320,20 +327,35 @@ async function addInventoryItem(event) {
         size: document.getElementById('product-size').value,
         colour: document.getElementById('product-colour').value,
         unit: document.getElementById('product-unit').value,
-        quantity: 0,
-        minStock: 0,
         price: parseFloat(document.getElementById('product-price').value),
         gst: parseFloat(document.getElementById('product-gst').value)
     };
     
     try {
-        await APIService.addInventoryItem(item);
-        await loadInventory();
-        closeModal();
-        alert('Product added successfully!');
+        if (editingItemId) {
+            // Update existing item
+            const existingItem = inventory.find(i => i.id === editingItemId);
+            if (existingItem) {
+                // Keep existing quantity and minStock when editing
+                item.quantity = existingItem.quantity;
+                item.minStock = existingItem.minStock;
+            }
+            await APIService.updateInventoryItem(editingItemId, item);
+            await loadInventory();
+            closeModal();
+            alert('Product updated successfully!');
+        } else {
+            // Add new item
+            item.quantity = 0;
+            item.minStock = 0;
+            await APIService.addInventoryItem(item);
+            await loadInventory();
+            closeModal();
+            alert('Product added successfully!');
+        }
     } catch (error) {
-        console.error('Error adding item:', error);
-        alert('Failed to add product. Please try again.');
+        console.error('Error saving item:', error);
+        alert('Failed to save product. Please try again.');
     }
 }
 
@@ -357,6 +379,8 @@ function editItem(id) {
     const item = inventory.find(i => i.id === id);
     if (!item) return;
     
+    editingItemId = id; // Set editing mode
+    
     document.getElementById('product-name').value = item.name;
     document.getElementById('product-description').value = item.description || '';
     document.getElementById('product-hsn').value = item.hsn || '';
@@ -366,7 +390,9 @@ function editItem(id) {
     document.getElementById('product-price').value = item.price;
     document.getElementById('product-gst').value = item.gst || 18;
     
-    showAddItemModal();
+    // Update modal title
+    document.getElementById('modal-title').textContent = 'Edit Product';
+    document.getElementById('add-item-modal').classList.add('active');
 }
 
 // Billing
