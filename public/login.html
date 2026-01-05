@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Plastiwood">
+    <meta name="description" content="Login to Plastiwood Inventory Management System">
+    <meta name="theme-color" content="#667eea">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- iOS Icons -->
+    <link rel="apple-touch-icon" href="/icons/icon-152x152.png">
+    
+    <title>Login - Plastiwood</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .login-box {
+            background: white;
+            padding: 3rem;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .login-logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .login-logo svg {
+            margin: 0 auto 1rem;
+        }
+        
+        .login-logo h1 {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .login-logo p {
+            color: var(--text-secondary);
+        }
+        
+        .login-form input, .login-form select {
+            width: 100%;
+            padding: 0.875rem;
+            margin-bottom: 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        
+        .login-form input:focus, .login-form select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .login-form button {
+            width: 100%;
+            padding: 1rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .login-form button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
+        }
+        
+        .demo-credentials {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            font-size: 0.875rem;
+        }
+        
+        .demo-credentials h4 {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        
+        .demo-credentials p {
+            margin: 0.25rem 0;
+            color: var(--text-secondary);
+        }
+        
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="login-logo">
+                <svg width="60" height="60" viewBox="0 0 40 40">
+                    <rect x="5" y="5" width="30" height="30" rx="4" fill="#2563eb"/>
+                    <path d="M15 12 L25 12 L25 28 L15 28 Z" fill="#fff" opacity="0.3"/>
+                    <path d="M12 15 L28 15 L28 25 L12 25 Z" fill="#fff" opacity="0.6"/>
+                </svg>
+                <h1>Windowers Plastiwood</h1>
+                <p>Inventory & Billing System</p>
+            </div>
+            
+            <div id="error-message" class="error-message"></div>
+            
+            <form class="login-form" onsubmit="handleLogin(event)">
+                <select id="name" required>
+                    <option value="">Select Name</option>
+                    <option value="Pramod">Pramod</option>
+                    <option value="Sandeep">Sandeep</option>
+                </select>
+                <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
+                <button type="submit">Login</button>
+            </form>
+            
+    
+    <script src="auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Plastiwood">
+    <meta name="description" content="Inventory and Billing Management System for Plastiwood Company">
+    <meta name="theme-color" content="#667eea">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- iOS Icons -->
+    <link rel="apple-touch-icon" href="/icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/icons/icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="96x96" href="/icons/icon-96x96.png">
+    <link rel="apple-touch-icon" sizes="128x128" href="/icons/icon-128x128.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="384x384" href="/icons/icon-384x384.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-72x72.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72x72.png">
+    
+    <title>Plastiwood - Inventory & Billing</title>
+    <!-- Version 3.1 - Debug Sidebar -->
+    <link rel="stylesheet" href="styles.css?v=3.1">
+</head>
+<body>
+    <!-- Sidebar Overlay -->
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleMenu()"></div>
+    
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h3>Menu</h3>
+            <button class="close-sidebar" onclick="toggleMenu()">&times;</button>
+        </div>
+        <div class="nav-links">
+            <button class="nav-btn" data-view="dashboard" id="dashboard-nav-sidebar">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Dashboard</span>
+            </button>
+            <button class="nav-btn active" data-view="inventory">
+                <span class="nav-icon">📦</span>
+                <span class="nav-text">Inventory</span>
+            </button>
+            <button class="nav-btn" data-view="purchases" id="purchases-nav-sidebar">
+                <span class="nav-icon">🛒</span>
+                <span class="nav-text">Purchases</span>
+            </button>
+            <button class="nav-btn" data-view="sales">
+                <span class="nav-icon">💰</span>
+                <span class="nav-text">Sales</span>
+            </button>
+            <button class="nav-btn" data-view="billing">
+                <span class="nav-icon">🧾</span>
+                <span class="nav-text">Billing</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <button class="hamburger-btn" onclick="toggleMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="logo">
+                <svg width="40" height="40" viewBox="0 0 40 40">
+                    <rect x="5" y="5" width="30" height="30" rx="4" fill="#2563eb"/>
+                    <path d="M15 12 L25 12 L25 28 L15 28 Z" fill="#fff" opacity="0.3"/>
+                    <path d="M12 15 L28 15 L28 25 L12 25 Z" fill="#fff" opacity="0.6"/>
+                </svg>
+                <span>Windowers Plastiwood</span>
+            </div>
+            <div class="user-menu">
+                <div id="connection-status" class="connection-status" title="Real-time connection status">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Connecting...</span>
+                </div>
+                <span id="user-name" class="user-name"></span>
+                <button class="btn btn-secondary btn-small" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Dashboard View (Owner Only) -->
+            <div id="dashboard-view" class="view">
+                <div class="view-header">
+                    <h1>📊 Business Dashboard</h1>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <select id="dashboard-period" class="period-selector" onchange="changeDashboardPeriod()">
+                            <option value="all">All Time</option>
+                            <option value="month">This Month</option>
+                            <option value="quarter">This Quarter</option>
+                            <option value="year">This Year</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="refreshDashboard()">🔄 Refresh</button>
+                    </div>
+                </div>
+
+                <!-- Period Info Banner -->
+                <div class="period-info-banner" id="period-info-banner">
+                    <span id="period-info-text">Showing data for: All Time</span>
+                </div>
+
+                <!-- Key Metrics Cards -->
+                <div class="dashboard-metrics">
+                    <div class="metric-card revenue">
+                        <div class="metric-icon">💰</div>
+                        <div class="metric-content">
+                            <h3>Total Revenue</h3>
+                            <p class="metric-value" id="dash-total-revenue">₹0.00</p>
+                            <span class="metric-label">From all sales</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card profit">
+                        <div class="metric-icon">📈</div>
+                        <div class="metric-content">
+                            <h3>Estimated Profit</h3>
+                            <p class="metric-value" id="dash-profit">₹0.00</p>
+                            <span class="metric-label">Revenue - Purchases</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card inventory-value">
+                        <div class="metric-icon">📦</div>
+                        <div class="metric-content">
+                            <h3>Inventory Value</h3>
+                            <p class="metric-value" id="dash-inventory-value">₹0.00</p>
+                            <span class="metric-label">Current stock worth</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card pending">
+                        <div class="metric-icon">⏳</div>
+                        <div class="metric-content">
+                            <h3>Pending Payments</h3>
+                            <p class="metric-value" id="dash-pending-payments">₹0.00</p>
+                            <span class="metric-label">To be collected</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Grid -->
+                <div class="dashboard-grid-compact">
+                    <!-- Sales Overview -->
+                    <div class="dashboard-card-compact">
+                        <h3>📊 Sales Overview</h3>
+                        <div class="stats-grid-compact">
+                            <div class="stat-box">
+                                <span class="stat-label-compact">Total Bills</span>
+                                <span class="stat-number-compact" id="dash-total-bills">0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label-compact">Paid</span>
+                                <span class="stat-number-compact success" id="dash-paid-bills">0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label-compact">Pending</span>
+                                <span class="stat-number-compact danger" id="dash-pending-bills">0</span>
+                            </div>
+                        </div>
+                        <div class="progress-compact">
+                            <div class="progress-label-compact">
+                                <span>Collection Rate</span>
+                                <span id="dash-collection-rate">0%</span>
+                            </div>
+                            <div class="progress-bar-compact">
+                                <div class="progress-fill success" id="dash-collection-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Inventory Status -->
+                    <div class="dashboard-card-compact">
+                        <h3>📦 Inventory Status</h3>
+                        <div class="stats-grid-compact">
+                            <div class="stat-box">
+                                <span class="stat-label-compact">Products</span>
+                                <span class="stat-number-compact" id="dash-total-products">0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label-compact">Low Stock</span>
+                                <span class="stat-number-compact warning" id="dash-low-stock">0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label-compact">Out of Stock</span>
+                                <span class="stat-number-compact danger" id="dash-out-stock">0</span>
+                            </div>
+                        </div>
+                        <div class="alerts-compact" id="dash-inventory-alerts">
+                            <!-- Alerts populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Purchase Summary -->
+                    <div class="dashboard-card-compact">
+                        <h3>🛒 Purchase Summary</h3>
+                        <div class="stats-grid-compact">
+                            <div class="stat-box">
+                                <span class="stat-label-compact">Total</span>
+                                <span class="stat-number-compact" id="dash-total-purchases">₹0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label-compact">Orders</span>
+                                <span class="stat-number-compact" id="dash-purchase-count">0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label-compact">Suppliers</span>
+                                <span class="stat-number-compact" id="dash-supplier-count">0</span>
+                            </div>
+                        </div>
+                        <div class="progress-compact">
+                            <div class="progress-label-compact">
+                                <span>Payment Rate</span>
+                                <span id="dash-supplier-payment-rate">0%</span>
+                            </div>
+                            <div class="progress-bar-compact">
+                                <div class="progress-fill success" id="dash-supplier-payment-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Customer Insights -->
+                    <div class="dashboard-card-compact">
+                        <h3>👥 Customer Insights</h3>
+                        <div class="stats-grid-compact">
+                            <div class="stat-box">
+                                <span class="stat-label-compact">Customers</span>
+                                <span class="stat-number-compact" id="dash-customer-count">0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label-compact">Avg Bill</span>
+                                <span class="stat-number-compact" id="dash-avg-bill">₹0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label-compact">GST</span>
+                                <span class="stat-number-compact" id="dash-gst-collected">₹0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top Products -->
+                    <div class="dashboard-card-compact full-width-compact">
+                        <h3>🏆 Top Selling Products</h3>
+                        <div class="top-products-compact" id="dash-top-products">
+                            <!-- Products populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="dashboard-card-compact full-width-compact">
+                        <h3>📋 Recent Activity</h3>
+                        <div class="recent-activity-compact" id="dash-recent-activity">
+                            <!-- Activity populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Inventory View -->
+            <div id="inventory-view" class="view active">
+                <div class="view-header">
+                    <h1>Inventory Management</h1>
+                    <button class="btn btn-primary" id="add-item-btn" onclick="showAddItemModal()">
+                        <span>+</span> Add Item
+                    </button>
+                </div>
+                
+                <div class="search-bar">
+                    <input type="text" id="search-inventory" placeholder="Search products..." onkeyup="filterInventory()">
+                </div>
+
+                <div class="table-container">
+                    <table id="inventory-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>HSN/SAC</th>
+                                <th>Size</th>
+                                <th>Unit</th>
+                                <th>Colour</th>
+                                <th>Stock</th>
+                                <th>Price (₹)</th>
+                                <th>GST %</th>
+                                <th>Taxed Price (₹)</th>
+                                <th id="actions-header">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Purchases View (Owner Only) -->
+            <div id="purchases-view" class="view">
+                <div class="view-header">
+                    <h1>Purchase Records</h1>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn btn-secondary" onclick="showSupplierReports()">
+                            📊 Supplier Reports
+                        </button>
+                        <button class="btn btn-primary" onclick="showAddPurchaseModal()">
+                            <span>+</span> Add Purchase
+                        </button>
+                    </div>
+                </div>
+
+                <div class="search-bar">
+                    <input type="text" id="search-purchases" placeholder="🔍 Search by supplier name, invoice number, date..." onkeyup="filterPurchases()">
+                </div>
+
+                <div class="table-container">
+                    <table id="purchases-table">
+                        <thead>
+                            <tr>
+                                <th>Purchase #</th>
+                                <th>Date</th>
+                                <th>Supplier Name</th>
+                                <th>Invoice No.</th>
+                                <th>Items</th>
+                                <th>Subtotal (₹)</th>
+                                <th>GST (₹)</th>
+                                <th>Total (₹)</th>
+                                <th>Payment Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="purchases-tbody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="sales-summary">
+                    <div class="stat-card">
+                        <h3>Total Purchases</h3>
+                        <p class="stat-value" id="purchases-total">₹0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Purchase Orders</h3>
+                        <p class="stat-value" id="purchases-count">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Pending Payments</h3>
+                        <p class="stat-value" id="purchases-pending">₹0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Suppliers</h3>
+                        <p class="stat-value" id="suppliers-count">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sales View -->
+            <div id="sales-view" class="view">
+                <div class="view-header">
+                    <h1>Sales Records</h1>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn btn-secondary" onclick="showCustomerReports()">
+                            📊 Customer Reports
+                        </button>
+                        <button class="btn btn-primary" onclick="switchView('billing')">
+                            <span>+</span> New Sale
+                        </button>
+                    </div>
+                </div>
+
+                <div class="search-bar">
+                    <input type="text" id="search-sales" placeholder="Search by customer name, bill number..." onkeyup="filterSales()">
+                </div>
+
+                <div class="table-container">
+                    <table id="sales-table">
+                        <thead>
+                            <tr>
+                                <th>Bill #</th>
+                                <th>Date</th>
+                                <th>Customer Name</th>
+                                <th>Phone</th>
+                                <th>GST Number</th>
+                                <th>State</th>
+                                <th>Items</th>
+                                <th>Subtotal (₹)</th>
+                                <th>GST (₹)</th>
+                                <th>Total (₹)</th>
+                                <th>Payment Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sales-tbody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="sales-summary">
+                    <div class="stat-card">
+                        <h3>Total Sales</h3>
+                        <p class="stat-value" id="sales-total">₹0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Bills</h3>
+                        <p class="stat-value" id="sales-count">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total GST Collected</h3>
+                        <p class="stat-value" id="sales-gst">₹0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Pending Payments</h3>
+                        <p class="stat-value" id="sales-pending">₹0.00</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Billing View -->
+            <div id="billing-view" class="view">
+                <div class="view-header">
+                    <h1>Generate Bill</h1>
+                    <button class="btn btn-secondary" onclick="viewBillHistory()">View History</button>
+                </div>
+
+                <div class="billing-container">
+                    <div class="customer-info">
+                        <h3>Customer Information</h3>
+                        <input type="text" id="customer-search" placeholder="Search by Name or Phone..." list="customer-list">
+                        <datalist id="customer-list"></datalist>
+                        <input type="text" id="customer-name" placeholder="Customer Name *" required>
+                        <input type="text" id="customer-phone" placeholder="Phone Number">
+                        <input type="text" id="customer-gst" placeholder="GST Number (Optional)">
+                        <input type="text" id="customer-address" placeholder="Address">
+                        <select id="customer-state" required>
+                            <option value="">Select State *</option>
+                            <option value="same">Same State (SGST + CGST)</option>
+                            <option value="other">Other State (IGST)</option>
+                        </select>
+                        <select id="customer-payment-status" required>
+                            <option value="">Payment Status *</option>
+                            <option value="paid">✅ Paid</option>
+                            <option value="pending">⏳ Pending</option>
+                            <option value="partial">💰 Partial</option>
+                        </select>
+                    </div>
+
+                    <div class="bill-items">
+                        <h3>Bill Items</h3>
+                        <div class="add-item-row">
+                            <select id="product-select">
+                                <option value="">Select Product</option>
+                            </select>
+                            <input type="number" id="item-quantity" placeholder="Qty" min="1">
+                            <input type="number" id="item-rate" placeholder="Rate (₹)" step="0.01" min="0">
+                            <button class="btn btn-primary" onclick="addBillItem()">Add</button>
+                        </div>
+
+                        <table class="bill-table">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Item Name</th>
+                                    <th>Size</th>
+                                    <th>Qty</th>
+                                    <th>Rate (₹)</th>
+                                    <th>Amount (₹)</th>
+                                    <th>GST %</th>
+                                    <th>GST (₹)</th>
+                                    <th>Total (₹)</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="bill-items-tbody">
+                            </tbody>
+                        </table>
+
+                        <div class="bill-summary">
+                            <div class="summary-row">
+                                <span>Subtotal (Before Tax):</span>
+                                <span id="subtotal">₹0.00</span>
+                            </div>
+                            <div id="sgst-row" class="summary-row" style="display: none;">
+                                <span>SGST:</span>
+                                <span id="sgst">₹0.00</span>
+                            </div>
+                            <div id="cgst-row" class="summary-row" style="display: none;">
+                                <span>CGST:</span>
+                                <span id="cgst">₹0.00</span>
+                            </div>
+                            <div id="igst-row" class="summary-row" style="display: none;">
+                                <span>IGST:</span>
+                                <span id="igst">₹0.00</span>
+                            </div>
+                            <div class="summary-row total">
+                                <span>Total Amount:</span>
+                                <span id="total">₹0.00</span>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary btn-large" onclick="generateBill()">Generate Bill</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Bill History Modal -->
+    <div id="bill-history-modal" class="modal">
+        <div class="modal-content" style="max-width: 1000px;">
+            <div class="modal-header">
+                <h2>📋 Recent Bills History</h2>
+                <span class="close" onclick="closeBillHistoryModal()">&times;</span>
+            </div>
+            <div class="table-container" style="max-height: 70vh; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Bill #</th>
+                            <th>Date & Time</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Items</th>
+                            <th>Amount</th>
+                            <th>Payment Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bill-history-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Bill Details Modal -->
+    <div id="bill-details-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>Bill Details</h2>
+                <span class="close" onclick="closeBillDetailsModal()">&times;</span>
+            </div>
+            <div id="bill-details-content">
+                <!-- Bill details will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Item Modal -->
+    <div id="add-item-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Product</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="add-item-form" onsubmit="addInventoryItem(event)">
+                <input type="text" id="product-name" placeholder="Product Name *" required>
+                <textarea id="product-description" placeholder="Description"></textarea>
+                <input type="text" id="product-hsn" placeholder="HSN/SAC Code (e.g., 72142000)">
+                <div class="form-row">
+                    <input type="text" id="product-size" placeholder="Size *" required style="flex: 2;">
+                    <select id="product-unit" required style="flex: 1;">
+                        <option value="">Unit *</option>
+                        <option value="kg">kg</option>
+                        <option value="bag">bag</option>
+                        <option value="pcs">pcs</option>
+                        <option value="m3">m3</option>
+                        <option value="ft">ft</option>
+                        <option value="m">m</option>
+                        <option value="mm">mm</option>
+                        <option value="inch">inch</option>
+                        <option value="cm">cm</option>
+                        <option value="sq.ft">sq.ft</option>
+                        <option value="sq.m">sq.m</option>
+                        <option value="ltr">ltr</option>
+                    </select>
+                </div>
+                <input type="text" id="product-colour" placeholder="Colour">
+                <input type="number" id="product-price" placeholder="Unit Price (₹) *" step="0.01" min="0" required>
+                <select id="product-gst" required>
+                    <option value="">Select GST Rate *</option>
+                    <option value="0">0% GST</option>
+                    <option value="5">5% GST</option>
+                    <option value="12">12% GST</option>
+                    <option value="18">18% GST</option>
+                    <option value="28">28% GST</option>
+                </select>
+                <button type="submit" class="btn btn-primary">Add Product</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Stock Modal -->
+    <div id="add-stock-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Stock</h2>
+                <span class="close" onclick="closeStockModal()">&times;</span>
+            </div>
+            <form id="add-stock-form" onsubmit="addStock(event)">
+                <input type="hidden" id="stock-item-id">
+                <div class="stock-info">
+                    <p><strong>Product:</strong> <span id="stock-item-name"></span></p>
+                    <p><strong>Current Stock:</strong> <span id="stock-item-current"></span></p>
+                </div>
+                <input type="number" id="stock-quantity" placeholder="Quantity to Add *" min="1" required>
+                <button type="submit" class="btn btn-primary">Add Stock</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Purchase Modal -->
+    <div id="add-purchase-modal" class="modal">
+        <div class="modal-content" style="max-width: 1000px;">
+            <div class="modal-header">
+                <h2>Add Purchase Order</h2>
+                <span class="close" onclick="closePurchaseModal()">&times;</span>
+            </div>
+            <form id="add-purchase-form" onsubmit="addPurchase(event)">
+                <div class="purchase-form-grid">
+                    <div class="purchase-form-section">
+                        <h4>📦 Supplier Information</h4>
+                        <input type="text" id="purchase-supplier-search" placeholder="🔍 Search Supplier..." list="supplier-list">
+                        <datalist id="supplier-list"></datalist>
+                        <input type="text" id="purchase-supplier-name" placeholder="Supplier Name *" required>
+                        <input type="text" id="purchase-supplier-phone" placeholder="Supplier Phone">
+                        <input type="text" id="purchase-supplier-gst" placeholder="Supplier GST Number">
+                    </div>
+                    <div class="purchase-form-section">
+                        <h4>📄 Purchase Details</h4>
+                        <input type="text" id="purchase-invoice" placeholder="Invoice Number *" required>
+                        <input type="date" id="purchase-date" required>
+                        <select id="purchase-payment-status" required>
+                            <option value="">Payment Status *</option>
+                            <option value="paid">✅ Paid</option>
+                            <option value="pending">⏳ Pending</option>
+                            <option value="partial">💰 Partial</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="purchase-items-section">
+                    <h3>🛒 Purchase Items</h3>
+                    <div id="purchase-items-container">
+                        <div class="purchase-item-row">
+                            <select class="purchase-product" required>
+                                <option value="">Select Product</option>
+                            </select>
+                            <input type="number" class="purchase-qty" placeholder="Quantity" min="1" required>
+                            <input type="number" class="purchase-rate" placeholder="Rate (₹)" step="0.01" min="0" required>
+                            <button type="button" class="btn btn-primary" onclick="addPurchaseItemRow()">+</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-large">💾 Save Purchase</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Supplier Reports Modal -->
+    <div id="supplier-reports-modal" class="modal">
+        <div class="modal-content" style="max-width: 1200px;">
+            <div class="modal-header">
+                <h2>📊 Supplier Reports</h2>
+                <span class="close" onclick="closeSupplierReportsModal()">&times;</span>
+            </div>
+            <div class="modal-search-bar">
+                <input type="text" id="search-supplier-reports" placeholder="🔍 Search by supplier name or GST number..." onkeyup="filterSupplierReports()">
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Supplier Name</th>
+                            <th>Phone</th>
+                            <th>GST Number</th>
+                            <th>Total Orders</th>
+                            <th>Total Amount (₹)</th>
+                            <th>Paid (₹)</th>
+                            <th>Outstanding (₹)</th>
+                            <th>Status</th>
+                            <th>Last Purchase</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="supplier-reports-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supplier Details Modal -->
+    <div id="supplier-details-modal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>📊 Supplier Details</h2>
+                <span class="close" onclick="closeSupplierDetailsModal()">&times;</span>
+            </div>
+            <div id="supplier-details-content">
+                <!-- Content will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Purchase Details Modal -->
+    <div id="purchase-details-modal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>📦 Purchase Order Details</h2>
+                <span class="close" onclick="closePurchaseDetailsModal()">&times;</span>
+            </div>
+            <div id="purchase-details-content">
+                <!-- Content will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Reports Modal -->
+    <div id="customer-reports-modal" class="modal">
+        <div class="modal-content" style="max-width: 1200px;">
+            <div class="modal-header">
+                <h2>📊 Customer Reports</h2>
+                <span class="close" onclick="closeCustomerReportsModal()">&times;</span>
+            </div>
+            <div class="modal-search-bar">
+                <input type="text" id="search-customer-reports" placeholder="🔍 Search by customer name or GST number..." onkeyup="filterCustomerReports()">
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Customer Name</th>
+                            <th>Phone</th>
+                            <th>GST Number</th>
+                            <th>Total Orders</th>
+                            <th>Total Amount (₹)</th>
+                            <th>Paid (₹)</th>
+                            <th>Outstanding (₹)</th>
+                            <th>Status</th>
+                            <th>Last Purchase</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customer-reports-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Details Modal -->
+    <div id="customer-details-modal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>📊 Customer Details</h2>
+                <span class="close" onclick="closeCustomerDetailsModal()">&times;</span>
+            </div>
+            <div id="customer-details-content">
+                <!-- Content will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Payment Status Modal -->
+    <div id="update-payment-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>💳 Update Payment Status</h2>
+                <span class="close" onclick="closeUpdatePaymentModal()">&times;</span>
+            </div>
+            <div class="payment-update-content">
+                <div class="bill-info-card">
+                    <p><strong>Bill #:</strong> <span id="update-bill-id"></span></p>
+                    <p><strong>Current Status:</strong> <span id="update-current-status"></span></p>
+                </div>
+                
+                <h3 style="margin: 1.5rem 0 1rem 0; color: var(--text-primary);">Select New Status:</h3>
+                
+                <div class="payment-status-options">
+                    <div class="payment-option" onclick="selectPaymentStatus('paid')">
+                        <div class="payment-option-icon">✅</div>
+                        <div class="payment-option-text">
+                            <div class="payment-option-title">Paid</div>
+                            <div class="payment-option-desc">Payment received in full</div>
+                        </div>
+                    </div>
+                    
+                    <div class="payment-option" onclick="selectPaymentStatus('pending')">
+                        <div class="payment-option-icon">⏳</div>
+                        <div class="payment-option-text">
+                            <div class="payment-option-title">Pending</div>
+                            <div class="payment-option-desc">Payment not yet received</div>
+                        </div>
+                    </div>
+                    
+                    <div class="payment-option" onclick="selectPaymentStatus('partial')">
+                        <div class="payment-option-icon">💰</div>
+                        <div class="payment-option-text">
+                            <div class="payment-option-title">Partial</div>
+                            <div class="payment-option-desc">Partial payment received</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Partial Payment Input (Hidden by default) -->
+                <div id="partial-payment-input" style="display: none; margin-top: 1.5rem;">
+                    <div class="bill-info-card">
+                        <h4 style="margin-bottom: 1rem; color: var(--primary);">Enter Partial Payment Details</h4>
+                        <p><strong>Total Amount:</strong> <span id="bill-total-amount">₹0.00</span></p>
+                        <p><strong>Already Paid:</strong> <span id="bill-already-paid">₹0.00</span></p>
+                        <div style="margin: 1rem 0;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Amount Received Now:</label>
+                            <input type="number" id="partial-amount-input" placeholder="Enter amount received" step="0.01" min="0" 
+                                   style="width: 100%; padding: 0.875rem; border: 2px solid var(--border); border-radius: 10px; font-size: 1rem;"
+                                   oninput="calculateBillPending()">
+                        </div>
+                        <p><strong>Remaining Pending:</strong> <span id="bill-remaining-pending" style="color: var(--danger); font-size: 1.25rem;">₹0.00</span></p>
+                        <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="confirmPartialPayment()">
+                            ✅ Confirm Partial Payment
+                        </button>
+                        <button class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;" onclick="cancelPartialPayment()">
+                            ❌ Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Purchase Payment Status Modal -->
+    <div id="update-purchase-payment-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>💳 Update Purchase Payment Status</h2>
+                <span class="close" onclick="closeUpdatePurchasePaymentModal()">&times;</span>
+            </div>
+            <div class="payment-update-content">
+                <div class="bill-info-card">
+                    <p><strong>Purchase #:</strong> <span id="update-purchase-id"></span></p>
+                    <p><strong>Current Status:</strong> <span id="update-purchase-current-status"></span></p>
+                </div>
+                
+                <h3 style="margin: 1.5rem 0 1rem 0; color: var(--text-primary);">Select New Status:</h3>
+                
+                <div class="payment-status-options">
+                    <div class="payment-option" onclick="selectPurchasePaymentStatus('paid')">
+                        <div class="payment-option-icon">✅</div>
+                        <div class="payment-option-text">
+                            <div class="payment-option-title">Paid</div>
+                            <div class="payment-option-desc">Payment made in full</div>
+                        </div>
+                    </div>
+                    
+                    <div class="payment-option" onclick="selectPurchasePaymentStatus('pending')">
+                        <div class="payment-option-icon">⏳</div>
+                        <div class="payment-option-text">
+                            <div class="payment-option-title">Pending</div>
+                            <div class="payment-option-desc">Payment not yet made</div>
+                        </div>
+                    </div>
+                    
+                    <div class="payment-option" onclick="selectPurchasePaymentStatus('partial')">
+                        <div class="payment-option-icon">💰</div>
+                        <div class="payment-option-text">
+                            <div class="payment-option-title">Partial</div>
+                            <div class="payment-option-desc">Partial payment made</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Partial Payment Input (Hidden by default) -->
+                <div id="partial-purchase-payment-input" style="display: none; margin-top: 1.5rem;">
+                    <div class="bill-info-card">
+                        <h4 style="margin-bottom: 1rem; color: var(--primary);">Enter Partial Payment Details</h4>
+                        <p><strong>Total Amount:</strong> <span id="purchase-total-amount">₹0.00</span></p>
+                        <p><strong>Already Paid:</strong> <span id="purchase-already-paid">₹0.00</span></p>
+                        <div style="margin: 1rem 0;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Amount Paid Now:</label>
+                            <input type="number" id="partial-purchase-amount-input" placeholder="Enter amount paid" step="0.01" min="0" 
+                                   style="width: 100%; padding: 0.875rem; border: 2px solid var(--border); border-radius: 10px; font-size: 1rem;"
+                                   oninput="calculatePurchasePending()">
+                        </div>
+                        <p><strong>Remaining Pending:</strong> <span id="purchase-remaining-pending" style="color: var(--danger); font-size: 1.25rem;">₹0.00</span></p>
+                        <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="confirmPartialPurchasePayment()">
+                            ✅ Confirm Partial Payment
+                        </button>
+                        <button class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;" onclick="cancelPartialPurchasePayment()">
+                            ❌ Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script src="api-service.js?v=2.0"></script>
+    <script src="realtime-sync.js?v=1.0"></script>
+    <script src="auth.js?v=3.1"></script>
+    <script src="app.js?v=3.1"></script>
+    
+    <!-- PWA Installation Script -->
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+
+        // PWA Install Prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button/banner
+            showInstallPromotion();
+        });
+
+        function showInstallPromotion() {
+            // Create install banner
+            const installBanner = document.createElement('div');
+            installBanner.id = 'install-banner';
+            installBanner.innerHTML = `
+                <div style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); 
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                            color: white; padding: 15px 25px; border-radius: 50px; 
+                            box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 10000; 
+                            display: flex; align-items: center; gap: 15px; max-width: 90%;">
+                    <span style="font-weight: 600;">📱 Install Plastiwood App</span>
+                    <button onclick="installPWA()" style="background: white; color: #667eea; 
+                            border: none; padding: 8px 20px; border-radius: 20px; 
+                            font-weight: 600; cursor: pointer;">Install</button>
+                    <button onclick="dismissInstall()" style="background: transparent; 
+                            color: white; border: 1px solid white; padding: 8px 15px; 
+                            border-radius: 20px; cursor: pointer;">Later</button>
+                </div>
+            `;
+            document.body.appendChild(installBanner);
+        }
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('✅ User accepted the install prompt');
+                    }
+                    deferredPrompt = null;
+                    dismissInstall();
+                });
+            }
+        }
+
+        function dismissInstall() {
+            const banner = document.getElementById('install-banner');
+            if (banner) banner.remove();
+        }
+
+        // Track installation
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ PWA was installed');
+            dismissInstall();
+        });
+    </script>
+</body>
+</html>
