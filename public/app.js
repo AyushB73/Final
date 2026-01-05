@@ -1926,6 +1926,19 @@ async function loadBills() {
     try {
         bills = await APIService.getBills();
         console.log(`✅ Loaded ${bills.length} bills`);
+        console.log('Bills data:', bills);
+        
+        // Log each bill's structure
+        bills.forEach(bill => {
+            console.log(`Bill #${bill.id}:`, {
+                id: bill.id,
+                hasCustomer: !!bill.customer,
+                hasItems: !!bill.items,
+                itemsCount: bill.items?.length || 0,
+                customer: bill.customer,
+                items: bill.items
+            });
+        });
     } catch (error) {
         console.error('Error loading bills:', error);
         bills = [];
@@ -3516,13 +3529,25 @@ function numberToWords(num) {
 
 // Function to download PDF for existing bills
 function downloadBillPDF(billId) {
-    console.log('downloadBillPDF called with billId:', billId);
-    const bill = bills.find(b => b.id == billId); // Use == for type coercion
+    console.log('downloadBillPDF called with billId:', billId, 'type:', typeof billId);
+    console.log('Available bills:', bills);
+    console.log('Bills IDs:', bills.map(b => ({ id: b.id, type: typeof b.id })));
+    
+    const bill = bills.find(b => {
+        console.log(`Comparing b.id (${b.id}, ${typeof b.id}) with billId (${billId}, ${typeof billId})`);
+        return b.id == billId;
+    });
+    
+    console.log('Found bill:', bill);
+    
     if (bill) {
+        console.log('Bill customer:', bill.customer);
+        console.log('Bill items:', bill.items);
         generateBillPDF(bill);
     } else {
         console.error('Bill not found with ID:', billId);
-        alert('Bill not found!');
+        console.error('Available bill IDs:', bills.map(b => b.id));
+        alert('Bill not found! Please refresh the page and try again.');
     }
 }
 
