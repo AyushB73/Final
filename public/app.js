@@ -1985,6 +1985,15 @@ function renderSales() {
         console.log('Bill items:', bill.items);
         console.log('Items type:', typeof bill.items, 'Is array:', Array.isArray(bill.items));
         
+        // Normalize bill format - handle both old and new formats
+        const customer = bill.customer || {
+            name: bill.customerName,
+            phone: bill.customerPhone,
+            gst: bill.customerGst,
+            address: bill.customerAddress,
+            state: bill.customerState
+        };
+        
         const row = document.createElement('tr');
         const date = new Date(bill.createdAt).toLocaleDateString('en-IN');
         const time = new Date(bill.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
@@ -1994,7 +2003,7 @@ function renderSales() {
         const itemCount = items.length;
         console.log('Item count:', itemCount);
         
-        const stateText = bill.customer.state === 'same' ? 'Same State' : 'Other State';
+        const stateText = customer.state === 'same' ? 'Same State' : 'Other State';
         
         let paymentStatusBadge = '';
         const paymentStatus = bill.paymentStatus || 'paid'; // Default to paid for old bills
@@ -2009,14 +2018,14 @@ function renderSales() {
         row.innerHTML = `
             <td><strong>#${bill.id}</strong></td>
             <td>${date}<br><small>${time}</small></td>
-            <td>${bill.customer.name}</td>
-            <td>${bill.customer.phone || '-'}</td>
-            <td>${bill.customer.gst || '-'}</td>
+            <td>${customer.name}</td>
+            <td>${customer.phone || '-'}</td>
+            <td>${customer.gst || '-'}</td>
             <td>${stateText}</td>
             <td>${itemCount} item${itemCount > 1 ? 's' : ''}</td>
-            <td>₹${bill.subtotal.toFixed(2)}</td>
-            <td>₹${bill.totalGST.toFixed(2)}</td>
-            <td><strong>₹${bill.total.toFixed(2)}</strong></td>
+            <td>₹${(bill.subtotal || 0).toFixed(2)}</td>
+            <td>₹${(bill.totalGST || 0).toFixed(2)}</td>
+            <td><strong>₹${(bill.total || 0).toFixed(2)}</strong></td>
             <td>${paymentStatusBadge}</td>
             <td class="actions-cell">
                 <button class="action-btn action-btn-sm btn-view" data-bill-id="${bill.id}" title="View Details">👁️</button>
@@ -2144,6 +2153,15 @@ function viewBillDetailsModal(billId) {
     
     console.log('Found bill:', bill);
     
+    // Normalize bill format - handle both old and new formats
+    const customer = bill.customer || {
+        name: bill.customerName,
+        phone: bill.customerPhone,
+        gst: bill.customerGst,
+        address: bill.customerAddress,
+        state: bill.customerState
+    };
+    
     const date = new Date(bill.createdAt).toLocaleDateString('en-IN');
     const time = new Date(bill.createdAt).toLocaleTimeString('en-IN');
     
@@ -2164,23 +2182,24 @@ function viewBillDetailsModal(billId) {
         </tr>
     `).join('');
     
+    const gstBreakdown = bill.gstBreakdown || {};
     let gstBreakdownHtml = '';
-    if (bill.gstBreakdown && bill.gstBreakdown.type === 'SGST+CGST') {
+    if (gstBreakdown.type === 'SGST+CGST') {
         gstBreakdownHtml = `
             <div class="summary-row">
                 <span>SGST:</span>
-                <span>₹${(bill.gstBreakdown.sgst || 0).toFixed(2)}</span>
+                <span>₹${(gstBreakdown.sgst || 0).toFixed(2)}</span>
             </div>
             <div class="summary-row">
                 <span>CGST:</span>
-                <span>₹${(bill.gstBreakdown.cgst || 0).toFixed(2)}</span>
+                <span>₹${(gstBreakdown.cgst || 0).toFixed(2)}</span>
             </div>
         `;
-    } else if (bill.gstBreakdown) {
+    } else if (gstBreakdown.type === 'IGST') {
         gstBreakdownHtml = `
             <div class="summary-row">
                 <span>IGST:</span>
-                <span>₹${(bill.gstBreakdown.igst || 0).toFixed(2)}</span>
+                <span>₹${(gstBreakdown.igst || 0).toFixed(2)}</span>
             </div>
         `;
     }
@@ -2189,11 +2208,11 @@ function viewBillDetailsModal(billId) {
         <div class="bill-info">
             <h3>Bill #${bill.id}</h3>
             <p><strong>Date:</strong> ${date} ${time}</p>
-            <p><strong>Customer:</strong> ${bill.customer?.name || 'N/A'}</p>
-            <p><strong>Phone:</strong> ${bill.customer?.phone || 'N/A'}</p>
-            <p><strong>GST Number:</strong> ${bill.customer?.gst || 'N/A'}</p>
-            <p><strong>Address:</strong> ${bill.customer?.address || 'N/A'}</p>
-            <p><strong>State:</strong> ${bill.customer?.state === 'same' ? 'Same State (SGST+CGST)' : 'Other State (IGST)'}</p>
+            <p><strong>Customer:</strong> ${customer.name || 'N/A'}</p>
+            <p><strong>Phone:</strong> ${customer.phone || 'N/A'}</p>
+            <p><strong>GST Number:</strong> ${customer.gst || 'N/A'}</p>
+            <p><strong>Address:</strong> ${customer.address || 'N/A'}</p>
+            <p><strong>State:</strong> ${customer.state === 'same' ? 'Same State (SGST+CGST)' : 'Other State (IGST)'}</p>
             <p><strong>Payment Status:</strong> ${bill.paymentStatus === 'paid' ? '✅ Paid' : bill.paymentStatus === 'pending' ? '⏳ Pending' : bill.paymentStatus === 'partial' ? '💰 Partial' : '✅ Paid'}</p>
         </div>
         
@@ -3541,9 +3560,26 @@ function downloadBillPDF(billId) {
     console.log('Found bill:', bill);
     
     if (bill) {
-        console.log('Bill customer:', bill.customer);
-        console.log('Bill items:', bill.items);
-        generateBillPDF(bill);
+        // Normalize bill format - handle both old and new formats
+        const normalizedBill = {
+            ...bill,
+            customer: bill.customer || {
+                name: bill.customerName,
+                phone: bill.customerPhone,
+                gst: bill.customerGst,
+                address: bill.customerAddress,
+                state: bill.customerState
+            },
+            items: Array.isArray(bill.items) ? bill.items : [],
+            gstBreakdown: bill.gstBreakdown || {},
+            paymentTracking: bill.paymentTracking || {}
+        };
+        
+        console.log('Normalized bill:', normalizedBill);
+        console.log('Bill customer:', normalizedBill.customer);
+        console.log('Bill items:', normalizedBill.items);
+        
+        generateBillPDF(normalizedBill);
     } else {
         console.error('Bill not found with ID:', billId);
         console.error('Available bill IDs:', bills.map(b => b.id));
