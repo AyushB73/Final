@@ -2292,6 +2292,75 @@ function closeCustomerReportsModal() {
     document.getElementById('customer-reports-modal').classList.remove('active');
 }
 
+// Edit Customer
+function editCustomer(customerId) {
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) {
+        alert('Customer not found');
+        return;
+    }
+    
+    const newName = prompt('Enter Customer Name:', customer.name);
+    if (newName === null) return; // User cancelled
+    
+    if (!newName || newName.trim() === '') {
+        alert('Customer name cannot be empty');
+        return;
+    }
+    
+    const newPhone = prompt('Enter Phone Number:', customer.phone || '');
+    const newGst = prompt('Enter GST Number:', customer.gst || '');
+    const newAddress = prompt('Enter Address:', customer.address || '');
+    const newState = prompt('Enter State (same/other):', customer.state || '');
+    
+    const updatedCustomer = {
+        name: newName.trim(),
+        phone: newPhone ? newPhone.trim() : null,
+        gst: newGst ? newGst.trim() : null,
+        address: newAddress ? newAddress.trim() : null,
+        state: newState ? newState.trim() : null
+    };
+    
+    APIService.updateCustomer(customerId, updatedCustomer)
+        .then(() => {
+            alert('Customer updated successfully!');
+            loadCustomers().then(() => {
+                renderCustomerReports();
+            });
+        })
+        .catch(error => {
+            console.error('Error updating customer:', error);
+            alert('Failed to update customer. Please try again.');
+        });
+}
+
+// Delete Customer
+async function deleteCustomer(customerId, customerName) {
+    // Check if customer has any bills
+    const customerBills = bills.filter(b => 
+        b.customer.name.toLowerCase() === customerName.toLowerCase()
+    );
+    
+    if (customerBills.length > 0) {
+        const confirmMsg = `⚠️ Warning: ${customerName} has ${customerBills.length} bill(s) in the system.\n\nDeleting this customer will NOT delete the bill records, but the customer information will be removed.\n\nAre you sure you want to delete this customer?`;
+        
+        if (!confirm(confirmMsg)) return;
+    } else {
+        if (!confirm(`Are you sure you want to delete customer "${customerName}"?`)) return;
+    }
+    
+    try {
+        await APIService.deleteCustomer(customerId);
+        alert('Customer deleted successfully!');
+        await loadCustomers();
+        renderCustomerReports();
+    } catch (error) {
+        console.error('Error deleting customer:', error);
+        alert('Failed to delete customer. Please try again.');
+    }
+}
+
+
 function filterCustomerReports() {
     const search = document.getElementById('search-customer-reports').value.toLowerCase();
     const rows = document.querySelectorAll('#customer-reports-tbody tr');
@@ -2372,7 +2441,9 @@ function renderCustomerReports() {
             <td>${paymentStatus}</td>
             <td>${data.lastPurchase}</td>
             <td>
-                <button class="action-btn" onclick="viewCustomerDetails('${data.customer.name.replace(/'/g, "\\'")}')">View Details</button>
+                <button class="action-btn" onclick="viewCustomerDetails('${data.customer.name.replace(/'/g, "\\'")}')">View</button>
+                <button class="action-btn" onclick="editCustomer(${data.customer.id})">Edit</button>
+                <button class="action-btn delete" onclick="deleteCustomer(${data.customer.id}, '${data.customer.name.replace(/'/g, "\\'")}')">Delete</button>
             </td>
         `;
         tbody.appendChild(row);

@@ -124,6 +124,12 @@ class APIService {
         });
     }
 
+    static async deleteCustomer(id) {
+        return await this.request(`/api/customers/${id}`, {
+            method: 'DELETE'
+        });
+    }
+
     // Suppliers API
     static async getSuppliers() {
         return await this.request('/api/suppliers');

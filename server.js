@@ -685,6 +685,17 @@ app.put('/api/customers/:id', async (req, res) => {
   }
 });
 
+app.delete('/api/customers/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await query('DELETE FROM customers WHERE id=?', [id]);
+    res.json({ success: true, message: 'Customer deleted successfully' });
+  } catch (error) {
+    console.error('❌ Error deleting customer:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Suppliers Routes
 app.get('/api/suppliers', async (req, res) => {
   try {
