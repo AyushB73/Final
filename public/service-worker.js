@@ -1,5 +1,5 @@
 // Service Worker for Plastiwood Inventory PWA
-const CACHE_NAME = 'plastiwood-v2.0.0';
+const CACHE_NAME = 'plastiwood-v2.0.1';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -69,26 +69,36 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Clone the response
-        const responseClone = response.clone();
-        
-        // Update cache with new response
-        caches.open(CACHE_NAME).then(cache => {
-          cache.put(event.request, responseClone);
-        });
+        // Only cache GET requests
+        if (event.request.method === 'GET') {
+          // Clone the response
+          const responseClone = response.clone();
+          
+          // Update cache with new response
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseClone);
+          });
+        }
         
         return response;
       })
       .catch(() => {
-        // Network failed, try cache
-        return caches.match(event.request)
-          .then(response => {
-            if (response) {
-              return response;
-            }
-            // If not in cache, return offline page
-            return caches.match('/index.html');
-          });
+        // Network failed, try cache (only for GET requests)
+        if (event.request.method === 'GET') {
+          return caches.match(event.request)
+            .then(response => {
+              if (response) {
+                return response;
+              }
+              // If not in cache, return offline page
+              return caches.match('/index.html');
+            });
+        }
+        // For non-GET requests, return error
+        return new Response(
+          JSON.stringify({ error: 'Network request failed' }),
+          { headers: { 'Content-Type': 'application/json' } }
+        );
       })
   );
 });
