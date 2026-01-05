@@ -100,8 +100,13 @@ function toggleMenu() {
     console.log('Sidebar computed left:', window.getComputedStyle(sidebar).left);
 }
 
-// Make toggleMenu available globally
+// Make functions available globally
 window.toggleMenu = toggleMenu;
+window.viewBillDetailsModal = viewBillDetailsModal;
+window.downloadBillPDF = downloadBillPDF;
+window.closeBillDetailsModal = closeBillDetailsModal;
+window.deleteBill = deleteBill;
+window.updatePaymentStatus = updatePaymentStatus;
 
 // Role-based access control
 function applyRoleRestrictions(role) {
