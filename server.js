@@ -396,12 +396,22 @@ app.post('/api/bills', async (req, res) => {
   try {
     const { customer, items, subtotal, gstBreakdown, totalGST, total, paymentStatus, paymentTracking } = req.body;
     
+    console.log('POST /api/bills - Received data:');
+    console.log('Customer:', customer);
+    console.log('Items:', items);
+    console.log('Items count:', items?.length || 0);
+    console.log('Subtotal:', subtotal);
+    console.log('Total:', total);
+    
     // Ensure all values are defined (use null instead of undefined)
     const customerName = customer?.name || null;
     const customerPhone = customer?.phone || null;
     const customerGst = customer?.gst || null;
     const customerAddress = customer?.address || null;
     const customerState = customer?.state || null;
+    
+    const itemsJson = JSON.stringify(items || []);
+    console.log('Items JSON to save:', itemsJson);
     
     const result = await query(
       `INSERT INTO bills (customerName, customerPhone, customerGst, customerAddress, customerState, 
@@ -413,7 +423,7 @@ app.post('/api/bills', async (req, res) => {
         customerGst,
         customerAddress,
         customerState,
-        JSON.stringify(items),
+        itemsJson,
         subtotal || 0,
         JSON.stringify(gstBreakdown || {}),
         totalGST || 0,
@@ -423,11 +433,15 @@ app.post('/api/bills', async (req, res) => {
       ]
     );
     
+    console.log('Bill inserted with ID:', result.insertId);
+    
     const bill = {
       id: result.insertId,
       customer, items, subtotal, gstBreakdown, totalGST, total, paymentStatus, paymentTracking,
       createdAt: new Date()
     };
+    
+    console.log('Returning bill:', bill);
     
     // Emit real-time update to all connected clients (for owner to see sales)
     io.emit('bill:created', { bill });

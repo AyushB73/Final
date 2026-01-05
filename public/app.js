@@ -692,6 +692,10 @@ async function generateBill() {
         paymentStatus: paymentStatus
     };
     
+    console.log('Creating bill with data:', bill);
+    console.log('Items in bill:', bill.items);
+    console.log('Items count:', bill.items.length);
+    
     try {
         // Update inventory quantities in database
         for (const billItem of currentBillItems) {
@@ -703,7 +707,9 @@ async function generateBill() {
         }
         
         // Save bill to database
+        console.log('Sending bill to API:', bill);
         const savedBill = await APIService.addBill(bill);
+        console.log('Saved bill response:', savedBill);
         
         // Reload data to get fresh bills list
         await loadInventory();
