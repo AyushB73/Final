@@ -3273,3 +3273,345 @@ table td .action-btn {
         padding: 1.5rem;
     }
 }
+
+    }
+    
+    main {
+        padding: 0;
+    }
+    
+    .table-container {
+        border-radius: 0;
+    }
+}
+
+/* Settings View Styles */
+.settings-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.settings-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border);
+    transition: all 0.3s ease;
+}
+
+.settings-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.settings-card h3 {
+    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+    color: var(--primary);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border);
+}
+
+.settings-card input,
+.settings-card textarea {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    margin-bottom: 1rem;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.settings-card input:focus,
+.settings-card textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.settings-card textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.settings-display {
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 2px solid var(--border);
+}
+
+.settings-display h4 {
+    margin-bottom: 1rem;
+    color: var(--primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.settings-display p {
+    margin: 0.5rem 0;
+    font-size: 0.95rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.settings-display strong {
+    color: var(--text-secondary);
+    font-weight: 600;
+    min-width: 120px;
+}
+
+.settings-display span {
+    flex: 1;
+    text-align: right;
+    word-break: break-word;
+}
+
+/* Enhanced Mobile Responsive Styles for Settings */
+@media (max-width: 768px) {
+    .settings-container {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .settings-card {
+        padding: 1.5rem;
+    }
+    
+    .settings-card h3 {
+        font-size: 1.1rem;
+    }
+    
+    .settings-display p {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .settings-display strong {
+        min-width: auto;
+    }
+    
+    .settings-display span {
+        text-align: left;
+    }
+}
+
+/* Connection Status Mobile */
+@media (max-width: 768px) {
+    .connection-status {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.7rem;
+    }
+    
+    .status-dot {
+        width: 6px;
+        height: 6px;
+    }
+    
+    .status-text {
+        display: none;
+    }
+}
+
+/* Improved Table Scrolling on Mobile */
+@media (max-width: 768px) {
+    .table-container {
+        position: relative;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    
+    .table-container::after {
+        content: '← Scroll →';
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        background: rgba(102, 126, 234, 0.9);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        pointer-events: none;
+        animation: fadeInOut 3s ease-in-out infinite;
+    }
+    
+    @keyframes fadeInOut {
+        0%, 100% { opacity: 0; }
+        50% { opacity: 1; }
+    }
+    
+    /* Hide scroll hint after first scroll */
+    .table-container.scrolled::after {
+        display: none;
+    }
+}
+
+/* Better Action Buttons on Mobile */
+@media (max-width: 768px) {
+    .actions-cell {
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        padding: 0.5rem !important;
+    }
+    
+    .action-btn-sm {
+        padding: 0.4rem 0.6rem;
+        font-size: 1.1rem;
+        min-width: 36px;
+        height: 36px;
+    }
+}
+
+/* Improved Modal on Mobile */
+@media (max-width: 768px) {
+    .modal {
+        padding: 0.5rem;
+    }
+    
+    .modal-content {
+        max-height: 95vh;
+        border-radius: 16px;
+    }
+    
+    .bill-details-table {
+        font-size: 0.75rem;
+    }
+    
+    .bill-details-table th,
+    .bill-details-table td {
+        padding: 0.5rem 0.35rem;
+    }
+}
+
+/* Improved Form Inputs on Mobile */
+@media (max-width: 768px) {
+    input[type="text"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="email"],
+    select,
+    textarea {
+        font-size: 16px !important; /* Prevents iOS zoom */
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    
+    select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        padding-right: 2.5rem;
+    }
+}
+
+/* Better Touch Targets */
+@media (hover: none) and (pointer: coarse) {
+    .nav-btn,
+    .btn,
+    .action-btn,
+    button {
+        min-height: 44px;
+        padding: 0.75rem 1rem;
+    }
+    
+    .action-btn-sm {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    input,
+    select,
+    textarea {
+        min-height: 44px;
+    }
+}
+
+/* Landscape Orientation Optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+    .dashboard-metrics {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+    
+    .metric-card {
+        padding: 1rem;
+    }
+    
+    .metric-icon {
+        font-size: 2rem;
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
+    }
+    
+    .modal-content {
+        max-height: 85vh;
+    }
+}
+
+/* Very Small Screens */
+@media (max-width: 360px) {
+    .logo {
+        font-size: 0.9rem;
+    }
+    
+    .view-header h1 {
+        font-size: 1.1rem;
+    }
+    
+    .metric-value {
+        font-size: 1.25rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Accessibility Improvements */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    .btn,
+    .action-btn,
+    .badge {
+        border: 2px solid currentColor;
+    }
+    
+    .table-container {
+        border: 2px solid var(--text-primary);
+    }
+}
+
+/* Dark Mode Support (Optional) */
+@media (prefers-color-scheme: dark) {
+    /* Add dark mode styles if needed in future */
+}

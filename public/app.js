@@ -43,6 +43,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Setup event delegation for sales table action buttons
     setupSalesTableActions();
+    
+    // Setup mobile-friendly table scrolling
+    setupMobileTableScroll();
 });
 
 // Navigation
@@ -3538,3 +3541,20 @@ window.downloadBillPDF = downloadBillPDF;
 window.closeBillDetailsModal = closeBillDetailsModal;
 window.deleteBill = deleteBill;
 window.updatePaymentStatus = updatePaymentStatus;
+
+
+// Mobile-friendly table scrolling
+function setupMobileTableScroll() {
+    const tableContainers = document.querySelectorAll('.table-container');
+    
+    tableContainers.forEach(container => {
+        let hasScrolled = false;
+        
+        container.addEventListener('scroll', () => {
+            if (!hasScrolled) {
+                hasScrolled = true;
+                container.classList.add('scrolled');
+            }
+        }, { once: true });
+    });
+}
