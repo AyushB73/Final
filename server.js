@@ -211,8 +211,19 @@ app.get('/api/health', async (req, res) => {
 app.get('/api/inventory', async (req, res) => {
   try {
     const inventory = await query('SELECT * FROM inventory ORDER BY id ASC');
-    res.json(inventory);
+    
+    // Ensure numeric fields are numbers, not strings
+    const formattedInventory = inventory.map(item => ({
+      ...item,
+      quantity: parseInt(item.quantity) || 0,
+      minStock: parseInt(item.minStock) || 0,
+      price: parseFloat(item.price) || 0,
+      gst: parseFloat(item.gst) || 0
+    }));
+    
+    res.json(formattedInventory);
   } catch (error) {
+    console.error('Error fetching inventory:', error);
     res.status(500).json({ error: error.message });
   }
 });

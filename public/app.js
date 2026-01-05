@@ -160,8 +160,12 @@ function renderInventory() {
         const row = document.createElement('tr');
         const stockStatus = item.quantity < 5 ? 'badge-danger' : item.quantity < 20 ? 'badge-warning' : 'badge-success';
         
+        // Ensure price and gst are numbers (convert from string if needed)
+        const price = parseFloat(item.price) || 0;
+        const gst = parseFloat(item.gst) || 0;
+        
         // Calculate taxed price (price + GST)
-        const taxedPrice = item.price + (item.price * item.gst / 100);
+        const taxedPrice = price + (price * gst / 100);
         
         // Show actions only for owner
         const actionsHtml = userRole === 'owner' ? `
@@ -181,8 +185,8 @@ function renderInventory() {
             <td>${item.unit}</td>
             <td>${item.colour || '-'}</td>
             <td><span class="badge ${stockStatus}">${item.quantity}</span></td>
-            <td>₹${item.price.toFixed(2)}</td>
-            <td>${item.gst}%</td>
+            <td>₹${price.toFixed(2)}</td>
+            <td>${gst}%</td>
             <td><strong>₹${taxedPrice.toFixed(2)}</strong></td>
             ${actionsHtml}
         `;
@@ -390,7 +394,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (productId) {
                 const product = inventory.find(p => p.id === productId);
                 if (product) {
-                    document.getElementById('item-rate').value = product.price.toFixed(2);
+                    const price = parseFloat(product.price) || 0;
+                    document.getElementById('item-rate').value = price.toFixed(2);
                 }
             } else {
                 document.getElementById('item-rate').value = '';
