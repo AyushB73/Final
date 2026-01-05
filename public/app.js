@@ -3048,12 +3048,21 @@ function generateBillPDF(bill) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
-    // Company Details (You can customize these)
-    const companyName = "PLASTIWOOD";
-    const companyAddress = "Your Business Address Here";
-    const companyGST = "Your GST Number";
-    const companyPhone = "Your Phone Number";
-    const companyEmail = "your.email@example.com";
+    // Load saved company and banking details
+    const savedCompany = localStorage.getItem('companyDetails');
+    const savedBanking = localStorage.getItem('bankingDetails');
+    
+    const company = savedCompany ? JSON.parse(savedCompany) : {};
+    const banking = savedBanking ? JSON.parse(savedBanking) : {};
+    
+    // Company Details (use saved or defaults)
+    const companyName = company.name || "PLASTIWOOD";
+    const companyAddress = company.address || "Your Business Address Here";
+    const companyGST = company.gst || "Your GST Number";
+    const companyPhone = company.phone || "Your Phone Number";
+    const companyEmail = company.email || "your.email@example.com";
+    const companyPAN = company.pan || "";
+    const companyWebsite = company.website || "";
     
     // Colors
     const primaryColor = [37, 99, 235]; // Blue
@@ -3062,7 +3071,7 @@ function generateBillPDF(bill) {
     
     // Header with gradient effect
     doc.setFillColor(...primaryColor);
-    doc.rect(0, 0, 210, 40, 'F');
+    doc.rect(0, 0, 210, 45, 'F');
     
     // Company Name
     doc.setTextColor(255, 255, 255);
@@ -3078,13 +3087,21 @@ function generateBillPDF(bill) {
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
     doc.text(companyAddress, 105, 31, { align: 'center' });
-    doc.text(`GST: ${companyGST} | Phone: ${companyPhone} | Email: ${companyEmail}`, 105, 36, { align: 'center' });
+    
+    let contactLine = `Phone: ${companyPhone}`;
+    if (companyEmail) contactLine += ` | Email: ${companyEmail}`;
+    doc.text(contactLine, 105, 36, { align: 'center' });
+    
+    let gstLine = `GST: ${companyGST}`;
+    if (companyPAN) gstLine += ` | PAN: ${companyPAN}`;
+    if (companyWebsite) gstLine += ` | ${companyWebsite}`;
+    doc.text(gstLine, 105, 41, { align: 'center' });
     
     // Reset text color
     doc.setTextColor(...darkColor);
     
     // Invoice Details Box
-    let yPos = 50;
+    let yPos = 55;
     doc.setFillColor(...lightGray);
     doc.rect(10, yPos, 190, 30, 'F');
     
@@ -3235,6 +3252,41 @@ function generateBillPDF(bill) {
     doc.text('1. Goods once sold will not be taken back or exchanged', 15, yPos + 5);
     doc.text('2. All disputes are subject to local jurisdiction only', 15, yPos + 10);
     doc.text('3. Payment should be made within 30 days from the date of invoice', 15, yPos + 15);
+    
+    // Banking Details (if available)
+    if (Object.keys(banking).length > 0) {
+        yPos += 25;
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'bold');
+        doc.text('Banking Details:', 15, yPos);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8);
+        
+        let bankYPos = yPos + 5;
+        if (banking.bankName) {
+            doc.text(`Bank: ${banking.bankName}`, 15, bankYPos);
+            bankYPos += 4;
+        }
+        if (banking.accountName) {
+            doc.text(`Account Name: ${banking.accountName}`, 15, bankYPos);
+            bankYPos += 4;
+        }
+        if (banking.accountNumber) {
+            doc.text(`Account Number: ${banking.accountNumber}`, 15, bankYPos);
+            bankYPos += 4;
+        }
+        if (banking.ifsc) {
+            doc.text(`IFSC Code: ${banking.ifsc}`, 15, bankYPos);
+            bankYPos += 4;
+        }
+        if (banking.branch) {
+            doc.text(`Branch: ${banking.branch}`, 15, bankYPos);
+            bankYPos += 4;
+        }
+        if (banking.upiId) {
+            doc.text(`UPI ID: ${banking.upiId}`, 15, bankYPos);
+        }
+    }
     
     // Footer
     const pageHeight = doc.internal.pageSize.height;
