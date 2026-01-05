@@ -2028,8 +2028,10 @@ function renderSales() {
             <td><strong>₹${(bill.total || 0).toFixed(2)}</strong></td>
             <td>${paymentStatusBadge}</td>
             <td class="actions-cell">
-                
-                
+                <button class="action-btn action-btn-sm btn-view" data-bill-id="${bill.id}" title="View Details">👁️</button>
+                <button class="action-btn action-btn-sm btn-pdf" data-bill-id="${bill.id}" title="Download PDF">📄</button>
+                <button class="action-btn action-btn-sm btn-payment" data-bill-id="${bill.id}" title="Update Payment">💳</button>
+                <button class="action-btn action-btn-sm delete btn-delete" data-bill-id="${bill.id}" title="Delete">🗑️</button>
             </td>
         `;
         tbody.appendChild(row);
@@ -2083,9 +2085,15 @@ function setupSalesTableActions() {
             return;
         }
         
-        if (target.classList.contains('btn-pdf')) {
+        if (target.classList.contains('btn-view')) {
+            console.log('View button clicked');
+            viewBillDetailsModal(billId);
+        } else if (target.classList.contains('btn-pdf')) {
             console.log('PDF button clicked');
             downloadBillPDF(billId);
+        } else if (target.classList.contains('btn-payment')) {
+            console.log('Payment button clicked');
+            updatePaymentStatus(billId);
         } else if (target.classList.contains('btn-delete')) {
             console.log('Delete button clicked');
             deleteBill(billId);
@@ -2309,12 +2317,27 @@ async function selectPaymentStatus(newStatus) {
     const billId = window.currentBillIdForUpdate;
     if (!billId) return;
     
-    const bill = bills.find(b => b.id == billId); // Use == for type coercion
+    let bill = bills.find(b => b.id == billId); // Use == for type coercion
     if (!bill) {
         console.error('Bill not found with ID:', billId);
         alert('Bill not found!');
         return;
     }
+    
+    // Normalize bill format - handle both old and new formats
+    bill = {
+        ...bill,
+        customer: bill.customer || {
+            name: bill.customerName,
+            phone: bill.customerPhone,
+            gst: bill.customerGst,
+            address: bill.customerAddress,
+            state: bill.customerState
+        },
+        items: Array.isArray(bill.items) ? bill.items : [],
+        gstBreakdown: bill.gstBreakdown || {},
+        paymentTracking: bill.paymentTracking || {}
+    };
     
     // If partial payment, show input form
     if (newStatus === 'partial') {
@@ -2411,8 +2434,14 @@ function calculateBillPending() {
     const billId = window.currentBillIdForUpdate;
     if (!billId) return;
     
-    const bill = bills.find(b => b.id == billId); // Use == for type coercion
+    let bill = bills.find(b => b.id == billId); // Use == for type coercion
     if (!bill) return;
+    
+    // Normalize bill format
+    bill = {
+        ...bill,
+        paymentTracking: bill.paymentTracking || {}
+    };
     
     const amountReceived = parseFloat(document.getElementById('partial-amount-input').value) || 0;
     const newPending = bill.paymentTracking.amountPending - amountReceived;
@@ -2424,8 +2453,23 @@ async function confirmPartialPayment() {
     const billId = window.currentBillIdForUpdate;
     if (!billId) return;
     
-    const bill = bills.find(b => b.id == billId); // Use == for type coercion
+    let bill = bills.find(b => b.id == billId); // Use == for type coercion
     if (!bill) return;
+    
+    // Normalize bill format
+    bill = {
+        ...bill,
+        customer: bill.customer || {
+            name: bill.customerName,
+            phone: bill.customerPhone,
+            gst: bill.customerGst,
+            address: bill.customerAddress,
+            state: bill.customerState
+        },
+        items: Array.isArray(bill.items) ? bill.items : [],
+        gstBreakdown: bill.gstBreakdown || {},
+        paymentTracking: bill.paymentTracking || {}
+    };
     
     const amountReceived = parseFloat(document.getElementById('partial-amount-input').value);
     
