@@ -3305,6 +3305,31 @@ function generateBillPDF(bill) {
         return;
     }
     
+    // Ensure all numeric fields have defaults
+    bill.subtotal = parseFloat(bill.subtotal) || 0;
+    bill.totalGST = parseFloat(bill.totalGST) || 0;
+    bill.total = parseFloat(bill.total) || 0;
+    bill.id = bill.id || 'N/A';
+    bill.createdAt = bill.createdAt || new Date();
+    bill.gstBreakdown = bill.gstBreakdown || {};
+    bill.paymentStatus = bill.paymentStatus || 'paid';
+    
+    // Ensure all items have numeric fields
+    bill.items = bill.items.map(item => ({
+        ...item,
+        quantity: parseFloat(item.quantity) || 0,
+        price: parseFloat(item.price) || 0,
+        amount: parseFloat(item.amount) || 0,
+        gst: parseFloat(item.gst) || 0,
+        gstAmount: parseFloat(item.gstAmount) || 0,
+        total: parseFloat(item.total) || 0,
+        name: item.name || 'Unknown Item',
+        size: item.size || '',
+        unit: item.unit || ''
+    }));
+    
+    console.log('Bill after normalization:', bill);
+    
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
