@@ -430,11 +430,13 @@ app.post('/api/purchases', async (req, res) => {
       throw new Error('Missing required fields: supplier, invoiceNo, purchaseDate, or items');
     }
     
-    // Ensure all values are defined (use null instead of undefined)
+    // Ensure all values are defined (use null instead of undefined or empty string)
     const supplierName = supplier.name || null;
-    const supplierPhone = supplier.phone || null;
-    const supplierGst = supplier.gst || null;
+    const supplierPhone = supplier.phone && supplier.phone.trim() !== '' ? supplier.phone : null;
+    const supplierGst = supplier.gst && supplier.gst.trim() !== '' ? supplier.gst : null;
     const paymentTrackingData = paymentTracking || null;
+    
+    console.log('Processed values:', { supplierName, supplierPhone, supplierGst });
     
     const result = await query(
       `INSERT INTO purchases (supplierName, supplierPhone, supplierGst, invoiceNo, purchaseDate,
@@ -465,6 +467,7 @@ app.post('/api/purchases', async (req, res) => {
     res.json(purchase);
   } catch (error) {
     console.error('❌ Error adding purchase:', error.message);
+    console.error('Stack:', error.stack);
     res.status(500).json({ error: error.message });
   }
 });
