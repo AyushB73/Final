@@ -41,9 +41,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Setup customer search
     setupCustomerSearch();
     
-    // Setup event delegation for sales table action buttons
-    setupSalesTableActions();
-    
     // Setup mobile-friendly table scrolling
     setupMobileTableScroll();
 });
@@ -70,8 +67,6 @@ function switchView(viewName) {
         renderDashboard();
     } else if (viewName === 'sales') {
         renderSales();
-        // Re-setup event listeners after rendering
-        setTimeout(() => setupSalesTableActions(), 100);
     } else if (viewName === 'purchases') {
         renderPurchases();
     } else if (viewName === 'settings') {
@@ -2034,6 +2029,12 @@ function viewBillHistory() {
 function renderSales() {
     console.log(`🔄 Rendering sales table with ${bills.length} bills`);
     const tbody = document.getElementById('sales-tbody');
+    
+    // Reset listener flag before clearing content
+    if (tbody) {
+        tbody.dataset.listenerAttached = 'false';
+    }
+    
     tbody.innerHTML = '';
     
     if (bills.length === 0) {
@@ -2098,10 +2099,15 @@ function renderSales() {
     });
     
     updateSalesSummary();
+    
+    // Setup event listeners after rendering
+    setupSalesTableActions();
 }
 
 // Setup event delegation for sales table action buttons
 function setupSalesTableActions() {
+    console.log('🔧 Setting up sales table actions...');
+    
     // Remove existing listener if any
     const salesTbody = document.getElementById('sales-tbody');
     if (!salesTbody) {
@@ -2109,20 +2115,16 @@ function setupSalesTableActions() {
         return;
     }
     
-    // Use event delegation on the parent table container
-    const salesTable = document.getElementById('sales-table');
-    if (!salesTable) {
-        console.warn('Sales table not found');
+    // Use event delegation on the tbody directly (more reliable)
+    // Remove the data attribute to prevent duplicate listeners
+    if (salesTbody.dataset.listenerAttached === 'true') {
+        console.log('Listener already attached, skipping...');
         return;
     }
     
-    // Remove old listener by cloning and replacing
-    const newTable = salesTable.cloneNode(true);
-    salesTable.parentNode.replaceChild(newTable, salesTable);
-    
-    // Add event listener to the new table
-    newTable.addEventListener('click', (e) => {
-        console.log('Table clicked:', e.target);
+    // Add event listener to tbody
+    salesTbody.addEventListener('click', (e) => {
+        console.log('Sales table clicked:', e.target);
         
         // Find the button (might be the target or a parent)
         let target = e.target;
@@ -2138,24 +2140,33 @@ function setupSalesTableActions() {
         }
         
         const billId = parseInt(target.dataset.billId);
-        console.log('Button clicked, billId:', billId);
+        console.log('Button clicked, billId:', billId, 'Button classes:', target.className);
         
         if (!billId) {
-            console.error('No billId found');
+            console.error('No billId found on button');
+            return;
+        }
+        
+        // Prevent multiple clicks
+        if (target.disabled) {
+            console.log('Button already processing...');
             return;
         }
         
         if (target.classList.contains('btn-view')) {
-            console.log('View button clicked');
+            console.log('View button clicked for bill:', billId);
             viewBillDetailsModal(billId);
         } else if (target.classList.contains('btn-payment')) {
-            console.log('Payment button clicked');
+            console.log('Payment button clicked for bill:', billId);
             updatePaymentStatus(billId);
         } else if (target.classList.contains('btn-delete')) {
-            console.log('Delete button clicked');
+            console.log('Delete button clicked for bill:', billId);
             deleteBill(billId);
         }
     });
+    
+    // Mark as attached
+    salesTbody.dataset.listenerAttached = 'true';
     
     console.log('✅ Sales table actions setup complete');
 }
@@ -2329,8 +2340,6 @@ async function deleteBill(billId) {
         await APIService.deleteBill(billId);
         bills = bills.filter(b => b.id != billId); // Use != for type coercion
         renderSales();
-        // Re-setup event listeners after re-render
-        setTimeout(() => setupSalesTableActions(), 100);
         alert('Bill deleted successfully!');
     } catch (error) {
         console.error('Error deleting bill:', error);
@@ -2528,8 +2537,6 @@ async function selectPaymentStatus(newStatus) {
         // Reload bills to get fresh data
         await loadBills();
         renderSales();
-        // Re-setup event listeners
-        setTimeout(() => setupSalesTableActions(), 100);
         closeUpdatePaymentModal();
         alert(`Payment status updated to: ${statusLabels[newStatus]}`);
     } catch (error) {
@@ -2626,8 +2633,6 @@ async function confirmPartialPayment() {
         // Reload bills to get fresh data
         await loadBills();
         renderSales();
-        // Re-setup event listeners
-        setTimeout(() => setupSalesTableActions(), 100);
         closeUpdatePaymentModal();
     } catch (error) {
         console.error('Error updating bill payment:', error);
