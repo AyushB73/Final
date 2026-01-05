@@ -462,8 +462,6 @@ function editItem(id) {
     
     document.getElementById('add-item-modal').classList.add('active');
 }
-    document.getElementById('add-item-modal').classList.add('active');
-}
 
 // Billing
 function updateProductSelect() {
