@@ -1,7 +1,7 @@
 // API Service for Backend Communication
 // This replaces localStorage with real database calls
 
-const API_BASE_URL = window.location.origin;
+const API_BASE_URL = 'https://final-production-4f72.up.railway.app';
 
 class APIService {
     // Generic API call handler
