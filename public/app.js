@@ -2643,19 +2643,19 @@ function viewBillDetailsModal(billId) {
     
     let itemsHtml = '';
     if (items.length === 0) {
-        itemsHtml = '<tr><td colspan="9" style="text-align: center; padding: 1rem; color: var(--text-secondary);">No items found</td></tr>';
+        itemsHtml = '<tr><td colspan="9" style="text-align: center; padding: 1rem; color: #6c757d;">No items found</td></tr>';
     } else {
         itemsHtml = items.map((item, idx) => `
             <tr>
-                <td>${idx + 1}</td>
-                <td>${item.name || 'N/A'}</td>
+                <td style="text-align: center;">${idx + 1}</td>
+                <td><strong>${item.name || 'N/A'}</strong></td>
                 <td>${item.size || ''} ${item.unit || ''}</td>
-                <td>${item.quantity || 0}</td>
-                <td>₹${(parseFloat(item.price) || 0).toFixed(2)}</td>
-                <td>₹${(parseFloat(item.amount) || 0).toFixed(2)}</td>
-                <td>${parseFloat(item.gst) || 0}%</td>
-                <td>₹${(parseFloat(item.gstAmount) || 0).toFixed(2)}</td>
-                <td>₹${(parseFloat(item.total) || 0).toFixed(2)}</td>
+                <td style="text-align: center;">${item.quantity || 0}</td>
+                <td style="text-align: right;">₹${(parseFloat(item.price) || 0).toFixed(2)}</td>
+                <td style="text-align: right;">₹${(parseFloat(item.amount) || 0).toFixed(2)}</td>
+                <td style="text-align: center;">${parseFloat(item.gst) || 0}%</td>
+                <td style="text-align: right;">₹${(parseFloat(item.gstAmount) || 0).toFixed(2)}</td>
+                <td style="text-align: right;"><strong>₹${(parseFloat(item.total) || 0).toFixed(2)}</strong></td>
             </tr>
         `).join('');
     }
@@ -2676,80 +2676,187 @@ function viewBillDetailsModal(billId) {
     let gstBreakdownHtml = '';
     if (gstBreakdown && gstBreakdown.type === 'SGST+CGST') {
         gstBreakdownHtml = `
-            <div class="summary-row">
-                <span>SGST:</span>
-                <span>₹${(parseFloat(gstBreakdown.sgst) || 0).toFixed(2)}</span>
+            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
+                <span style="color: #6c757d;">SGST:</span>
+                <span style="font-weight: 600;">₹${(parseFloat(gstBreakdown.sgst) || 0).toFixed(2)}</span>
             </div>
-            <div class="summary-row">
-                <span>CGST:</span>
-                <span>₹${(parseFloat(gstBreakdown.cgst) || 0).toFixed(2)}</span>
+            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
+                <span style="color: #6c757d;">CGST:</span>
+                <span style="font-weight: 600;">₹${(parseFloat(gstBreakdown.cgst) || 0).toFixed(2)}</span>
             </div>
         `;
     } else if (gstBreakdown && gstBreakdown.type === 'IGST') {
         gstBreakdownHtml = `
-            <div class="summary-row">
-                <span>IGST:</span>
-                <span>₹${(parseFloat(gstBreakdown.igst) || 0).toFixed(2)}</span>
+            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
+                <span style="color: #6c757d;">IGST:</span>
+                <span style="font-weight: 600;">₹${(parseFloat(gstBreakdown.igst) || 0).toFixed(2)}</span>
             </div>
         `;
     } else {
         // If no breakdown type, show total GST
         gstBreakdownHtml = `
-            <div class="summary-row">
-                <span>Total GST:</span>
-                <span>₹${(parseFloat(bill.totalGST) || 0).toFixed(2)}</span>
+            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
+                <span style="color: #6c757d;">Total GST:</span>
+                <span style="font-weight: 600;">₹${(parseFloat(bill.totalGST) || 0).toFixed(2)}</span>
+            </div>
+        `;
+    }
+    
+    // Payment status badge
+    const paymentStatus = bill.paymentStatus || 'paid';
+    let statusBadge = '';
+    let statusColor = '';
+    if (paymentStatus === 'paid') {
+        statusBadge = '✅ Paid';
+        statusColor = '#28a745';
+    } else if (paymentStatus === 'pending') {
+        statusBadge = '⏳ Pending';
+        statusColor = '#dc3545';
+    } else {
+        statusBadge = '💰 Partial';
+        statusColor = '#ffc107';
+    }
+    
+    // Payment tracking details
+    let paymentTrackingHtml = '';
+    if (bill.paymentTracking && (paymentStatus === 'partial' || paymentStatus === 'paid')) {
+        const tracking = bill.paymentTracking;
+        paymentTrackingHtml = `
+            <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                <h4 style="margin: 0 0 0.75rem 0; color: #495057; font-size: 0.95rem;">💳 Payment Details</h4>
+                <div style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                    <span style="color: #6c757d;">Total Amount:</span>
+                    <span style="font-weight: 600;">₹${(parseFloat(tracking.totalAmount) || 0).toFixed(2)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                    <span style="color: #28a745;">Amount Paid:</span>
+                    <span style="font-weight: 600; color: #28a745;">₹${(parseFloat(tracking.amountPaid) || 0).toFixed(2)}</span>
+                </div>
+                ${tracking.amountPending > 0 ? `
+                <div style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                    <span style="color: #dc3545;">Amount Pending:</span>
+                    <span style="font-weight: 600; color: #dc3545;">₹${(parseFloat(tracking.amountPending) || 0).toFixed(2)}</span>
+                </div>
+                ` : ''}
             </div>
         `;
     }
     
     const content = `
-        <div class="bill-info">
-            <h3>Bill #${bill.id}</h3>
-            <p><strong>Date:</strong> ${date} ${time}</p>
-            <p><strong>Customer:</strong> ${customer.name || 'N/A'}</p>
-            <p><strong>Phone:</strong> ${customer.phone || 'N/A'}</p>
-            <p><strong>GST Number:</strong> ${customer.gst || 'N/A'}</p>
-            <p><strong>Address:</strong> ${customer.address || 'N/A'}</p>
-            <p><strong>State:</strong> ${customer.state === 'same' ? 'Same State (SGST+CGST)' : 'Other State (IGST)'}</p>
-            <p><strong>Payment Status:</strong> ${bill.paymentStatus === 'paid' ? '✅ Paid' : bill.paymentStatus === 'pending' ? '⏳ Pending' : bill.paymentStatus === 'partial' ? '💰 Partial' : '✅ Paid'}</p>
-        </div>
-        
-        <h3>Items</h3>
-        <table class="bill-details-table">
-            <thead>
-                <tr>
-                    <th>S.No</th>
-                    <th>Item</th>
-                    <th>Size</th>
-                    <th>Qty</th>
-                    <th>Rate</th>
-                    <th>Amount</th>
-                    <th>GST %</th>
-                    <th>GST Amt</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${itemsHtml}
-            </tbody>
-        </table>
-        
-        <div class="bill-summary-box">
-            <div class="summary-row">
-                <span>Subtotal:</span>
-                <span>₹${(parseFloat(bill.subtotal) || 0).toFixed(2)}</span>
+        <div style="max-width: 900px; margin: 0 auto;">
+            <!-- Header Card -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 12px 12px 0 0; margin: -1rem -1rem 0 -1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h2 style="margin: 0; font-size: 1.75rem;">Bill #${bill.id}</h2>
+                        <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">${date} at ${time}</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); padding: 0.75rem 1.5rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.25rem;">Status</div>
+                        <div style="font-size: 1.1rem; font-weight: 700;">${statusBadge}</div>
+                    </div>
+                </div>
             </div>
-            ${gstBreakdownHtml}
-            <div class="summary-row total">
-                <span>Total Amount:</span>
-                <span>₹${(parseFloat(bill.total) || 0).toFixed(2)}</span>
+            
+            <!-- Customer Details Card -->
+            <div style="background: white; padding: 1.5rem; border: 1px solid #e9ecef; border-top: none;">
+                <h3 style="margin: 0 0 1rem 0; color: #495057; font-size: 1.1rem; display: flex; align-items: center;">
+                    <span style="margin-right: 0.5rem;">👤</span> Customer Information
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <div>
+                        <div style="color: #6c757d; font-size: 0.85rem; margin-bottom: 0.25rem;">Name</div>
+                        <div style="font-weight: 600; color: #212529;">${customer.name || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <div style="color: #6c757d; font-size: 0.85rem; margin-bottom: 0.25rem;">Phone</div>
+                        <div style="font-weight: 600; color: #212529;">${customer.phone || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <div style="color: #6c757d; font-size: 0.85rem; margin-bottom: 0.25rem;">GST Number</div>
+                        <div style="font-weight: 600; color: #212529;">${customer.gst || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <div style="color: #6c757d; font-size: 0.85rem; margin-bottom: 0.25rem;">State</div>
+                        <div style="font-weight: 600; color: #212529;">${customer.state === 'same' ? 'Same State (SGST+CGST)' : 'Other State (IGST)'}</div>
+                    </div>
+                </div>
+                ${customer.address ? `
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e9ecef;">
+                    <div style="color: #6c757d; font-size: 0.85rem; margin-bottom: 0.25rem;">Address</div>
+                    <div style="font-weight: 600; color: #212529;">${customer.address}</div>
+                </div>
+                ` : ''}
             </div>
-        </div>
-        
-        <div style="margin-top: 2rem; text-align: center;">
-            <button class="btn btn-primary btn-large" onclick="downloadBillPDF(${bill.id})" style="width: auto; padding: 1rem 2rem;">
-                📄 Generate PDF Invoice
-            </button>
+            
+            <!-- Items Table Card -->
+            <div style="background: white; padding: 1.5rem; border: 1px solid #e9ecef; border-top: none; margin-top: 1rem;">
+                <h3 style="margin: 0 0 1rem 0; color: #495057; font-size: 1.1rem; display: flex; align-items: center;">
+                    <span style="margin-right: 0.5rem;">📦</span> Items (${items.length})
+                </h3>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                                <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #495057;">#</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Item</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Size</th>
+                                <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #495057;">Qty</th>
+                                <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #495057;">Rate</th>
+                                <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #495057;">Amount</th>
+                                <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #495057;">GST%</th>
+                                <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #495057;">GST Amt</th>
+                                <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #495057;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Summary Card -->
+            <div style="background: white; padding: 1.5rem; border: 1px solid #e9ecef; border-top: none; border-radius: 0 0 12px 12px; margin-bottom: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <!-- GST Breakdown -->
+                    <div>
+                        <h4 style="margin: 0 0 1rem 0; color: #495057; font-size: 0.95rem;">📊 GST Breakdown</h4>
+                        ${gstBreakdownHtml}
+                    </div>
+                    
+                    <!-- Total Summary -->
+                    <div>
+                        <h4 style="margin: 0 0 1rem 0; color: #495057; font-size: 0.95rem;">💰 Bill Summary</h4>
+                        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
+                            <span style="color: #6c757d;">Subtotal:</span>
+                            <span style="font-weight: 600;">₹${(parseFloat(bill.subtotal) || 0).toFixed(2)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
+                            <span style="color: #6c757d;">Total GST:</span>
+                            <span style="font-weight: 600;">₹${(parseFloat(bill.totalGST) || 0).toFixed(2)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.75rem 0; margin-top: 0.5rem; background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                            <span style="font-size: 1.1rem; font-weight: 700; color: #212529;">Total Amount:</span>
+                            <span style="font-size: 1.3rem; font-weight: 700; color: #667eea;">₹${(parseFloat(bill.total) || 0).toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                ${paymentTrackingHtml}
+            </div>
+            
+            <!-- Action Button -->
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <button 
+                    onclick="downloadBillPDF(${bill.id})" 
+                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 1rem 2.5rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: transform 0.2s;"
+                    onmouseover="this.style.transform='translateY(-2px)'"
+                    onmouseout="this.style.transform='translateY(0)'"
+                >
+                    📄 Download PDF Invoice
+                </button>
+            </div>
         </div>
     `;
     
