@@ -1,4 +1,4 @@
-// State management with MySQL Database via API
+﻿// State management with MySQL Database via API
 let inventory = [];
 let bills = [];
 let currentBillItems = [];
@@ -2028,8 +2028,8 @@ function renderSales() {
             <td><strong>₹${(bill.total || 0).toFixed(2)}</strong></td>
             <td>${paymentStatusBadge}</td>
             <td class="actions-cell">
-                <button class="action-btn action-btn-sm btn-pdf" data-bill-id="${bill.id}" title="Download PDF">�</bubtton>
-                <button class="action-btn action-btn-sm delete btn-delete" data-bill-id="${bill.id}" title="Delete">�️<o/button>
+                
+                
             </td>
         `;
         tbody.appendChild(row);
