@@ -2069,7 +2069,6 @@ function renderSales() {
             <td>${paymentStatusBadge}</td>
             <td class="actions-cell">
                 <button class="action-btn action-btn-sm btn-view" data-bill-id="${bill.id}" title="View Details">👁️</button>
-                <button class="action-btn action-btn-sm btn-pdf" data-bill-id="${bill.id}" title="Download PDF">📄</button>
                 <button class="action-btn action-btn-sm btn-payment" data-bill-id="${bill.id}" title="Update Payment">💳</button>
                 <button class="action-btn action-btn-sm delete btn-delete" data-bill-id="${bill.id}" title="Delete">🗑️</button>
             </td>
@@ -2128,9 +2127,6 @@ function setupSalesTableActions() {
         if (target.classList.contains('btn-view')) {
             console.log('View button clicked');
             viewBillDetailsModal(billId);
-        } else if (target.classList.contains('btn-pdf')) {
-            console.log('PDF button clicked');
-            downloadBillPDF(billId);
         } else if (target.classList.contains('btn-payment')) {
             console.log('Payment button clicked');
             updatePaymentStatus(billId);
@@ -2286,6 +2282,12 @@ function viewBillDetailsModal(billId) {
                 <span>Total Amount:</span>
                 <span>₹${bill.total.toFixed(2)}</span>
             </div>
+        </div>
+        
+        <div style="margin-top: 2rem; text-align: center;">
+            <button class="btn btn-primary btn-large" onclick="downloadBillPDF(${bill.id})" style="width: auto; padding: 1rem 2rem;">
+                📄 Generate PDF Invoice
+            </button>
         </div>
     `;
     
