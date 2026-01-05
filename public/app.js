@@ -1155,20 +1155,36 @@ function renderPurchases() {
     const tbody = document.getElementById('purchases-tbody');
     tbody.innerHTML = '';
     
+    console.log('📦 Rendering purchases:', purchases);
+    
     if (purchases.length === 0) {
         tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-secondary);">📦 No purchase records found. Click "Add Purchase" to get started!</td></tr>';
         return;
     }
     
     purchases.slice().reverse().forEach(purchase => {
+        console.log('Purchase data:', purchase);
+        
+        // Normalize purchase format - handle both old and new formats
+        const supplier = purchase.supplier || {
+            name: purchase.supplierName,
+            phone: purchase.supplierPhone,
+            gst: purchase.supplierGst
+        };
+        
+        const items = Array.isArray(purchase.items) ? purchase.items : [];
+        
         const row = document.createElement('tr');
         const date = new Date(purchase.purchaseDate).toLocaleDateString('en-IN');
-        const itemCount = purchase.items.length;
+        const itemCount = items.length;
+        
+        console.log('Purchase items count:', itemCount);
         
         let statusBadge = '';
-        if (purchase.paymentStatus === 'paid') {
+        const paymentStatus = purchase.paymentStatus || 'paid';
+        if (paymentStatus === 'paid') {
             statusBadge = '<span class="badge badge-success">✅ Paid</span>';
-        } else if (purchase.paymentStatus === 'pending') {
+        } else if (paymentStatus === 'pending') {
             statusBadge = '<span class="badge badge-danger">⏳ Pending</span>';
         } else {
             statusBadge = '<span class="badge badge-warning">💰 Partial</span>';
@@ -1177,12 +1193,12 @@ function renderPurchases() {
         row.innerHTML = `
             <td><strong>#${purchase.id}</strong></td>
             <td>${date}</td>
-            <td>${purchase.supplier.name}</td>
-            <td>${purchase.invoiceNo}</td>
+            <td>${supplier.name}</td>
+            <td>${purchase.invoiceNo || '-'}</td>
             <td>${itemCount} item${itemCount > 1 ? 's' : ''}</td>
-            <td>₹${purchase.subtotal.toFixed(2)}</td>
-            <td>₹${purchase.totalGST.toFixed(2)}</td>
-            <td><strong>₹${purchase.total.toFixed(2)}</strong></td>
+            <td>₹${(purchase.subtotal || 0).toFixed(2)}</td>
+            <td>₹${(purchase.totalGST || 0).toFixed(2)}</td>
+            <td><strong>₹${(purchase.total || 0).toFixed(2)}</strong></td>
             <td>${statusBadge}</td>
             <td>
                 <button class="action-btn" onclick="viewPurchaseDetails(${purchase.id})">View</button>

@@ -511,12 +511,15 @@ app.get('/api/purchases', async (req, res) => {
     const parsedPurchases = purchases.map((purchase, index) => {
       try {
         return {
-          ...purchase,
+          id: purchase.id,
+          purchaseDate: purchase.purchaseDate,
+          invoiceNo: purchase.invoiceNo,
           items: JSON.parse(purchase.items || '[]'),
           paymentTracking: JSON.parse(purchase.paymentTracking || '{}'),
           subtotal: parseFloat(purchase.subtotal) || 0,
           totalGST: parseFloat(purchase.totalGST) || 0,
           total: parseFloat(purchase.total) || 0,
+          paymentStatus: purchase.paymentStatus || 'paid',
           supplier: {
             name: purchase.supplierName,
             phone: purchase.supplierPhone,
@@ -527,7 +530,22 @@ app.get('/api/purchases', async (req, res) => {
         console.error(`❌ Error parsing purchase #${purchase.id}:`, parseError.message);
         // Return purchase with safe defaults if parsing fails
         return {
-          ...purchase,
+          id: purchase.id,
+          purchaseDate: purchase.purchaseDate,
+          invoiceNo: purchase.invoiceNo,
+          items: [],
+          paymentTracking: {},
+          subtotal: parseFloat(purchase.subtotal) || 0,
+          totalGST: parseFloat(purchase.totalGST) || 0,
+          total: parseFloat(purchase.total) || 0,
+          paymentStatus: purchase.paymentStatus || 'paid',
+          supplier: {
+            name: purchase.supplierName || 'Unknown',
+            phone: purchase.supplierPhone || null,
+            gst: purchase.supplierGst || null
+          }
+        };
+      }
           items: [],
           paymentTracking: {},
           subtotal: parseFloat(purchase.subtotal) || 0,
