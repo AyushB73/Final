@@ -443,19 +443,47 @@ app.put('/api/bills/:id', async (req, res) => {
     const { customer, items, subtotal, gstBreakdown, totalGST, total, paymentStatus, paymentTracking } = req.body;
     const id = parseInt(req.params.id);
     
+    console.log('PUT /api/bills/:id - Request body:', JSON.stringify(req.body, null, 2));
+    
+    // Validate required fields
+    if (!customer || !customer.name) {
+      console.error('Customer data is missing or invalid');
+      return res.status(400).json({ error: 'Customer data is required' });
+    }
+    
     await query(
       `UPDATE bills SET customerName=?, customerPhone=?, customerGst=?, customerAddress=?, customerState=?,
        items=?, subtotal=?, gstBreakdown=?, totalGST=?, total=?, paymentStatus=?, paymentTracking=? WHERE id=?`,
       [
-        customer.name, customer.phone, customer.gst, customer.address, customer.state,
-        JSON.stringify(items), subtotal, JSON.stringify(gstBreakdown), totalGST, total,
-        paymentStatus, JSON.stringify(paymentTracking || {}), id
+        customer.name, customer.phone || null, customer.gst || null, customer.address || null, customer.state || null,
+        JSON.stringify(items || []), subtotal || 0, JSON.stringify(gstBreakdown || {}), totalGST || 0, total || 0,
+        paymentStatus || 'paid', JSON.stringify(paymentTracking || {}), id
       ]
     );
     
     const [bill] = await query('SELECT * FROM bills WHERE id=?', [id]);
-    res.json(bill);
+    
+    // Parse and return the updated bill
+    const parsedBill = {
+      ...bill,
+      items: JSON.parse(bill.items || '[]'),
+      gstBreakdown: JSON.parse(bill.gstBreakdown || '{}'),
+      paymentTracking: JSON.parse(bill.paymentTracking || '{}'),
+      subtotal: parseFloat(bill.subtotal) || 0,
+      totalGST: parseFloat(bill.totalGST) || 0,
+      total: parseFloat(bill.total) || 0,
+      customer: {
+        name: bill.customerName,
+        phone: bill.customerPhone,
+        gst: bill.customerGst,
+        address: bill.customerAddress,
+        state: bill.customerState
+      }
+    };
+    
+    res.json(parsedBill);
   } catch (error) {
+    console.error('Error updating bill:', error);
     res.status(500).json({ error: error.message });
   }
 });

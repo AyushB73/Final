@@ -2285,8 +2285,12 @@ async function selectPaymentStatus(newStatus) {
     const billId = window.currentBillIdForUpdate;
     if (!billId) return;
     
-    const bill = bills.find(b => b.id === billId);
-    if (!bill) return;
+    const bill = bills.find(b => b.id == billId); // Use == for type coercion
+    if (!bill) {
+        console.error('Bill not found with ID:', billId);
+        alert('Bill not found!');
+        return;
+    }
     
     // If partial payment, show input form
     if (newStatus === 'partial') {
@@ -2354,11 +2358,23 @@ async function selectPaymentStatus(newStatus) {
     bill.paymentStatus = newStatus;
     
     try {
-        await APIService.updateBill(bill.id, { 
+        // Send the complete bill object to the server
+        await APIService.updateBill(bill.id, {
+            customer: bill.customer,
+            items: bill.items,
+            subtotal: bill.subtotal,
+            gstBreakdown: bill.gstBreakdown,
+            totalGST: bill.totalGST,
+            total: bill.total,
             paymentStatus: newStatus,
             paymentTracking: bill.paymentTracking 
         });
+        
+        // Reload bills to get fresh data
+        await loadBills();
         renderSales();
+        // Re-setup event listeners
+        setTimeout(() => setupSalesTableActions(), 100);
         closeUpdatePaymentModal();
         alert(`Payment status updated to: ${statusLabels[newStatus]}`);
     } catch (error) {
@@ -2371,7 +2387,7 @@ function calculateBillPending() {
     const billId = window.currentBillIdForUpdate;
     if (!billId) return;
     
-    const bill = bills.find(b => b.id === billId);
+    const bill = bills.find(b => b.id == billId); // Use == for type coercion
     if (!bill) return;
     
     const amountReceived = parseFloat(document.getElementById('partial-amount-input').value) || 0;
@@ -2384,7 +2400,7 @@ async function confirmPartialPayment() {
     const billId = window.currentBillIdForUpdate;
     if (!billId) return;
     
-    const bill = bills.find(b => b.id === billId);
+    const bill = bills.find(b => b.id == billId); // Use == for type coercion
     if (!bill) return;
     
     const amountReceived = parseFloat(document.getElementById('partial-amount-input').value);
@@ -2418,11 +2434,23 @@ async function confirmPartialPayment() {
     }
     
     try {
-        await APIService.updateBill(bill.id, { 
+        // Send the complete bill object to the server
+        await APIService.updateBill(bill.id, {
+            customer: bill.customer,
+            items: bill.items,
+            subtotal: bill.subtotal,
+            gstBreakdown: bill.gstBreakdown,
+            totalGST: bill.totalGST,
+            total: bill.total,
             paymentStatus: bill.paymentStatus,
             paymentTracking: bill.paymentTracking 
         });
+        
+        // Reload bills to get fresh data
+        await loadBills();
         renderSales();
+        // Re-setup event listeners
+        setTimeout(() => setupSalesTableActions(), 100);
         closeUpdatePaymentModal();
     } catch (error) {
         console.error('Error updating bill payment:', error);
@@ -3148,6 +3176,27 @@ function updatePeriodInfo(period) {
 
 // PDF Generation Function
 function generateBillPDF(bill) {
+    console.log('generateBillPDF called with bill:', bill);
+    
+    // Validate bill object
+    if (!bill) {
+        console.error('Bill is undefined or null');
+        alert('Error: Bill data is missing. Cannot generate PDF.');
+        return;
+    }
+    
+    if (!bill.customer) {
+        console.error('Bill customer is undefined');
+        alert('Error: Customer data is missing. Cannot generate PDF.');
+        return;
+    }
+    
+    if (!bill.items || !Array.isArray(bill.items)) {
+        console.error('Bill items is undefined or not an array');
+        alert('Error: Bill items data is missing. Cannot generate PDF.');
+        return;
+    }
+    
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
