@@ -259,13 +259,47 @@ app.post('/api/inventory', async (req, res) => {
 
 app.put('/api/inventory/:id', async (req, res) => {
   try {
-    const { name, description, hsn, size, colour, unit, quantity, minStock, price, gst } = req.body;
     const id = parseInt(req.params.id);
+    
+    // Get current item first
+    const [currentItem] = await query('SELECT * FROM inventory WHERE id=?', [id]);
+    
+    if (!currentItem) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    
+    // Merge with new data (only update provided fields)
+    const { name, description, hsn, size, colour, unit, quantity, minStock, price, gst } = req.body;
+    
+    const updatedData = {
+      name: name !== undefined ? name : currentItem.name,
+      description: description !== undefined ? description : currentItem.description,
+      hsn: hsn !== undefined ? hsn : currentItem.hsn,
+      size: size !== undefined ? size : currentItem.size,
+      colour: colour !== undefined ? colour : currentItem.colour,
+      unit: unit !== undefined ? unit : currentItem.unit,
+      quantity: quantity !== undefined ? quantity : currentItem.quantity,
+      minStock: minStock !== undefined ? minStock : currentItem.minStock,
+      price: price !== undefined ? price : currentItem.price,
+      gst: gst !== undefined ? gst : currentItem.gst
+    };
     
     await query(
       `UPDATE inventory SET name=?, description=?, hsn=?, size=?, colour=?, unit=?, 
        quantity=?, minStock=?, price=?, gst=?, updatedAt=NOW() WHERE id=?`,
-      [name, description, hsn, size, colour, unit, quantity, minStock, price, gst, id]
+      [
+        updatedData.name,
+        updatedData.description,
+        updatedData.hsn,
+        updatedData.size,
+        updatedData.colour,
+        updatedData.unit,
+        updatedData.quantity,
+        updatedData.minStock,
+        updatedData.price,
+        updatedData.gst,
+        id
+      ]
     );
     
     const [item] = await query('SELECT * FROM inventory WHERE id=?', [id]);
@@ -275,6 +309,7 @@ app.put('/api/inventory/:id', async (req, res) => {
     
     res.json(item);
   } catch (error) {
+    console.error('❌ Error updating inventory:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
