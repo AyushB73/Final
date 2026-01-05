@@ -70,6 +70,8 @@ function switchView(viewName) {
         renderDashboard();
     } else if (viewName === 'sales') {
         renderSales();
+        // Re-setup event listeners after rendering
+        setTimeout(() => setupSalesTableActions(), 100);
     } else if (viewName === 'purchases') {
         renderPurchases();
     } else if (viewName === 'settings') {
@@ -2018,26 +2020,65 @@ function renderSales() {
 
 // Setup event delegation for sales table action buttons
 function setupSalesTableActions() {
+    // Remove existing listener if any
     const salesTbody = document.getElementById('sales-tbody');
-    if (!salesTbody) return;
+    if (!salesTbody) {
+        console.warn('Sales tbody not found, will retry...');
+        return;
+    }
     
-    salesTbody.addEventListener('click', (e) => {
-        const target = e.target;
-        if (!target.classList.contains('action-btn')) return;
+    // Use event delegation on the parent table container
+    const salesTable = document.getElementById('sales-table');
+    if (!salesTable) {
+        console.warn('Sales table not found');
+        return;
+    }
+    
+    // Remove old listener by cloning and replacing
+    const newTable = salesTable.cloneNode(true);
+    salesTable.parentNode.replaceChild(newTable, salesTable);
+    
+    // Add event listener to the new table
+    newTable.addEventListener('click', (e) => {
+        console.log('Table clicked:', e.target);
+        
+        // Find the button (might be the target or a parent)
+        let target = e.target;
+        
+        // If clicked on emoji/text inside button, get the button
+        if (!target.classList.contains('action-btn')) {
+            target = target.closest('.action-btn');
+        }
+        
+        if (!target || !target.classList.contains('action-btn')) {
+            console.log('Not an action button');
+            return;
+        }
         
         const billId = parseInt(target.dataset.billId);
-        if (!billId) return;
+        console.log('Button clicked, billId:', billId);
+        
+        if (!billId) {
+            console.error('No billId found');
+            return;
+        }
         
         if (target.classList.contains('btn-view')) {
+            console.log('View button clicked');
             viewBillDetailsModal(billId);
         } else if (target.classList.contains('btn-pdf')) {
+            console.log('PDF button clicked');
             downloadBillPDF(billId);
         } else if (target.classList.contains('btn-payment')) {
+            console.log('Payment button clicked');
             updatePaymentStatus(billId);
         } else if (target.classList.contains('btn-delete')) {
+            console.log('Delete button clicked');
             deleteBill(billId);
         }
     });
+    
+    console.log('✅ Sales table actions setup complete');
 }
 
 function filterSales() {

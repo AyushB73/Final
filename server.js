@@ -337,9 +337,14 @@ app.get('/api/bills', async (req, res) => {
     // Parse JSON fields and ensure numeric types
     const parsedBills = bills.map((bill, index) => {
       try {
+        // Log raw items data for debugging
+        console.log(`Bill #${bill.id} raw items:`, bill.items);
+        const parsedItems = JSON.parse(bill.items || '[]');
+        console.log(`Bill #${bill.id} parsed items count:`, parsedItems.length);
+        
         return {
           ...bill,
-          items: JSON.parse(bill.items || '[]'),
+          items: parsedItems,
           gstBreakdown: JSON.parse(bill.gstBreakdown || '{}'),
           paymentTracking: JSON.parse(bill.paymentTracking || '{}'),
           subtotal: parseFloat(bill.subtotal) || 0,
