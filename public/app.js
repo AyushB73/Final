@@ -1,4 +1,4 @@
-// State management with localStorage
+// State management with MySQL Database via API
 let inventory = [];
 let bills = [];
 let currentBillItems = [];
@@ -6,22 +6,8 @@ let customers = [];
 let purchases = [];
 let suppliers = [];
 
-// Storage keys
-const STORAGE_KEYS = {
-    INVENTORY: 'plastiwood_inventory',
-    BILLS: 'plastiwood_bills',
-    CUSTOMERS: 'plastiwood_customers',
-    PURCHASES: 'plastiwood_purchases',
-    SUPPLIERS: 'plastiwood_suppliers',
-    NEXT_INVENTORY_ID: 'plastiwood_next_inventory_id',
-    NEXT_BILL_ID: 'plastiwood_next_bill_id',
-    NEXT_CUSTOMER_ID: 'plastiwood_next_customer_id',
-    NEXT_PURCHASE_ID: 'plastiwood_next_purchase_id',
-    NEXT_SUPPLIER_ID: 'plastiwood_next_supplier_id'
-};
-
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Check authentication
     const currentUser = requireAuth();
     if (!currentUser) return;
@@ -32,15 +18,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Apply role-based restrictions
     applyRoleRestrictions(currentUser.role);
     
-    // Initialize sample data first (only if no data exists)
-    initializeSampleData();
+    // Initialize database with sample data if needed
+    try {
+        await APIService.initializeDatabase();
+    } catch (error) {
+        console.error('Database initialization error:', error);
+    }
     
-    // Then load all data from localStorage
-    loadInventory();
-    loadBills();
-    loadCustomers();
-    loadPurchases();
-    loadSuppliers();
+    // Load all data from database
+    await loadInventory();
+    await loadBills();
+    await loadCustomers();
+    await loadPurchases();
+    await loadSuppliers();
     setupNavigation();
     
     // Initialize sales view if bills exist
@@ -136,45 +126,18 @@ function checkOwnerPermission() {
 }
 
 // Initialize sample data if first time
-function initializeSampleData() {
-    // Only initialize if no inventory data exists (first time user)
-    if (!localStorage.getItem(STORAGE_KEYS.INVENTORY)) {
-        const sampleInventory = [
-            { id: 1, name: 'Steel Rebar', description: 'TMT Steel Rebar', hsn: '72142000', size: '12mm', colour: 'Silver', unit: 'kg', quantity: 1000, minStock: 500, price: 65.00, gst: 18 },
-            { id: 2, name: 'Portland Cement', description: 'OPC 53 Grade Cement', hsn: '25232900', size: '50kg', colour: 'Grey', unit: 'bag', quantity: 500, minStock: 200, price: 350.00, gst: 28 },
-            { id: 3, name: 'Plywood', description: 'Commercial Plywood', hsn: '44121300', size: '18mm', colour: 'Brown', unit: 'pcs', quantity: 100, minStock: 50, price: 1800.00, gst: 18 },
-            { id: 4, name: 'Concrete Mix', description: 'Ready Mix Concrete', hsn: '38244090', size: 'M25', colour: 'Grey', unit: 'm3', quantity: 50, minStock: 20, price: 4500.00, gst: 18 },
-            { id: 5, name: 'Plastiwood Deck Board', description: 'Premium composite deck board', hsn: '39259000', size: '6ft', colour: 'Brown', unit: 'pcs', quantity: 150, minStock: 50, price: 2500.00, gst: 18 }
-        ];
-        localStorage.setItem(STORAGE_KEYS.INVENTORY, JSON.stringify(sampleInventory));
-        localStorage.setItem(STORAGE_KEYS.NEXT_INVENTORY_ID, '6');
-        localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify([]));
-        localStorage.setItem(STORAGE_KEYS.NEXT_BILL_ID, '1');
-        localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify([]));
-        localStorage.setItem(STORAGE_KEYS.NEXT_CUSTOMER_ID, '1');
-        localStorage.setItem(STORAGE_KEYS.PURCHASES, JSON.stringify([]));
-        localStorage.setItem(STORAGE_KEYS.NEXT_PURCHASE_ID, '1');
-        localStorage.setItem(STORAGE_KEYS.SUPPLIERS, JSON.stringify([]));
-        localStorage.setItem(STORAGE_KEYS.NEXT_SUPPLIER_ID, '1');
-    }
-}
+// Database initialization is now handled by the backend
 
 // Inventory Management
-function loadInventory() {
-    const stored = localStorage.getItem(STORAGE_KEYS.INVENTORY);
-    inventory = stored ? JSON.parse(stored) : [];
-    renderInventory();
-    updateProductSelect();
-}
-
-function saveInventory() {
-    localStorage.setItem(STORAGE_KEYS.INVENTORY, JSON.stringify(inventory));
-}
-
-function getNextInventoryId() {
-    const nextId = parseInt(localStorage.getItem(STORAGE_KEYS.NEXT_INVENTORY_ID) || '1');
-    localStorage.setItem(STORAGE_KEYS.NEXT_INVENTORY_ID, (nextId + 1).toString());
-    return nextId;
+async function loadInventory() {
+    try {
+        inventory = await APIService.getInventory();
+        renderInventory();
+        updateProductSelect();
+    } catch (error) {
+        console.error('Error loading inventory:', error);
+        alert('Failed to load inventory. Please refresh the page.');
+    }
 }
 
 function renderInventory() {
@@ -257,7 +220,7 @@ function closeStockModal() {
     document.getElementById('add-stock-form').reset();
 }
 
-function addStock(event) {
+async function addStock(event) {
     event.preventDefault();
     
     const itemId = parseInt(document.getElementById('stock-item-id').value);
@@ -266,13 +229,22 @@ function addStock(event) {
     const item = inventory.find(i => i.id === itemId);
     if (!item) return;
     
-    item.quantity += quantityToAdd;
-    saveInventory();
-    renderInventory();
-    updateProductSelect();
-    closeStockModal();
-    
-    alert(`Successfully added ${quantityToAdd} units to ${item.name}. New stock: ${item.quantity}`);
+    try {
+        // Update quantity
+        item.quantity += quantityToAdd;
+        
+        // Save to database
+        await APIService.updateInventoryItem(itemId, item);
+        
+        // Update local state
+        await loadInventory();
+        
+        closeStockModal();
+        alert(`Successfully added ${quantityToAdd} units to ${item.name}. New stock: ${item.quantity}`);
+    } catch (error) {
+        console.error('Error adding stock:', error);
+        alert('Failed to add stock. Please try again.');
+    }
 }
 
 function checkLowStock() {
@@ -318,7 +290,7 @@ function closeModal() {
     document.getElementById('add-item-form').reset();
 }
 
-function addInventoryItem(event) {
+async function addInventoryItem(event) {
     event.preventDefault();
     
     if (!checkOwnerPermission()) {
@@ -327,7 +299,6 @@ function addInventoryItem(event) {
     }
     
     const item = {
-        id: getNextInventoryId(),
         name: document.getElementById('product-name').value,
         description: document.getElementById('product-description').value,
         hsn: document.getElementById('product-hsn').value,
@@ -337,25 +308,32 @@ function addInventoryItem(event) {
         quantity: 0,
         minStock: 0,
         price: parseFloat(document.getElementById('product-price').value),
-        gst: parseFloat(document.getElementById('product-gst').value),
-        createdAt: new Date().toISOString()
+        gst: parseFloat(document.getElementById('product-gst').value)
     };
     
-    inventory.push(item);
-    saveInventory();
-    renderInventory();
-    updateProductSelect();
-    closeModal();
+    try {
+        await APIService.addInventoryItem(item);
+        await loadInventory();
+        closeModal();
+        alert('Product added successfully!');
+    } catch (error) {
+        console.error('Error adding item:', error);
+        alert('Failed to add product. Please try again.');
+    }
 }
 
-function deleteItem(id) {
+async function deleteItem(id) {
     if (!checkOwnerPermission()) return;
     if (!confirm('Are you sure you want to delete this item?')) return;
     
-    inventory = inventory.filter(item => item.id !== id);
-    saveInventory();
-    renderInventory();
-    updateProductSelect();
+    try {
+        await APIService.deleteInventoryItem(id);
+        await loadInventory();
+        alert('Product deleted successfully!');
+    } catch (error) {
+        console.error('Error deleting item:', error);
+        alert('Failed to delete product. Please try again.');
+    }
 }
 
 function editItem(id) {
@@ -522,7 +500,7 @@ function removeBillItem(index) {
     renderBillItems();
 }
 
-function generateBill() {
+async function generateBill() {
     const customerName = document.getElementById('customer-name').value;
     const customerPhone = document.getElementById('customer-phone').value;
     const customerGst = document.getElementById('customer-gst').value;
@@ -578,89 +556,113 @@ function generateBill() {
         address: customerAddress,
         state: customerState
     };
-    saveOrUpdateCustomer(customerData);
+    await saveOrUpdateCustomer(customerData);
     
     const bill = {
-        id: getNextBillId(),
         customer: customerData,
         items: itemsWithGST,
         subtotal,
         gstBreakdown,
         totalGST,
         total,
-        paymentStatus: paymentStatus,
-        createdAt: new Date().toISOString()
+        paymentStatus: paymentStatus
     };
     
-    // Update inventory quantities
-    currentBillItems.forEach(billItem => {
-        const invItem = inventory.find(i => i.id === billItem.id);
-        if (invItem) {
-            invItem.quantity -= billItem.quantity;
+    try {
+        // Update inventory quantities in database
+        for (const billItem of currentBillItems) {
+            const invItem = inventory.find(i => i.id === billItem.id);
+            if (invItem) {
+                invItem.quantity -= billItem.quantity;
+                await APIService.updateInventoryItem(invItem.id, invItem);
+            }
         }
-    });
-    
-    bills.push(bill);
-    saveBills();
-    saveInventory();
-    
-    // Generate PDF
-    generateBillPDF(bill);
-    
-    // Check for low stock after sale
-    const lowStockWarnings = [];
-    currentBillItems.forEach(billItem => {
-        const invItem = inventory.find(i => i.id === billItem.id);
-        if (invItem && invItem.quantity < 5) {
-            lowStockWarnings.push(`${invItem.name}: ${invItem.quantity} ${invItem.unit} remaining`);
+        
+        // Save bill to database
+        const savedBill = await APIService.addBill(bill);
+        
+        // Reload data
+        await loadInventory();
+        await loadBills();
+        
+        // Generate PDF
+        generateBillPDF(savedBill);
+        
+        // Check for low stock after sale
+        const lowStockWarnings = [];
+        currentBillItems.forEach(billItem => {
+            const invItem = inventory.find(i => i.id === billItem.id);
+            if (invItem && invItem.quantity < 5) {
+                lowStockWarnings.push(`${invItem.name}: ${invItem.quantity} ${invItem.unit} remaining`);
+            }
+        });
+        
+        let alertMessage = `Bill #${savedBill.id} generated successfully!\nTotal Amount: ₹${total.toFixed(2)}\nPayment Status: ${paymentStatus.toUpperCase()}\n\nPDF invoice has been downloaded!`;
+        
+        if (lowStockWarnings.length > 0 && isOwner()) {
+            alertMessage += '\n\n⚠️ LOW STOCK ALERT:\n' + lowStockWarnings.join('\n');
         }
-    });
-    
-    let alertMessage = `Bill #${bill.id} generated successfully!\nTotal Amount: ₹${total.toFixed(2)}\nPayment Status: ${paymentStatus.toUpperCase()}\n\nPDF invoice has been downloaded!`;
-    
-    if (lowStockWarnings.length > 0 && isOwner()) {
-        alertMessage += '\n\n⚠️ LOW STOCK ALERT:\n' + lowStockWarnings.join('\n');
+        
+        alert(alertMessage);
+        
+        // Reset form
+        document.getElementById('customer-search').value = '';
+        document.getElementById('customer-name').value = '';
+        document.getElementById('customer-phone').value = '';
+        document.getElementById('customer-gst').value = '';
+        document.getElementById('customer-address').value = '';
+        document.getElementById('customer-state').value = '';
+        document.getElementById('customer-payment-status').value = '';
+        currentBillItems = [];
+        renderBillItems();
+        
+        // Switch to sales view to show the new bill
+        switchView('sales');
+    } catch (error) {
+        console.error('Error generating bill:', error);
+        alert('Failed to generate bill. Please try again.');
     }
-    
-    alert(alertMessage);
-    
-    // Reset form
-    document.getElementById('customer-search').value = '';
-    document.getElementById('customer-name').value = '';
-    document.getElementById('customer-phone').value = '';
-    document.getElementById('customer-gst').value = '';
-    document.getElementById('customer-address').value = '';
-    document.getElementById('customer-state').value = '';
-    document.getElementById('customer-payment-status').value = '';
-    currentBillItems = [];
-    renderBillItems();
-    loadInventory();
-    
-    // Switch to sales view to show the new bill
-    switchView('sales');
 }
 
-function getNextBillId() {
-    const nextId = parseInt(localStorage.getItem(STORAGE_KEYS.NEXT_BILL_ID) || '1');
-    localStorage.setItem(STORAGE_KEYS.NEXT_BILL_ID, (nextId + 1).toString());
-    return nextId;
-}
+// Bill IDs are now auto-generated by the database
 
 // Customer Management
-function loadCustomers() {
-    const stored = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-    customers = stored ? JSON.parse(stored) : [];
-    updateCustomerDatalist();
+async function loadCustomers() {
+    try {
+        customers = await APIService.getCustomers();
+        updateCustomerDatalist();
+    } catch (error) {
+        console.error('Error loading customers:', error);
+    }
 }
 
-function saveCustomers() {
-    localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
-}
-
-function getNextCustomerId() {
-    const nextId = parseInt(localStorage.getItem(STORAGE_KEYS.NEXT_CUSTOMER_ID) || '1');
-    localStorage.setItem(STORAGE_KEYS.NEXT_CUSTOMER_ID, (nextId + 1).toString());
-    return nextId;
+async function saveOrUpdateCustomer(customerData) {
+    try {
+        // Check if customer exists by phone or name
+        let existingCustomer = customers.find(c => 
+            (customerData.phone && c.phone === customerData.phone) ||
+            (customerData.name && c.name.toLowerCase() === customerData.name.toLowerCase())
+        );
+        
+        if (existingCustomer) {
+            // Update existing customer
+            await APIService.updateCustomer(existingCustomer.id, {
+                ...customerData,
+                lastBillDate: new Date().toISOString()
+            });
+        } else {
+            // Add new customer
+            await APIService.addCustomer({
+                ...customerData,
+                createdAt: new Date().toISOString(),
+                lastBillDate: new Date().toISOString()
+            });
+        }
+        
+        await loadCustomers();
+    } catch (error) {
+        console.error('Error saving customer:', error);
+    }
 }
 
 function updateCustomerDatalist() {
@@ -715,71 +717,46 @@ function fillCustomerDetails(customer) {
     document.getElementById('customer-state').value = customer.state || '';
 }
 
-function saveOrUpdateCustomer(customerData) {
-    // Check if customer exists by phone or name
-    let existingCustomer = null;
-    
-    if (customerData.phone) {
-        existingCustomer = customers.find(c => c.phone === customerData.phone);
-    }
-    
-    if (!existingCustomer && customerData.name) {
-        existingCustomer = customers.find(c => c.name.toLowerCase() === customerData.name.toLowerCase());
-    }
-    
-    if (existingCustomer) {
-        // Update existing customer
-        existingCustomer.name = customerData.name;
-        existingCustomer.phone = customerData.phone;
-        existingCustomer.gst = customerData.gst;
-        existingCustomer.address = customerData.address;
-        existingCustomer.state = customerData.state;
-        existingCustomer.lastBillDate = new Date().toISOString();
-    } else {
-        // Add new customer
-        const newCustomer = {
-            id: getNextCustomerId(),
-            ...customerData,
-            createdAt: new Date().toISOString(),
-            lastBillDate: new Date().toISOString()
-        };
-        customers.push(newCustomer);
-    }
-    
-    saveCustomers();
-    updateCustomerDatalist();
-}
+// This duplicate function is removed - using the async version above
 
 // Purchase Management
-function loadPurchases() {
-    const stored = localStorage.getItem(STORAGE_KEYS.PURCHASES);
-    purchases = stored ? JSON.parse(stored) : [];
+async function loadPurchases() {
+    try {
+        purchases = await APIService.getPurchases();
+    } catch (error) {
+        console.error('Error loading purchases:', error);
+    }
 }
 
-function savePurchases() {
-    localStorage.setItem(STORAGE_KEYS.PURCHASES, JSON.stringify(purchases));
+async function loadSuppliers() {
+    try {
+        suppliers = await APIService.getSuppliers();
+        updateSupplierDatalist();
+    } catch (error) {
+        console.error('Error loading suppliers:', error);
+    }
 }
 
-function getNextPurchaseId() {
-    const nextId = parseInt(localStorage.getItem(STORAGE_KEYS.NEXT_PURCHASE_ID) || '1');
-    localStorage.setItem(STORAGE_KEYS.NEXT_PURCHASE_ID, (nextId + 1).toString());
-    return nextId;
-}
-
-function loadSuppliers() {
-    const stored = localStorage.getItem(STORAGE_KEYS.SUPPLIERS);
-    suppliers = stored ? JSON.parse(stored) : [];
-    updateSupplierDatalist();
-}
-
-function saveSuppliers() {
-    localStorage.setItem(STORAGE_KEYS.SUPPLIERS, JSON.stringify(suppliers));
-}
-
-function getNextSupplierId() {
-    const nextId = parseInt(localStorage.getItem(STORAGE_KEYS.NEXT_SUPPLIER_ID) || '1');
-    localStorage.setItem(STORAGE_KEYS.NEXT_SUPPLIER_ID, (nextId + 1).toString());
-    return nextId;
+async function saveOrUpdateSupplier(supplierData) {
+    try {
+        let existingSupplier = suppliers.find(s =>
+            (supplierData.phone && s.phone === supplierData.phone) ||
+            (supplierData.name && s.name.toLowerCase() === supplierData.name.toLowerCase())
+        );
+        
+        if (existingSupplier) {
+            await APIService.updateSupplier(existingSupplier.id, supplierData);
+        } else {
+            await APIService.addSupplier({
+                ...supplierData,
+                createdAt: new Date().toISOString()
+            });
+        }
+        
+        await loadSuppliers();
+    } catch (error) {
+        console.error('Error saving supplier:', error);
+    }
 }
 
 function updateSupplierDatalist() {
@@ -894,7 +871,7 @@ function removePurchaseItemRow(button) {
     button.parentElement.remove();
 }
 
-function addPurchase(event) {
+async function addPurchase(event) {
     event.preventDefault();
     
     const supplierName = document.getElementById('purchase-supplier-name').value;
@@ -963,79 +940,66 @@ function addPurchase(event) {
     const total = subtotal + totalGST;
     
     // Save or update supplier
-    saveOrUpdateSupplier({
+    await saveOrUpdateSupplier({
         name: supplierName,
         phone: supplierPhone,
         gst: supplierGst
     });
     
-    const purchase = {
-        id: getNextPurchaseId(),
-        supplier: {
-            name: supplierName,
-            phone: supplierPhone,
-            gst: supplierGst
-        },
-        invoiceNo: invoiceNo,
-        purchaseDate: purchaseDate,
-        items: items,
-        subtotal: subtotal,
-        totalGST: totalGST,
-        total: total,
-        paymentStatus: paymentStatus,
-        createdAt: new Date().toISOString()
-    };
-    
-    purchases.push(purchase);
-    savePurchases();
-    saveInventory(); // Save updated inventory
-    
-    // Build stock update message
-    let stockMessage = '';
-    if (stockUpdates.length > 0) {
-        stockMessage = '\n\n📦 STOCK UPDATED:\n';
-        stockUpdates.forEach(update => {
-            stockMessage += `\n✅ ${update.name}:\n   Added: ${update.added} ${update.unit}\n   Stock: ${update.oldStock} → ${update.newStock} ${update.unit}`;
-        });
+    try {
+        // Create purchase via API (ID will be auto-generated by database)
+        const purchaseData = {
+            supplier: {
+                name: supplierName,
+                phone: supplierPhone,
+                gst: supplierGst
+            },
+            invoiceNo: invoiceNo,
+            purchaseDate: purchaseDate,
+            items: items,
+            subtotal: subtotal,
+            totalGST: totalGST,
+            total: total,
+            paymentStatus: paymentStatus
+        };
+        
+        const newPurchase = await APIService.addPurchase(purchaseData);
+        
+        // Update inventory for each item
+        for (const item of items) {
+            const product = inventory.find(p => p.id === item.id);
+            if (product) {
+                product.quantity += item.quantity;
+                await APIService.updateInventoryItem(product.id, { quantity: product.quantity });
+            }
+        }
+        
+        // Reload purchases and inventory
+        await loadPurchases();
+        await loadInventory();
+        
+        // Build stock update message
+        let stockMessage = '';
+        if (stockUpdates.length > 0) {
+            stockMessage = '\n\n📦 STOCK UPDATED:\n';
+            stockUpdates.forEach(update => {
+                stockMessage += `\n✅ ${update.name}:\n   Added: ${update.added} ${update.unit}\n   Stock: ${update.oldStock} → ${update.newStock} ${update.unit}`;
+            });
+        }
+        
+        alert(`Purchase #${newPurchase.id} added successfully!\nTotal: ₹${total.toFixed(2)}${stockMessage}`);
+        
+        closePurchaseModal();
+        renderPurchases();
+        renderInventory();
+        updateProductSelect();
+    } catch (error) {
+        console.error('Error adding purchase:', error);
+        alert('Failed to add purchase. Please try again.');
     }
-    
-    alert(`Purchase #${purchase.id} added successfully!\nTotal: ₹${total.toFixed(2)}${stockMessage}`);
-    
-    closePurchaseModal();
-    renderPurchases();
-    renderInventory(); // Refresh inventory view
-    updateProductSelect(); // Update product dropdown with new stock
 }
 
-function saveOrUpdateSupplier(supplierData) {
-    let existingSupplier = null;
-    
-    if (supplierData.phone) {
-        existingSupplier = suppliers.find(s => s.phone === supplierData.phone);
-    }
-    
-    if (!existingSupplier && supplierData.name) {
-        existingSupplier = suppliers.find(s => s.name.toLowerCase() === supplierData.name.toLowerCase());
-    }
-    
-    if (existingSupplier) {
-        existingSupplier.name = supplierData.name;
-        existingSupplier.phone = supplierData.phone;
-        existingSupplier.gst = supplierData.gst;
-        existingSupplier.lastPurchaseDate = new Date().toISOString();
-    } else {
-        const newSupplier = {
-            id: getNextSupplierId(),
-            ...supplierData,
-            createdAt: new Date().toISOString(),
-            lastPurchaseDate: new Date().toISOString()
-        };
-        suppliers.push(newSupplier);
-    }
-    
-    saveSuppliers();
-    updateSupplierDatalist();
-}
+// This duplicate function is removed - using the async version above
 
 function renderPurchases() {
     const tbody = document.getElementById('purchases-tbody');
@@ -1309,7 +1273,7 @@ function closeUpdatePurchasePaymentModal() {
     document.getElementById('partial-purchase-amount-input').value = '';
 }
 
-function selectPurchasePaymentStatus(newStatus) {
+async function selectPurchasePaymentStatus(newStatus) {
     const purchaseId = window.currentPurchaseIdForUpdate;
     if (!purchaseId) return;
     
@@ -1380,11 +1344,19 @@ function selectPurchasePaymentStatus(newStatus) {
     }
     
     purchase.paymentStatus = newStatus;
-    savePurchases();
-    renderPurchases();
-    closeUpdatePurchasePaymentModal();
     
-    alert(`Purchase payment status updated to: ${statusLabels[newStatus]}`);
+    try {
+        await APIService.updatePurchase(purchase.id, { 
+            paymentStatus: newStatus,
+            paymentTracking: purchase.paymentTracking 
+        });
+        renderPurchases();
+        closeUpdatePurchasePaymentModal();
+        alert(`Purchase payment status updated to: ${statusLabels[newStatus]}`);
+    } catch (error) {
+        console.error('Error updating purchase payment status:', error);
+        alert('Failed to update payment status. Please try again.');
+    }
 }
 
 function calculatePurchasePending() {
@@ -1400,7 +1372,7 @@ function calculatePurchasePending() {
     document.getElementById('purchase-remaining-pending').textContent = `₹${Math.max(0, newPending).toFixed(2)}`;
 }
 
-function confirmPartialPurchasePayment() {
+async function confirmPartialPurchasePayment() {
     const purchaseId = window.currentPurchaseIdForUpdate;
     if (!purchaseId) return;
     
@@ -1437,9 +1409,17 @@ function confirmPartialPurchasePayment() {
         alert(`Partial payment recorded!\nPaid: ₹${amountPaid.toFixed(2)}\nRemaining: ₹${purchase.paymentTracking.amountPending.toFixed(2)}`);
     }
     
-    savePurchases();
-    renderPurchases();
-    closeUpdatePurchasePaymentModal();
+    try {
+        await APIService.updatePurchase(purchase.id, { 
+            paymentStatus: purchase.paymentStatus,
+            paymentTracking: purchase.paymentTracking 
+        });
+        renderPurchases();
+        closeUpdatePurchasePaymentModal();
+    } catch (error) {
+        console.error('Error updating purchase payment:', error);
+        alert('Failed to update payment. Please try again.');
+    }
 }
 
 function cancelPartialPurchasePayment() {
@@ -1449,12 +1429,17 @@ function cancelPartialPurchasePayment() {
     document.getElementById('partial-purchase-amount-input').value = '';
 }
 
-function deletePurchase(purchaseId) {
+async function deletePurchase(purchaseId) {
     if (!confirm('Are you sure you want to delete this purchase record?')) return;
     
-    purchases = purchases.filter(p => p.id !== purchaseId);
-    savePurchases();
-    renderPurchases();
+    try {
+        await APIService.deletePurchase(purchaseId);
+        purchases = purchases.filter(p => p.id !== purchaseId);
+        renderPurchases();
+    } catch (error) {
+        console.error('Error deleting purchase:', error);
+        alert('Failed to delete purchase. Please try again.');
+    }
 }
 
 // Supplier Reports
@@ -1718,21 +1703,19 @@ function closeSupplierDetailsModal() {
     document.getElementById('supplier-details-modal').classList.remove('active');
 }
 
-function getNextBillId() {
-    const nextId = parseInt(localStorage.getItem(STORAGE_KEYS.NEXT_BILL_ID) || '1');
-    localStorage.setItem(STORAGE_KEYS.NEXT_BILL_ID, (nextId + 1).toString());
-    return nextId;
-}
+// Bill IDs are now auto-generated by the database
 
 // Reports
-function loadBills() {
-    const stored = localStorage.getItem(STORAGE_KEYS.BILLS);
-    bills = stored ? JSON.parse(stored) : [];
+async function loadBills() {
+    try {
+        bills = await APIService.getBills();
+    } catch (error) {
+        console.error('Error loading bills:', error);
+        bills = [];
+    }
 }
 
-function saveBills() {
-    localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
-}
+// Bills are now saved via API, no need for saveBills function
 
 function viewBillDetails(billId) {
     const bill = bills.find(b => b.id === billId);
@@ -1939,12 +1922,17 @@ function closeBillDetailsModal() {
     document.getElementById('bill-details-modal').classList.remove('active');
 }
 
-function deleteBill(billId) {
+async function deleteBill(billId) {
     if (!confirm('Are you sure you want to delete this bill? This action cannot be undone.')) return;
     
-    bills = bills.filter(b => b.id !== billId);
-    saveBills();
-    renderSales();
+    try {
+        await APIService.deleteBill(billId);
+        bills = bills.filter(b => b.id !== billId);
+        renderSales();
+    } catch (error) {
+        console.error('Error deleting bill:', error);
+        alert('Failed to delete bill. Please try again.');
+    }
 }
 
 function updatePaymentStatus(billId) {
@@ -1979,7 +1967,7 @@ function closeUpdatePaymentModal() {
     document.getElementById('partial-amount-input').value = '';
 }
 
-function selectPaymentStatus(newStatus) {
+async function selectPaymentStatus(newStatus) {
     const billId = window.currentBillIdForUpdate;
     if (!billId) return;
     
@@ -2050,11 +2038,19 @@ function selectPaymentStatus(newStatus) {
     }
     
     bill.paymentStatus = newStatus;
-    saveBills();
-    renderSales();
-    closeUpdatePaymentModal();
     
-    alert(`Payment status updated to: ${statusLabels[newStatus]}`);
+    try {
+        await APIService.updateBill(bill.id, { 
+            paymentStatus: newStatus,
+            paymentTracking: bill.paymentTracking 
+        });
+        renderSales();
+        closeUpdatePaymentModal();
+        alert(`Payment status updated to: ${statusLabels[newStatus]}`);
+    } catch (error) {
+        console.error('Error updating bill payment status:', error);
+        alert('Failed to update payment status. Please try again.');
+    }
 }
 
 function calculateBillPending() {
@@ -2070,7 +2066,7 @@ function calculateBillPending() {
     document.getElementById('bill-remaining-pending').textContent = `₹${Math.max(0, newPending).toFixed(2)}`;
 }
 
-function confirmPartialPayment() {
+async function confirmPartialPayment() {
     const billId = window.currentBillIdForUpdate;
     if (!billId) return;
     
@@ -2107,9 +2103,17 @@ function confirmPartialPayment() {
         alert(`Partial payment recorded!\nReceived: ₹${amountReceived.toFixed(2)}\nRemaining: ₹${bill.paymentTracking.amountPending.toFixed(2)}`);
     }
     
-    saveBills();
-    renderSales();
-    closeUpdatePaymentModal();
+    try {
+        await APIService.updateBill(bill.id, { 
+            paymentStatus: bill.paymentStatus,
+            paymentTracking: bill.paymentTracking 
+        });
+        renderSales();
+        closeUpdatePaymentModal();
+    } catch (error) {
+        console.error('Error updating bill payment:', error);
+        alert('Failed to update payment. Please try again.');
+    }
 }
 
 function cancelPartialPayment() {
