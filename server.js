@@ -546,18 +546,6 @@ app.get('/api/purchases', async (req, res) => {
           }
         };
       }
-          items: [],
-          paymentTracking: {},
-          subtotal: parseFloat(purchase.subtotal) || 0,
-          totalGST: parseFloat(purchase.totalGST) || 0,
-          total: parseFloat(purchase.total) || 0,
-          supplier: {
-            name: purchase.supplierName || 'Unknown',
-            phone: purchase.supplierPhone || null,
-            gst: purchase.supplierGst || null
-          }
-        };
-      }
     });
     
     res.json(parsedPurchases);
