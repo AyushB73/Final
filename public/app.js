@@ -705,12 +705,36 @@ async function generateBill() {
         // Save bill to database
         const savedBill = await APIService.addBill(bill);
         
-        // Reload data
+        // Reload data to get fresh bills list
         await loadInventory();
         await loadBills();
         
-        // Generate PDF
-        generateBillPDF(savedBill);
+        console.log('Bills after reload:', bills);
+        console.log('Saved bill ID:', savedBill.id);
+        
+        // Find the bill in the reloaded bills array
+        const reloadedBill = bills.find(b => b.id == savedBill.id);
+        console.log('Reloaded bill from array:', reloadedBill);
+        
+        // Use the reloaded bill if found, otherwise normalize the saved bill
+        const billForPDF = reloadedBill || {
+            ...savedBill,
+            customer: savedBill.customer || {
+                name: savedBill.customerName,
+                phone: savedBill.customerPhone,
+                gst: savedBill.customerGst,
+                address: savedBill.customerAddress,
+                state: savedBill.customerState
+            },
+            items: Array.isArray(savedBill.items) ? savedBill.items : [],
+            gstBreakdown: savedBill.gstBreakdown || {},
+            paymentTracking: savedBill.paymentTracking || {}
+        };
+        
+        console.log('Bill for PDF:', billForPDF);
+        
+        // Generate PDF with normalized bill
+        generateBillPDF(billForPDF);
         
         // Check for low stock after sale
         const lowStockWarnings = [];
