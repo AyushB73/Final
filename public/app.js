@@ -667,15 +667,42 @@ async function generateBill() {
         };
     }
     
+    // Initialize payment tracking based on payment status
+    let paymentTracking = {
+        totalAmount: total,
+        amountPaid: 0,
+        amountPending: total,
+        payments: []
+    };
+    
+    if (paymentStatus === 'paid') {
+        paymentTracking = {
+            totalAmount: total,
+            amountPaid: total,
+            amountPending: 0,
+            payments: [{
+                amount: total,
+                date: new Date().toISOString(),
+                note: 'Paid at time of billing'
+            }]
+        };
+    }
+    
     // Save or update customer
     const customerData = {
         name: customerName,
-        phone: customerPhone,
-        gst: customerGst,
-        address: customerAddress,
+        phone: customerPhone || null,
+        gst: customerGst || null,
+        address: customerAddress || null,
         state: customerState
     };
-    await saveOrUpdateCustomer(customerData);
+    
+    try {
+        await saveOrUpdateCustomer(customerData);
+    } catch (error) {
+        console.error('Error saving customer:', error);
+        // Continue even if customer save fails
+    }
     
     const bill = {
         customer: customerData,
@@ -684,55 +711,43 @@ async function generateBill() {
         gstBreakdown,
         totalGST,
         total,
-        paymentStatus: paymentStatus
+        paymentStatus: paymentStatus,
+        paymentTracking: paymentTracking
     };
     
-    console.log('Creating bill with data:', bill);
-    console.log('Items in bill:', bill.items);
-    console.log('Items count:', bill.items.length);
+    console.log('Creating bill with data:', JSON.stringify(bill, null, 2));
     
     try {
         // Update inventory quantities in database
         for (const billItem of currentBillItems) {
             const invItem = inventory.find(i => i.id === billItem.id);
             if (invItem) {
-                invItem.quantity -= billItem.quantity;
-                await APIService.updateInventoryItem(invItem.id, invItem);
+                const newQuantity = invItem.quantity - billItem.quantity;
+                if (newQuantity < 0) {
+                    alert(`Error: Not enough stock for ${invItem.name}. Available: ${invItem.quantity}, Required: ${billItem.quantity}`);
+                    return;
+                }
+                invItem.quantity = newQuantity;
+                await APIService.updateInventoryItem(invItem.id, { quantity: newQuantity });
             }
         }
         
         // Save bill to database
-        console.log('Sending bill to API:', bill);
+        console.log('Sending bill to API...');
         const savedBill = await APIService.addBill(bill);
-        console.log('Saved bill response:', savedBill);
+        console.log('✅ Bill saved successfully:', savedBill);
         
         // Reload data to get fresh bills list
         await loadInventory();
         await loadBills();
         
-        console.log('Bills after reload:', bills);
-        console.log('Saved bill ID:', savedBill.id);
-        
         // Find the bill in the reloaded bills array
         const reloadedBill = bills.find(b => b.id == savedBill.id);
-        console.log('Reloaded bill from array:', reloadedBill);
         
-        // Use the reloaded bill if found, otherwise normalize the saved bill
-        const billForPDF = reloadedBill || {
-            ...savedBill,
-            customer: savedBill.customer || {
-                name: savedBill.customerName,
-                phone: savedBill.customerPhone,
-                gst: savedBill.customerGst,
-                address: savedBill.customerAddress,
-                state: savedBill.customerState
-            },
-            items: Array.isArray(savedBill.items) ? savedBill.items : [],
-            gstBreakdown: savedBill.gstBreakdown || {},
-            paymentTracking: savedBill.paymentTracking || {}
-        };
+        // Use the reloaded bill if found, otherwise use saved bill
+        const billForPDF = reloadedBill || savedBill;
         
-        console.log('Bill for PDF:', billForPDF);
+        console.log('Generating PDF for bill:', billForPDF);
         
         // Generate PDF with normalized bill
         generateBillPDF(billForPDF);
@@ -746,7 +761,7 @@ async function generateBill() {
             }
         });
         
-        let alertMessage = `Bill #${savedBill.id} generated successfully!\nTotal Amount: ₹${total.toFixed(2)}\nPayment Status: ${paymentStatus.toUpperCase()}\n\nPDF invoice has been downloaded!`;
+        let alertMessage = `✅ Bill #${savedBill.id} generated successfully!\n\nTotal Amount: ₹${total.toFixed(2)}\nPayment Status: ${paymentStatus.toUpperCase()}\n\nPDF invoice has been downloaded!`;
         
         if (lowStockWarnings.length > 0 && isOwner()) {
             alertMessage += '\n\n⚠️ LOW STOCK ALERT:\n' + lowStockWarnings.join('\n');
@@ -768,8 +783,10 @@ async function generateBill() {
         // Switch to sales view to show the new bill
         switchView('sales');
     } catch (error) {
-        console.error('Error generating bill:', error);
-        alert('Failed to generate bill. Please try again.');
+        console.error('❌ Error generating bill:', error);
+        console.error('Error details:', error.message);
+        console.error('Stack trace:', error.stack);
+        alert('Failed to generate bill. Please try again.\n\nError: ' + error.message);
     }
 }
 
