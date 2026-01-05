@@ -619,6 +619,26 @@
         </div>
     </div>
 
+    <!-- Remove Stock Modal -->
+    <div id="remove-stock-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Remove Stock</h2>
+                <span class="close" onclick="closeRemoveStockModal()">&times;</span>
+            </div>
+            <form id="remove-stock-form" onsubmit="removeStockSubmit(event)">
+                <input type="hidden" id="remove-stock-item-id">
+                <div class="stock-info">
+                    <p><strong>Product:</strong> <span id="remove-stock-item-name"></span></p>
+                    <p><strong>Current Stock:</strong> <span id="remove-stock-item-current"></span></p>
+                </div>
+                <input type="number" id="remove-stock-quantity" placeholder="Quantity to Remove *" min="1" required>
+                <input type="text" id="remove-stock-reason" placeholder="Reason (e.g., Damaged, Expired, Returned) *" required>
+                <button type="submit" class="btn btn-primary">Remove Stock</button>
+            </form>
+        </div>
+    </div>
+
     <!-- Add Purchase Modal -->
     <div id="add-purchase-modal" class="modal">
         <div class="modal-content" style="max-width: 1000px;">

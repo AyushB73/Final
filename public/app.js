@@ -288,32 +288,31 @@ function showRemoveStockModal(itemId) {
         return;
     }
     
-    const quantityToRemove = prompt(`Remove stock from: ${item.name} (${item.size} ${item.unit})\n\nCurrent Stock: ${item.quantity}\n\nEnter quantity to remove:`, '0');
-    
-    if (quantityToRemove === null) return; // User cancelled
-    
-    const qty = parseInt(quantityToRemove);
-    
-    if (isNaN(qty) || qty <= 0) {
-        alert('Please enter a valid positive number');
-        return;
-    }
-    
-    if (qty > item.quantity) {
-        alert(`Cannot remove ${qty} units. Only ${item.quantity} units available in stock.`);
-        return;
-    }
-    
-    const reason = prompt(`Reason for removing ${qty} units:\n(e.g., Damaged, Expired, Returned, etc.)`, 'Stock Adjustment');
-    
-    if (reason === null) return; // User cancelled
-    
-    removeStock(itemId, qty, reason || 'Stock Adjustment');
+    document.getElementById('remove-stock-item-id').value = itemId;
+    document.getElementById('remove-stock-item-name').textContent = `${item.name} (${item.size} ${item.unit})`;
+    document.getElementById('remove-stock-item-current').textContent = item.quantity;
+    document.getElementById('remove-stock-modal').classList.add('active');
 }
 
-async function removeStock(itemId, quantityToRemove, reason) {
+function closeRemoveStockModal() {
+    document.getElementById('remove-stock-modal').classList.remove('active');
+    document.getElementById('remove-stock-form').reset();
+}
+
+async function removeStockSubmit(event) {
+    event.preventDefault();
+    
+    const itemId = parseInt(document.getElementById('remove-stock-item-id').value);
+    const quantityToRemove = parseInt(document.getElementById('remove-stock-quantity').value);
+    const reason = document.getElementById('remove-stock-reason').value;
+    
     const item = inventory.find(i => i.id === itemId);
     if (!item) return;
+    
+    if (quantityToRemove > item.quantity) {
+        alert(`Cannot remove ${quantityToRemove} units. Only ${item.quantity} units available in stock.`);
+        return;
+    }
     
     try {
         // Update quantity
@@ -326,6 +325,7 @@ async function removeStock(itemId, quantityToRemove, reason) {
         // Update local state
         await loadInventory();
         
+        closeRemoveStockModal();
         alert(`Successfully removed ${quantityToRemove} units from ${item.name}.\nReason: ${reason}\nOld Stock: ${oldQuantity}\nNew Stock: ${item.quantity}`);
     } catch (error) {
         console.error('Error removing stock:', error);
