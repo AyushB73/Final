@@ -2470,17 +2470,39 @@ async function selectPaymentStatus(newStatus) {
     bill.paymentStatus = newStatus;
     
     try {
-        // Send the complete bill object to the server
-        await APIService.updateBill(bill.id, {
-            customer: bill.customer,
-            items: bill.items,
-            subtotal: bill.subtotal,
-            gstBreakdown: bill.gstBreakdown,
-            totalGST: bill.totalGST,
-            total: bill.total,
+        // Ensure all numeric values are valid
+        const updateData = {
+            customer: {
+                name: bill.customer?.name || '',
+                phone: bill.customer?.phone || null,
+                gst: bill.customer?.gst || null,
+                address: bill.customer?.address || null,
+                state: bill.customer?.state || null
+            },
+            items: Array.isArray(bill.items) ? bill.items.map(item => ({
+                id: item.id,
+                name: item.name || '',
+                size: item.size || '',
+                unit: item.unit || '',
+                quantity: parseFloat(item.quantity) || 0,
+                price: parseFloat(item.price) || 0,
+                amount: parseFloat(item.amount) || 0,
+                gst: parseFloat(item.gst) || 0,
+                gstAmount: parseFloat(item.gstAmount) || 0,
+                total: parseFloat(item.total) || 0
+            })) : [],
+            subtotal: parseFloat(bill.subtotal) || 0,
+            gstBreakdown: bill.gstBreakdown || {},
+            totalGST: parseFloat(bill.totalGST) || 0,
+            total: parseFloat(bill.total) || 0,
             paymentStatus: newStatus,
-            paymentTracking: bill.paymentTracking 
-        });
+            paymentTracking: bill.paymentTracking || {}
+        };
+        
+        console.log('Sending update data:', updateData);
+        
+        // Send the complete bill object to the server
+        await APIService.updateBill(bill.id, updateData);
         
         // Reload bills to get fresh data
         await loadBills();
@@ -2491,6 +2513,7 @@ async function selectPaymentStatus(newStatus) {
         alert(`Payment status updated to: ${statusLabels[newStatus]}`);
     } catch (error) {
         console.error('Error updating bill payment status:', error);
+        console.error('Error details:', error.message);
         alert('Failed to update payment status. Please try again.');
     }
 }

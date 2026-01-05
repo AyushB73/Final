@@ -68,10 +68,18 @@ class APIService {
     }
 
     static async updateBill(id, bill) {
-        return await this.request(`/api/bills/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(bill)
-        });
+        try {
+            const jsonData = JSON.stringify(bill);
+            console.log('Stringified bill data:', jsonData);
+            return await this.request(`/api/bills/${id}`, {
+                method: 'PUT',
+                body: jsonData
+            });
+        } catch (error) {
+            console.error('Error stringifying bill data:', error);
+            console.error('Bill object:', bill);
+            throw new Error('Failed to serialize bill data: ' + error.message);
+        }
     }
 
     static async deleteBill(id) {
