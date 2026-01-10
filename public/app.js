@@ -3760,11 +3760,15 @@ function viewCustomerDetails(customerName) {
                         <div class="stat-number">₹${paidAmount.toFixed(2)}</div>
                     </div>
                 </div>
-                <div class="supplier-stat-card ${outstandingAmount > 0 ? 'danger' : 'success'}">
+                <div class="supplier-stat-card ${outstandingAmount > 0 ? 'danger' : 'success'}" style="position: relative;">
                     <div class="stat-icon">${outstandingAmount > 0 ? '⏳' : '✅'}</div>
                     <div class="stat-info">
                         <div class="stat-label">Outstanding</div>
                         <div class="stat-number">₹${outstandingAmount.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-actions" style="position: absolute; top: 10px; right: 10px; display: flex; gap: 5px;">
+                        <button onclick="downloadCustomerReportPDF('${customer.name.replace(/'/g, "\\'")}')" class="btn-icon" title="Download PDF">📄</button>
+                        <button onclick="downloadCustomerReportCSV('${customer.name.replace(/'/g, "\\'")}')" class="btn-icon" title="Download CSV">📊</button>
                     </div>
                 </div>
             </div>
@@ -3831,6 +3835,113 @@ function viewCustomerDetails(customerName) {
 
 function closeCustomerDetailsModal() {
     document.getElementById('customer-details-modal').classList.remove('active');
+}
+
+async function downloadCustomerReportPDF(customerName) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const customer = customers.find(c => c.name === customerName);
+    if (!customer) {
+        alert('Customer data not found');
+        return;
+    }
+
+    const customerBills = bills.filter(b =>
+        b.customer.name.toLowerCase() === customerName.toLowerCase() ||
+        (b.customer.phone && customer.phone && b.customer.phone === customer.phone)
+    );
+
+    const totalAmount = customerBills.reduce((sum, b) => sum + b.total, 0);
+    const paidAmount = customerBills.filter(b => (b.paymentStatus || 'paid') === 'paid').reduce((sum, b) => sum + b.total, 0);
+    const pendingAmount = customerBills.filter(b => b.paymentStatus === 'pending').reduce((sum, b) => sum + b.total, 0);
+    const partialAmount = customerBills.filter(b => b.paymentStatus === 'partial').reduce((sum, b) => sum + b.total, 0);
+    const outstandingAmount = pendingAmount + partialAmount;
+
+    // Header
+    doc.setFillColor(41, 128, 185);
+    doc.rect(0, 0, 210, 40, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("PLASTIWOOD", 105, 15, { align: "center" });
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text("Customer Account Statement", 105, 25, { align: "center" });
+    doc.setFontSize(10);
+    doc.text(`Report Date: ${new Date().toLocaleDateString('en-IN')}`, 105, 33, { align: "center" });
+
+    // Customer Info
+    doc.setTextColor(44, 62, 80);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Customer Profile", 14, 50);
+    doc.line(14, 52, 196, 52);
+    doc.setFontSize(10);
+    doc.text(`Name:`, 14, 60);
+    doc.text(`Phone:`, 14, 66);
+    doc.text(`GST No:`, 14, 72);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${customer.name}`, 40, 60);
+    doc.text(`${customer.phone || 'N/A'}`, 40, 66);
+    doc.text(`${customer.gst || 'N/A'}`, 40, 72);
+
+    // Summary
+    doc.setFont("helvetica", "bold");
+    doc.text(`Total Orders:`, 120, 60);
+    doc.text(`Total Business:`, 120, 66);
+    doc.text(`Outstanding:`, 120, 72);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${customerBills.length}`, 160, 60);
+    doc.text(`Rs. ${totalAmount.toFixed(2)}`, 160, 66);
+    if (outstandingAmount > 0) doc.setTextColor(231, 76, 60);
+    else doc.setTextColor(39, 174, 96);
+    doc.text(`Rs. ${outstandingAmount.toFixed(2)}`, 160, 72);
+    doc.setTextColor(44, 62, 80);
+
+    // Table
+    doc.autoTable({
+        startY: 85,
+        head: [['Bill #', 'Date', 'Items', 'Amount (Rs.)', 'Status']],
+        body: customerBills.map(b => [
+            `#${b.id}`,
+            new Date(b.createdAt).toLocaleDateString('en-IN'),
+            b.items.length,
+            b.total.toFixed(2),
+            b.paymentStatus.toUpperCase()
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+        styles: { fontSize: 9 }
+    });
+
+    doc.save(`Customer_Report_${customer.name.replace(/\s+/g, '_')}.pdf`);
+}
+
+function downloadCustomerReportCSV(customerName) {
+    const customer = customers.find(c => c.name === customerName);
+    if (!customer) return;
+
+    const customerBills = bills.filter(b =>
+        b.customer.name.toLowerCase() === customerName.toLowerCase() ||
+        (b.customer.phone && customer.phone && b.customer.phone === customer.phone)
+    );
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Bill #,Date,Items Count,Amount (INR),Payment Status\n";
+
+    customerBills.forEach(b => {
+        const date = new Date(b.createdAt).toLocaleDateString('en-IN');
+        csvContent += `${b.id},${date},${b.items.length},${b.total.toFixed(2)},${b.paymentStatus.toUpperCase()}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Customer_Report_${customer.name.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 

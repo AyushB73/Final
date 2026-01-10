@@ -501,9 +501,9 @@ app.put('/api/bills/:id', async (req, res) => {
     // Parse and return the updated bill
     const parsedBill = {
       ...bill,
-      items: JSON.parse(bill.items || '[]'),
-      gstBreakdown: JSON.parse(bill.gstBreakdown || '{}'),
-      paymentTracking: JSON.parse(bill.paymentTracking || '{}'),
+      items: typeof bill.items === 'string' ? JSON.parse(bill.items || '[]') : (bill.items || []),
+      gstBreakdown: typeof bill.gstBreakdown === 'string' ? JSON.parse(bill.gstBreakdown || '{}') : (bill.gstBreakdown || {}),
+      paymentTracking: typeof bill.paymentTracking === 'string' ? JSON.parse(bill.paymentTracking || '{}') : (bill.paymentTracking || {}),
       subtotal: parseFloat(bill.subtotal) || 0,
       totalGST: parseFloat(bill.totalGST) || 0,
       total: parseFloat(bill.total) || 0,
