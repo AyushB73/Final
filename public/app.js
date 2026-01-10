@@ -11,20 +11,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Check authentication
     const currentUser = requireAuth();
     if (!currentUser) return;
-    
+
     // Display user info
     document.getElementById('user-name').textContent = currentUser.name;
-    
+
     // Apply role-based restrictions
     applyRoleRestrictions(currentUser.role);
-    
+
     // Initialize database with sample data if needed
     try {
         await APIService.initializeDatabase();
     } catch (error) {
         console.error('Database initialization error:', error);
     }
-    
+
     // Load all data from database
     await loadInventory();
     await loadBills();
@@ -32,15 +32,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadPurchases();
     await loadSuppliers();
     setupNavigation();
-    
+
     // Initialize sales view if bills exist
     if (bills.length > 0) {
         renderSales();
     }
-    
+
     // Setup customer search
     setupCustomerSearch();
-    
+
     // Setup mobile-friendly table scrolling
     setupMobileTableScroll();
 });
@@ -59,10 +59,10 @@ function setupNavigation() {
 function switchView(viewName) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    
+
     document.getElementById(`${viewName}-view`).classList.add('active');
     document.querySelectorAll(`[data-view="${viewName}"]`).forEach(btn => btn.classList.add('active'));
-    
+
     if (viewName === 'dashboard') {
         renderDashboard();
     } else if (viewName === 'sales') {
@@ -84,19 +84,19 @@ function toggleMenu() {
     console.log('=== toggleMenu called ===');
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebar-overlay');
-    
+
     console.log('Sidebar element:', sidebar);
     console.log('Overlay element:', overlay);
-    
+
     if (!sidebar || !overlay) {
         console.error('Elements not found!', { sidebar, overlay });
         alert('Error: Sidebar elements not found! Please refresh the page.');
         return;
     }
-    
+
     sidebar.classList.toggle('active');
     overlay.classList.toggle('active');
-    
+
     const isActive = sidebar.classList.contains('active');
     console.log('Sidebar is now:', isActive ? 'OPEN' : 'CLOSED');
     console.log('Sidebar classes:', sidebar.className);
@@ -111,15 +111,15 @@ function applyRoleRestrictions(role) {
         // Hide add item button
         const addItemBtn = document.getElementById('add-item-btn');
         if (addItemBtn) addItemBtn.style.display = 'none';
-        
+
         // Hide actions column header
         const actionsHeader = document.getElementById('actions-header');
         if (actionsHeader) actionsHeader.style.display = 'none';
-        
+
         // Hide purchases tab for staff (sidebar)
         const purchasesNavSidebar = document.getElementById('purchases-nav-sidebar');
         if (purchasesNavSidebar) purchasesNavSidebar.style.display = 'none';
-        
+
         // Hide dashboard tab for staff (sidebar)
         const dashboardNavSidebar = document.getElementById('dashboard-nav-sidebar');
         if (dashboardNavSidebar) dashboardNavSidebar.style.display = 'none';
@@ -146,14 +146,14 @@ async function loadInventory() {
     } catch (error) {
         console.error('Error loading inventory:', error);
         console.error('Full error details:', error.message, error.stack);
-        
+
         // Show more helpful error message
-        const errorMsg = error.message.includes('Failed to fetch') 
+        const errorMsg = error.message.includes('Failed to fetch')
             ? 'Cannot connect to server. Please check if the backend is running.'
             : `Failed to load inventory: ${error.message}`;
-        
+
         alert(errorMsg + '\n\nPlease check the browser console for more details.');
-        
+
         // Initialize with empty inventory to prevent app crash
         inventory = [];
         renderInventory();
@@ -164,18 +164,18 @@ function renderInventory() {
     const tbody = document.getElementById('inventory-tbody');
     tbody.innerHTML = '';
     const userRole = getCurrentUser()?.role;
-    
+
     inventory.forEach((item) => {
         const row = document.createElement('tr');
         const stockStatus = item.quantity < 5 ? 'badge-danger' : item.quantity < 20 ? 'badge-warning' : 'badge-success';
-        
+
         // Ensure price and gst are numbers (convert from string if needed)
         const price = parseFloat(item.price) || 0;
         const gst = parseFloat(item.gst) || 0;
-        
+
         // Calculate taxed price (price + GST)
         const taxedPrice = price + (price * gst / 100);
-        
+
         // Show actions only for owner
         const actionsHtml = userRole === 'owner' ? `
             <td>
@@ -185,7 +185,7 @@ function renderInventory() {
                 <button class="action-btn delete" onclick="deleteItem(${item.id})">Delete</button>
             </td>
         ` : '<td style="display: none;"></td>';
-        
+
         row.innerHTML = `
             <td>${item.id}</td>
             <td><strong>${item.name}</strong></td>
@@ -202,7 +202,7 @@ function renderInventory() {
         `;
         tbody.appendChild(row);
     });
-    
+
     // Check for low stock items and alert owner
     checkLowStock();
 }
@@ -210,7 +210,7 @@ function renderInventory() {
 function filterInventory() {
     const search = document.getElementById('search-inventory').value.toLowerCase();
     const rows = document.querySelectorAll('#inventory-tbody tr');
-    
+
     rows.forEach(row => {
         const text = row.textContent.toLowerCase();
         row.style.display = text.includes(search) ? '' : 'none';
@@ -224,13 +224,13 @@ function showAddItemModal() {
     if (!checkOwnerPermission()) return;
     editingItemId = null; // Reset editing mode
     document.getElementById('add-item-form').reset();
-    
+
     // Update modal title if element exists
     const modalTitle = document.querySelector('#add-item-modal h2');
     if (modalTitle) {
         modalTitle.textContent = 'Add New Product';
     }
-    
+
     document.getElementById('add-item-modal').classList.add('active');
 }
 
@@ -243,10 +243,10 @@ function closeModal() {
 // Stock Management
 function showAddStockModal(itemId) {
     if (!checkOwnerPermission()) return;
-    
+
     const item = inventory.find(i => i.id === itemId);
     if (!item) return;
-    
+
     document.getElementById('stock-item-id').value = itemId;
     document.getElementById('stock-item-name').textContent = `${item.name} (${item.size} ${item.unit})`;
     document.getElementById('stock-item-current').textContent = item.quantity;
@@ -260,23 +260,23 @@ function closeStockModal() {
 
 async function addStock(event) {
     event.preventDefault();
-    
+
     const itemId = parseInt(document.getElementById('stock-item-id').value);
     const quantityToAdd = parseInt(document.getElementById('stock-quantity').value);
-    
+
     const item = inventory.find(i => i.id === itemId);
     if (!item) return;
-    
+
     try {
         // Update quantity
         item.quantity += quantityToAdd;
-        
+
         // Save to database
         await APIService.updateInventoryItem(itemId, item);
-        
+
         // Update local state
         await loadInventory();
-        
+
         closeStockModal();
         alert(`Successfully added ${quantityToAdd} units to ${item.name}. New stock: ${item.quantity}`);
     } catch (error) {
@@ -288,15 +288,15 @@ async function addStock(event) {
 // Remove Stock Management
 function showRemoveStockModal(itemId) {
     if (!checkOwnerPermission()) return;
-    
+
     const item = inventory.find(i => i.id === itemId);
     if (!item) return;
-    
+
     if (item.quantity === 0) {
         alert('Cannot remove stock. Current stock is already 0.');
         return;
     }
-    
+
     document.getElementById('remove-stock-item-id').value = itemId;
     document.getElementById('remove-stock-item-name').textContent = `${item.name} (${item.size} ${item.unit})`;
     document.getElementById('remove-stock-item-current').textContent = item.quantity;
@@ -310,30 +310,30 @@ function closeRemoveStockModal() {
 
 async function removeStockSubmit(event) {
     event.preventDefault();
-    
+
     const itemId = parseInt(document.getElementById('remove-stock-item-id').value);
     const quantityToRemove = parseInt(document.getElementById('remove-stock-quantity').value);
     const reason = document.getElementById('remove-stock-reason').value;
-    
+
     const item = inventory.find(i => i.id === itemId);
     if (!item) return;
-    
+
     if (quantityToRemove > item.quantity) {
         alert(`Cannot remove ${quantityToRemove} units. Only ${item.quantity} units available in stock.`);
         return;
     }
-    
+
     try {
         // Update quantity
         const oldQuantity = item.quantity;
         item.quantity -= quantityToRemove;
-        
+
         // Save to database
         await APIService.updateInventoryItem(itemId, { quantity: item.quantity });
-        
+
         // Update local state
         await loadInventory();
-        
+
         closeRemoveStockModal();
         alert(`Successfully removed ${quantityToRemove} units from ${item.name}.\nReason: ${reason}\nOld Stock: ${oldQuantity}\nNew Stock: ${item.quantity}`);
     } catch (error) {
@@ -344,13 +344,13 @@ async function removeStockSubmit(event) {
 
 function checkLowStock() {
     if (!isOwner()) return; // Only alert owner
-    
+
     const lowStockItems = inventory.filter(item => item.quantity < 5 && item.quantity > 0);
     const outOfStockItems = inventory.filter(item => item.quantity === 0);
-    
+
     if (lowStockItems.length > 0 || outOfStockItems.length > 0) {
         let message = '';
-        
+
         if (outOfStockItems.length > 0) {
             message += '⚠️ OUT OF STOCK:\n';
             outOfStockItems.forEach(item => {
@@ -358,19 +358,19 @@ function checkLowStock() {
             });
             message += '\n';
         }
-        
+
         if (lowStockItems.length > 0) {
             message += '⚠️ LOW STOCK (Less than 5 units):\n';
             lowStockItems.forEach(item => {
                 message += `- ${item.name}: ${item.quantity} ${item.unit} remaining\n`;
             });
         }
-        
+
         // Show alert only once per session
         const alertKey = 'low_stock_alert_shown';
         const lastAlert = sessionStorage.getItem(alertKey);
         const currentItems = JSON.stringify([...lowStockItems.map(i => i.id), ...outOfStockItems.map(i => i.id)]);
-        
+
         if (lastAlert !== currentItems) {
             setTimeout(() => {
                 alert(message);
@@ -387,12 +387,12 @@ function closeModal() {
 
 async function addInventoryItem(event) {
     event.preventDefault();
-    
+
     if (!checkOwnerPermission()) {
         closeModal();
         return;
     }
-    
+
     const item = {
         name: document.getElementById('product-name').value,
         description: document.getElementById('product-description').value,
@@ -403,7 +403,7 @@ async function addInventoryItem(event) {
         price: parseFloat(document.getElementById('product-price').value),
         gst: parseFloat(document.getElementById('product-gst').value)
     };
-    
+
     try {
         if (editingItemId) {
             // Update existing item
@@ -435,7 +435,7 @@ async function addInventoryItem(event) {
 async function deleteItem(id) {
     if (!checkOwnerPermission()) return;
     if (!confirm('Are you sure you want to delete this item?')) return;
-    
+
     try {
         await APIService.deleteInventoryItem(id);
         await loadInventory();
@@ -448,12 +448,12 @@ async function deleteItem(id) {
 
 function editItem(id) {
     if (!checkOwnerPermission()) return;
-    
+
     const item = inventory.find(i => i.id === id);
     if (!item) return;
-    
+
     editingItemId = id; // Set editing mode
-    
+
     document.getElementById('product-name').value = item.name;
     document.getElementById('product-description').value = item.description || '';
     document.getElementById('product-hsn').value = item.hsn || '';
@@ -462,13 +462,13 @@ function editItem(id) {
     document.getElementById('product-unit').value = item.unit || '';
     document.getElementById('product-price').value = item.price;
     document.getElementById('product-gst').value = item.gst || 18;
-    
+
     // Update modal title if element exists
     const modalTitle = document.querySelector('#add-item-modal h2');
     if (modalTitle) {
         modalTitle.textContent = 'Edit Product';
     }
-    
+
     document.getElementById('add-item-modal').classList.add('active');
 }
 
@@ -476,7 +476,7 @@ function editItem(id) {
 function updateProductSelect() {
     const select = document.getElementById('product-select');
     select.innerHTML = '<option value="">Select Product</option>';
-    
+
     inventory.forEach(item => {
         if (item.quantity > 0) {
             const option = document.createElement('option');
@@ -492,7 +492,7 @@ function updateProductSelect() {
 document.addEventListener('DOMContentLoaded', () => {
     const productSelect = document.getElementById('product-select');
     if (productSelect) {
-        productSelect.addEventListener('change', function() {
+        productSelect.addEventListener('change', function () {
             const productId = parseInt(this.value);
             if (productId) {
                 const product = inventory.find(p => p.id === productId);
@@ -511,20 +511,20 @@ function addBillItem() {
     const productId = parseInt(document.getElementById('product-select').value);
     const quantity = parseInt(document.getElementById('item-quantity').value);
     const customRate = parseFloat(document.getElementById('item-rate').value);
-    
+
     if (!productId || !quantity || !customRate) {
         alert('Please select a product, enter quantity, and enter rate');
         return;
     }
-    
+
     const product = inventory.find(p => p.id === productId);
     if (!product) return;
-    
+
     if (quantity > product.quantity) {
         alert(`Only ${product.quantity} units available in stock`);
         return;
     }
-    
+
     const existingItem = currentBillItems.find(item => item.id === productId && item.price === customRate);
     if (existingItem) {
         existingItem.quantity += quantity;
@@ -539,7 +539,7 @@ function addBillItem() {
             quantity: quantity
         });
     }
-    
+
     renderBillItems();
     document.getElementById('product-select').value = '';
     document.getElementById('item-quantity').value = '';
@@ -549,19 +549,19 @@ function addBillItem() {
 function renderBillItems() {
     const tbody = document.getElementById('bill-items-tbody');
     tbody.innerHTML = '';
-    
+
     const customerState = document.getElementById('customer-state').value;
     let subtotal = 0;
     let totalGST = 0;
-    
+
     currentBillItems.forEach((item, index) => {
         const amount = item.price * item.quantity;
         const gstAmount = (amount * item.gst) / 100;
         const itemTotal = amount + gstAmount;
-        
+
         subtotal += amount;
         totalGST += gstAmount;
-        
+
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${index + 1}</td>
@@ -579,12 +579,12 @@ function renderBillItems() {
         `;
         tbody.appendChild(row);
     });
-    
+
     const total = subtotal + totalGST;
-    
+
     document.getElementById('subtotal').textContent = `₹${subtotal.toFixed(2)}`;
     document.getElementById('total').textContent = `₹${total.toFixed(2)}`;
-    
+
     // Show/hide GST breakdown based on customer state
     if (customerState === 'same') {
         const sgst = totalGST / 2;
@@ -626,22 +626,22 @@ async function generateBill() {
     const customerAddress = document.getElementById('customer-address').value;
     const customerState = document.getElementById('customer-state').value;
     const paymentStatus = document.getElementById('customer-payment-status').value;
-    
+
     if (!customerName || !customerState || !paymentStatus || currentBillItems.length === 0) {
         alert('Please enter customer details, select state, payment status, and add items to the bill');
         return;
     }
-    
+
     // Calculate totals
     let subtotal = 0;
     let totalGST = 0;
-    
+
     const itemsWithGST = currentBillItems.map(item => {
         const amount = item.price * item.quantity;
         const gstAmount = (amount * item.gst) / 100;
         subtotal += amount;
         totalGST += gstAmount;
-        
+
         return {
             ...item,
             amount,
@@ -649,9 +649,9 @@ async function generateBill() {
             total: amount + gstAmount
         };
     });
-    
+
     const total = subtotal + totalGST;
-    
+
     // Determine GST breakdown
     let gstBreakdown = {};
     if (customerState === 'same') {
@@ -666,7 +666,7 @@ async function generateBill() {
             igst: totalGST
         };
     }
-    
+
     // Initialize payment tracking based on payment status
     let paymentTracking = {
         totalAmount: total,
@@ -674,7 +674,7 @@ async function generateBill() {
         amountPending: total,
         payments: []
     };
-    
+
     if (paymentStatus === 'paid') {
         paymentTracking = {
             totalAmount: total,
@@ -687,7 +687,7 @@ async function generateBill() {
             }]
         };
     }
-    
+
     // Save or update customer
     const customerData = {
         name: customerName,
@@ -696,14 +696,14 @@ async function generateBill() {
         address: customerAddress || null,
         state: customerState
     };
-    
+
     try {
         await saveOrUpdateCustomer(customerData);
     } catch (error) {
         console.error('Error saving customer:', error);
         // Continue even if customer save fails
     }
-    
+
     const bill = {
         customer: customerData,
         items: itemsWithGST,
@@ -714,9 +714,9 @@ async function generateBill() {
         paymentStatus: paymentStatus,
         paymentTracking: paymentTracking
     };
-    
+
     console.log('Creating bill with data:', JSON.stringify(bill, null, 2));
-    
+
     try {
         // Update inventory quantities in database
         for (const billItem of currentBillItems) {
@@ -731,27 +731,27 @@ async function generateBill() {
                 await APIService.updateInventoryItem(invItem.id, { quantity: newQuantity });
             }
         }
-        
+
         // Save bill to database
         console.log('Sending bill to API...');
         const savedBill = await APIService.addBill(bill);
         console.log('✅ Bill saved successfully:', savedBill);
-        
+
         // Reload data to get fresh bills list
         await loadInventory();
         await loadBills();
-        
+
         // Find the bill in the reloaded bills array
         const reloadedBill = bills.find(b => b.id == savedBill.id);
-        
+
         // Use the reloaded bill if found, otherwise use saved bill
         const billForPDF = reloadedBill || savedBill;
-        
+
         console.log('Generating PDF for bill:', billForPDF);
-        
+
         // Generate PDF with normalized bill
         generateBillPDF(billForPDF);
-        
+
         // Check for low stock after sale
         const lowStockWarnings = [];
         currentBillItems.forEach(billItem => {
@@ -760,15 +760,15 @@ async function generateBill() {
                 lowStockWarnings.push(`${invItem.name}: ${invItem.quantity} ${invItem.unit} remaining`);
             }
         });
-        
+
         let alertMessage = `✅ Bill #${savedBill.id} generated successfully!\n\nTotal Amount: ₹${total.toFixed(2)}\nPayment Status: ${paymentStatus.toUpperCase()}\n\nPDF invoice has been downloaded!`;
-        
+
         if (lowStockWarnings.length > 0 && isOwner()) {
             alertMessage += '\n\n⚠️ LOW STOCK ALERT:\n' + lowStockWarnings.join('\n');
         }
-        
+
         alert(alertMessage);
-        
+
         // Reset form
         document.getElementById('customer-search').value = '';
         document.getElementById('customer-name').value = '';
@@ -779,7 +779,7 @@ async function generateBill() {
         document.getElementById('customer-payment-status').value = '';
         currentBillItems = [];
         renderBillItems();
-        
+
         // Switch to sales view to show the new bill
         switchView('sales');
     } catch (error) {
@@ -805,11 +805,11 @@ async function loadCustomers() {
 async function saveOrUpdateCustomer(customerData) {
     try {
         // Check if customer exists by phone or name
-        let existingCustomer = customers.find(c => 
+        let existingCustomer = customers.find(c =>
             (customerData.phone && c.phone === customerData.phone) ||
             (customerData.name && c.name.toLowerCase() === customerData.name.toLowerCase())
         );
-        
+
         if (existingCustomer) {
             // Update existing customer
             await APIService.updateCustomer(existingCustomer.id, {
@@ -824,7 +824,7 @@ async function saveOrUpdateCustomer(customerData) {
                 lastBillDate: new Date().toISOString()
             });
         }
-        
+
         await loadCustomers();
     } catch (error) {
         console.error('Error saving customer:', error);
@@ -834,7 +834,7 @@ async function saveOrUpdateCustomer(customerData) {
 function updateCustomerDatalist() {
     const datalist = document.getElementById('customer-list');
     if (!datalist) return;
-    
+
     datalist.innerHTML = '';
     customers.forEach(customer => {
         const option = document.createElement('option');
@@ -847,28 +847,28 @@ function updateCustomerDatalist() {
 function setupCustomerSearch() {
     const searchInput = document.getElementById('customer-search');
     if (!searchInput) return;
-    
-    searchInput.addEventListener('input', function() {
+
+    searchInput.addEventListener('input', function () {
         const searchValue = this.value.toLowerCase();
-        
+
         // Find customer by name or phone
-        const customer = customers.find(c => 
-            c.name.toLowerCase().includes(searchValue) || 
+        const customer = customers.find(c =>
+            c.name.toLowerCase().includes(searchValue) ||
             (c.phone && c.phone.includes(searchValue))
         );
-        
+
         if (customer) {
             fillCustomerDetails(customer);
         }
     });
-    
-    searchInput.addEventListener('change', function() {
+
+    searchInput.addEventListener('change', function () {
         const searchValue = this.value;
-        const customer = customers.find(c => 
-            searchValue.includes(c.name) || 
+        const customer = customers.find(c =>
+            searchValue.includes(c.name) ||
             (c.phone && searchValue.includes(c.phone))
         );
-        
+
         if (customer) {
             fillCustomerDetails(customer);
         }
@@ -891,7 +891,7 @@ async function loadPurchases() {
         purchases = await APIService.getPurchases();
         console.log(`✅ Loaded ${purchases.length} purchases`);
         console.log('Purchases data:', purchases);
-        
+
         // Log each purchase structure
         purchases.forEach(purchase => {
             console.log(`Purchase #${purchase.id}:`, {
@@ -924,7 +924,7 @@ async function saveOrUpdateSupplier(supplierData) {
             (supplierData.phone && s.phone === supplierData.phone) ||
             (supplierData.name && s.name.toLowerCase() === supplierData.name.toLowerCase())
         );
-        
+
         if (existingSupplier) {
             await APIService.updateSupplier(existingSupplier.id, supplierData);
         } else {
@@ -933,7 +933,7 @@ async function saveOrUpdateSupplier(supplierData) {
                 createdAt: new Date().toISOString()
             });
         }
-        
+
         await loadSuppliers();
     } catch (error) {
         console.error('Error saving supplier:', error);
@@ -943,7 +943,7 @@ async function saveOrUpdateSupplier(supplierData) {
 function updateSupplierDatalist() {
     const datalist = document.getElementById('supplier-list');
     if (!datalist) return;
-    
+
     datalist.innerHTML = '';
     suppliers.forEach(supplier => {
         const option = document.createElement('option');
@@ -956,7 +956,7 @@ function showAddPurchaseModal() {
     updatePurchaseProductSelects();
     document.getElementById('purchase-date').valueAsDate = new Date();
     document.getElementById('add-purchase-modal').classList.add('active');
-    
+
     // Setup supplier search with proper event listeners
     setTimeout(() => {
         const searchInput = document.getElementById('purchase-supplier-search');
@@ -964,30 +964,30 @@ function showAddPurchaseModal() {
             // Remove any existing listeners
             const newSearchInput = searchInput.cloneNode(true);
             searchInput.parentNode.replaceChild(newSearchInput, searchInput);
-            
+
             // Add input event for real-time search
-            newSearchInput.addEventListener('input', function() {
+            newSearchInput.addEventListener('input', function () {
                 const searchValue = this.value.toLowerCase().trim();
                 if (searchValue.length < 2) return;
-                
-                const supplier = suppliers.find(s => 
-                    s.name.toLowerCase().includes(searchValue) || 
+
+                const supplier = suppliers.find(s =>
+                    s.name.toLowerCase().includes(searchValue) ||
                     (s.phone && s.phone.includes(searchValue))
                 );
-                
+
                 if (supplier) {
                     fillSupplierDetails(supplier);
                 }
             });
-            
+
             // Add change event for datalist selection
-            newSearchInput.addEventListener('change', function() {
+            newSearchInput.addEventListener('change', function () {
                 const searchValue = this.value;
-                const supplier = suppliers.find(s => 
-                    searchValue.includes(s.name) || 
+                const supplier = suppliers.find(s =>
+                    searchValue.includes(s.name) ||
                     (s.phone && searchValue.includes(s.phone))
                 );
-                
+
                 if (supplier) {
                     fillSupplierDetails(supplier);
                 }
@@ -1054,32 +1054,32 @@ function removePurchaseItemRow(button) {
 
 async function addPurchase(event) {
     event.preventDefault();
-    
+
     const supplierName = document.getElementById('purchase-supplier-name').value;
     const supplierPhone = document.getElementById('purchase-supplier-phone').value;
     const supplierGst = document.getElementById('purchase-supplier-gst').value;
     const invoiceNo = document.getElementById('purchase-invoice').value;
     const purchaseDate = document.getElementById('purchase-date').value;
     const paymentStatus = document.getElementById('purchase-payment-status').value;
-    
+
     // Validate only supplier name
     if (!supplierName || supplierName.trim() === '') {
         alert('Please enter Supplier Name');
         return;
     }
-    
+
     // Collect purchase items
     const itemRows = document.querySelectorAll('.purchase-item-row');
     const items = [];
     let subtotal = 0;
     let totalGST = 0;
     const stockUpdates = []; // Track stock updates
-    
+
     itemRows.forEach(row => {
         const productId = parseInt(row.querySelector('.purchase-product').value);
         const quantity = parseInt(row.querySelector('.purchase-qty').value);
         const rate = parseFloat(row.querySelector('.purchase-rate').value);
-        
+
         if (productId && quantity && rate) {
             const product = inventory.find(p => p.id === productId);
             if (product) {
@@ -1087,7 +1087,7 @@ async function addPurchase(event) {
                 const gst = parseFloat(product.gst) || 0;
                 const amount = quantity * rate;
                 const gstAmount = (amount * gst) / 100;
-                
+
                 items.push({
                     id: productId,
                     name: product.name || 'Unknown',
@@ -1100,14 +1100,14 @@ async function addPurchase(event) {
                     gstAmount: gstAmount,
                     total: amount + gstAmount
                 });
-                
+
                 subtotal += amount;
                 totalGST += gstAmount;
-                
+
                 // Update inventory stock
                 const oldQuantity = parseInt(product.quantity) || 0;
                 const newQuantity = oldQuantity + quantity;
-                
+
                 // Track stock update for notification
                 stockUpdates.push({
                     name: product.name || 'Unknown',
@@ -1119,27 +1119,27 @@ async function addPurchase(event) {
             }
         }
     });
-    
+
     if (items.length === 0) {
         alert('Please add at least one item');
         return;
     }
-    
+
     const total = subtotal + totalGST;
-    
+
     // Save or update supplier
     await saveOrUpdateSupplier({
         name: supplierName,
         phone: supplierPhone || null,
         gst: supplierGst || null
     });
-    
+
     // Generate invoice number if empty
     const finalInvoiceNo = invoiceNo || `INV-${Date.now()}`;
-    
+
     // Use today's date if not provided
     const finalPurchaseDate = purchaseDate || new Date().toISOString().split('T')[0];
-    
+
     try {
         // Create purchase via API (ID will be auto-generated by database)
         const purchaseData = {
@@ -1157,24 +1157,29 @@ async function addPurchase(event) {
             paymentStatus: paymentStatus || 'pending',
             paymentTracking: null  // Explicitly set to null
         };
-        
+
         console.log('Sending purchase data:', JSON.stringify(purchaseData, null, 2));
-        
+
         const newPurchase = await APIService.addPurchase(purchaseData);
-        
+
         // Update inventory for each item
-        for (const item of items) {
-            const product = inventory.find(p => p.id === item.id);
-            if (product) {
-                product.quantity += item.quantity;
-                await APIService.updateInventoryItem(product.id, { quantity: product.quantity });
+        try {
+            for (const item of items) {
+                const product = inventory.find(p => p.id === item.id);
+                if (product) {
+                    product.quantity += item.quantity;
+                    await APIService.updateInventoryItem(product.id, { quantity: product.quantity });
+                }
             }
+        } catch (stockError) {
+            console.error('Error updating stock quantities:', stockError);
+            alert('Purchase added, but failed to update stock quantities automatically. Please check inventory.');
         }
-        
+
         // Reload purchases and inventory
         await loadPurchases();
         await loadInventory();
-        
+
         // Build stock update message
         let stockMessage = '';
         if (stockUpdates.length > 0) {
@@ -1183,14 +1188,14 @@ async function addPurchase(event) {
                 stockMessage += `\n✅ ${update.name}:\n   Added: ${update.added} ${update.unit}\n   Stock: ${update.oldStock} → ${update.newStock} ${update.unit}`;
             });
         }
-        
+
         alert(`Purchase #${newPurchase.id} added successfully!\nTotal: ₹${total.toFixed(2)}${stockMessage}`);
-        
+
         closePurchaseModal();
-        
+
         // Switch to purchases view to show the new purchase
         switchView('purchases');
-        
+
         // Render updated data
         renderPurchases();
         renderInventory();
@@ -1211,32 +1216,32 @@ async function addPurchase(event) {
 function renderPurchases() {
     const tbody = document.getElementById('purchases-tbody');
     tbody.innerHTML = '';
-    
+
     console.log('📦 Rendering purchases:', purchases);
-    
+
     if (purchases.length === 0) {
         tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-secondary);">📦 No purchase records found. Click "Add Purchase" to get started!</td></tr>';
         return;
     }
-    
+
     purchases.slice().reverse().forEach(purchase => {
         console.log('Purchase data:', purchase);
-        
+
         // Normalize purchase format - handle both old and new formats
         const supplier = purchase.supplier || {
             name: purchase.supplierName,
             phone: purchase.supplierPhone,
             gst: purchase.supplierGst
         };
-        
+
         const items = Array.isArray(purchase.items) ? purchase.items : [];
-        
+
         const row = document.createElement('tr');
         const date = new Date(purchase.purchaseDate).toLocaleDateString('en-IN');
         const itemCount = items.length;
-        
+
         console.log('Purchase items count:', itemCount);
-        
+
         let statusBadge = '';
         const paymentStatus = purchase.paymentStatus || 'paid';
         if (paymentStatus === 'paid') {
@@ -1246,7 +1251,7 @@ function renderPurchases() {
         } else {
             statusBadge = '<span class="badge badge-warning">💰 Partial</span>';
         }
-        
+
         row.innerHTML = `
             <td><strong>#${purchase.id}</strong></td>
             <td>${date}</td>
@@ -1264,14 +1269,14 @@ function renderPurchases() {
         `;
         tbody.appendChild(row);
     });
-    
+
     updatePurchasesSummary();
 }
 
 function filterPurchases() {
     const search = document.getElementById('search-purchases').value.toLowerCase().trim();
     const rows = document.querySelectorAll('#purchases-tbody tr');
-    
+
     if (!search) {
         // Show all rows if search is empty
         rows.forEach(row => {
@@ -1279,16 +1284,16 @@ function filterPurchases() {
         });
         return;
     }
-    
+
     let visibleCount = 0;
-    
+
     rows.forEach(row => {
         const text = row.textContent.toLowerCase();
         const isVisible = text.includes(search);
         row.style.display = isVisible ? '' : 'none';
         if (isVisible) visibleCount++;
     });
-    
+
     // Show message if no results
     if (visibleCount === 0 && rows.length > 0) {
         const tbody = document.getElementById('purchases-tbody');
@@ -1306,7 +1311,7 @@ function filterPurchases() {
 function updatePurchasesSummary() {
     const totalPurchases = purchases.reduce((sum, p) => sum + p.total, 0);
     const totalCount = purchases.length;
-    
+
     // Calculate actual pending amount using payment tracking
     let pendingPayments = 0;
     purchases.forEach(purchase => {
@@ -1316,9 +1321,9 @@ function updatePurchasesSummary() {
             pendingPayments += purchase.paymentTracking.amountPending;
         }
     });
-    
+
     const suppliersCount = suppliers.length;
-    
+
     document.getElementById('purchases-total').textContent = `₹${totalPurchases.toFixed(2)}`;
     document.getElementById('purchases-count').textContent = totalCount;
     document.getElementById('purchases-pending').textContent = `₹${pendingPayments.toFixed(2)}`;
@@ -1328,10 +1333,10 @@ function updatePurchasesSummary() {
 function viewPurchaseDetails(purchaseId) {
     const purchase = purchases.find(p => p.id === purchaseId);
     if (!purchase) return;
-    
+
     const date = new Date(purchase.purchaseDate).toLocaleDateString('en-IN');
     const time = new Date(purchase.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-    
+
     let paymentStatusBadge = '';
     if (purchase.paymentStatus === 'paid') {
         paymentStatusBadge = '<span class="badge badge-success">✅ Paid</span>';
@@ -1340,7 +1345,7 @@ function viewPurchaseDetails(purchaseId) {
     } else {
         paymentStatusBadge = '<span class="badge badge-warning">💰 Partial</span>';
     }
-    
+
     // Generate items table HTML
     let itemsHtml = purchase.items.map((item, idx) => `
         <tr>
@@ -1355,7 +1360,7 @@ function viewPurchaseDetails(purchaseId) {
             <td>₹${item.total.toFixed(2)}</td>
         </tr>
     `).join('');
-    
+
     const content = `
         <div class="purchase-details-card">
             <!-- Purchase Info Section -->
@@ -1453,7 +1458,7 @@ function viewPurchaseDetails(purchaseId) {
             </div>
         </div>
     `;
-    
+
     document.getElementById('purchase-details-content').innerHTML = content;
     document.getElementById('purchase-details-modal').classList.add('active');
 }
@@ -1466,21 +1471,21 @@ function closePurchaseDetailsModal() {
 function updatePurchasePaymentStatus(purchaseId) {
     const purchase = purchases.find(p => p.id === purchaseId);
     if (!purchase) return;
-    
+
     const currentStatus = purchase.paymentStatus || 'paid';
     const statusLabels = {
         'paid': '✅ Paid',
         'pending': '⏳ Pending',
         'partial': '💰 Partial'
     };
-    
+
     // Store the purchase ID for later use
     window.currentPurchaseIdForUpdate = purchaseId;
-    
+
     // Populate modal
     document.getElementById('update-purchase-id').textContent = purchaseId;
     document.getElementById('update-purchase-current-status').innerHTML = `<span class="badge badge-${currentStatus === 'paid' ? 'success' : currentStatus === 'pending' ? 'danger' : 'warning'}">${statusLabels[currentStatus]}</span>`;
-    
+
     // Close purchase details modal and show payment update modal
     closePurchaseDetailsModal();
     document.getElementById('update-purchase-payment-modal').classList.add('active');
@@ -1489,7 +1494,7 @@ function updatePurchasePaymentStatus(purchaseId) {
 function closeUpdatePurchasePaymentModal() {
     document.getElementById('update-purchase-payment-modal').classList.remove('active');
     window.currentPurchaseIdForUpdate = null;
-    
+
     // Reset form
     document.getElementById('partial-purchase-payment-input').style.display = 'none';
     document.querySelectorAll('#update-purchase-payment-modal .payment-status-options')[0].style.display = 'flex';
@@ -1499,19 +1504,19 @@ function closeUpdatePurchasePaymentModal() {
 async function selectPurchasePaymentStatus(newStatus) {
     const purchaseId = window.currentPurchaseIdForUpdate;
     if (!purchaseId) return;
-    
+
     const purchase = purchases.find(p => p.id === purchaseId);
     if (!purchase) return;
-    
+
     // If partial payment, show input form
     if (newStatus === 'partial') {
         // Hide payment options
         document.querySelectorAll('#update-purchase-payment-modal .payment-status-options')[0].style.display = 'none';
-        
+
         // Show partial payment input
         const partialInput = document.getElementById('partial-purchase-payment-input');
         partialInput.style.display = 'block';
-        
+
         // Initialize payment tracking if not exists
         if (!purchase.paymentTracking) {
             purchase.paymentTracking = {
@@ -1521,22 +1526,22 @@ async function selectPurchasePaymentStatus(newStatus) {
                 payments: []
             };
         }
-        
+
         // Display amounts
         document.getElementById('purchase-total-amount').textContent = `₹${purchase.paymentTracking.totalAmount.toFixed(2)}`;
         document.getElementById('purchase-already-paid').textContent = `₹${purchase.paymentTracking.amountPaid.toFixed(2)}`;
         document.getElementById('purchase-remaining-pending').textContent = `₹${purchase.paymentTracking.amountPending.toFixed(2)}`;
         document.getElementById('partial-purchase-amount-input').value = '';
         document.getElementById('partial-purchase-amount-input').max = purchase.paymentTracking.amountPending;
-        
+
         return;
     }
-    
+
     const statusLabels = {
         'paid': '✅ Paid',
         'pending': '⏳ Pending'
     };
-    
+
     // For paid status, mark as fully paid
     if (newStatus === 'paid') {
         if (!purchase.paymentTracking) {
@@ -1555,7 +1560,7 @@ async function selectPurchasePaymentStatus(newStatus) {
             purchase.paymentTracking.amountPending = 0;
         }
     }
-    
+
     // For pending status, reset payments
     if (newStatus === 'pending') {
         purchase.paymentTracking = {
@@ -1565,13 +1570,13 @@ async function selectPurchasePaymentStatus(newStatus) {
             payments: []
         };
     }
-    
+
     purchase.paymentStatus = newStatus;
-    
+
     try {
-        await APIService.updatePurchase(purchase.id, { 
+        await APIService.updatePurchase(purchase.id, {
             paymentStatus: newStatus,
-            paymentTracking: purchase.paymentTracking 
+            paymentTracking: purchase.paymentTracking
         });
         renderPurchases();
         closeUpdatePurchasePaymentModal();
@@ -1585,35 +1590,35 @@ async function selectPurchasePaymentStatus(newStatus) {
 function calculatePurchasePending() {
     const purchaseId = window.currentPurchaseIdForUpdate;
     if (!purchaseId) return;
-    
+
     const purchase = purchases.find(p => p.id === purchaseId);
     if (!purchase) return;
-    
+
     const amountPaid = parseFloat(document.getElementById('partial-purchase-amount-input').value) || 0;
     const newPending = purchase.paymentTracking.amountPending - amountPaid;
-    
+
     document.getElementById('purchase-remaining-pending').textContent = `₹${Math.max(0, newPending).toFixed(2)}`;
 }
 
 async function confirmPartialPurchasePayment() {
     const purchaseId = window.currentPurchaseIdForUpdate;
     if (!purchaseId) return;
-    
+
     const purchase = purchases.find(p => p.id === purchaseId);
     if (!purchase) return;
-    
+
     const amountPaid = parseFloat(document.getElementById('partial-purchase-amount-input').value);
-    
+
     if (!amountPaid || amountPaid <= 0) {
         alert('Please enter a valid amount paid');
         return;
     }
-    
+
     if (amountPaid > purchase.paymentTracking.amountPending) {
         alert('Amount paid cannot be more than pending amount');
         return;
     }
-    
+
     // Update payment tracking
     purchase.paymentTracking.amountPaid += amountPaid;
     purchase.paymentTracking.amountPending -= amountPaid;
@@ -1622,7 +1627,7 @@ async function confirmPartialPurchasePayment() {
         date: new Date().toISOString(),
         note: 'Partial payment made'
     });
-    
+
     // Check if fully paid now
     if (purchase.paymentTracking.amountPending <= 0.01) {
         purchase.paymentStatus = 'paid';
@@ -1631,11 +1636,11 @@ async function confirmPartialPurchasePayment() {
         purchase.paymentStatus = 'partial';
         alert(`Partial payment recorded!\nPaid: ₹${amountPaid.toFixed(2)}\nRemaining: ₹${purchase.paymentTracking.amountPending.toFixed(2)}`);
     }
-    
+
     try {
-        await APIService.updatePurchase(purchase.id, { 
+        await APIService.updatePurchase(purchase.id, {
             paymentStatus: purchase.paymentStatus,
-            paymentTracking: purchase.paymentTracking 
+            paymentTracking: purchase.paymentTracking
         });
         renderPurchases();
         closeUpdatePurchasePaymentModal();
@@ -1654,7 +1659,7 @@ function cancelPartialPurchasePayment() {
 
 async function deletePurchase(purchaseId) {
     if (!confirm('Are you sure you want to delete this purchase record?')) return;
-    
+
     try {
         await APIService.deletePurchase(purchaseId);
         purchases = purchases.filter(p => p.id !== purchaseId);
@@ -1678,7 +1683,7 @@ function closeSupplierReportsModal() {
 function filterSupplierReports() {
     const search = document.getElementById('search-supplier-reports').value.toLowerCase();
     const rows = document.querySelectorAll('#supplier-reports-tbody tr');
-    
+
     rows.forEach(row => {
         const text = row.textContent.toLowerCase();
         row.style.display = text.includes(search) ? '' : 'none';
@@ -1688,19 +1693,19 @@ function filterSupplierReports() {
 function renderSupplierReports() {
     const tbody = document.getElementById('supplier-reports-tbody');
     tbody.innerHTML = '';
-    
+
     if (suppliers.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-secondary);">📊 No supplier data available</td></tr>';
         return;
     }
-    
+
     // Calculate data for each supplier
     const supplierData = suppliers.map(supplier => {
-        const supplierPurchases = purchases.filter(p => 
+        const supplierPurchases = purchases.filter(p =>
             p.supplier.name.toLowerCase() === supplier.name.toLowerCase() ||
             (p.supplier.phone && supplier.phone && p.supplier.phone === supplier.phone)
         );
-        
+
         const totalPurchases = supplierPurchases.length;
         const totalAmount = supplierPurchases.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
         const paidAmount = supplierPurchases
@@ -1712,11 +1717,11 @@ function renderSupplierReports() {
         const partialAmount = supplierPurchases
             .filter(p => p.paymentStatus === 'partial')
             .reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
-        
-        const lastPurchase = supplierPurchases.length > 0 
+
+        const lastPurchase = supplierPurchases.length > 0
             ? new Date(Math.max(...supplierPurchases.map(p => new Date(p.createdAt)))).toLocaleDateString('en-IN')
             : 'N/A';
-        
+
         return {
             supplier,
             totalPurchases,
@@ -1728,13 +1733,13 @@ function renderSupplierReports() {
             outstandingAmount: pendingAmount + partialAmount
         };
     });
-    
+
     // Sort by total amount (highest first)
     supplierData.sort((a, b) => b.totalAmount - a.totalAmount);
-    
+
     supplierData.forEach(data => {
         const row = document.createElement('tr');
-        
+
         let paymentStatus = '';
         if (data.outstandingAmount === 0) {
             paymentStatus = '<span class="badge badge-success">✅ Clear</span>';
@@ -1743,7 +1748,7 @@ function renderSupplierReports() {
         } else {
             paymentStatus = '<span class="badge badge-warning">💰 Partial</span>';
         }
-        
+
         row.innerHTML = `
             <td onclick="viewSupplierDetails('${data.supplier.name.replace(/'/g, "\\'")}')"><strong>${data.supplier.name}</strong></td>
             <td>${data.supplier.phone || '-'}</td>
@@ -1767,19 +1772,19 @@ function renderSupplierReports() {
 function viewSupplierDetails(supplierName) {
     const supplier = suppliers.find(s => s.name === supplierName);
     if (!supplier) return;
-    
-    const supplierPurchases = purchases.filter(p => 
+
+    const supplierPurchases = purchases.filter(p =>
         p.supplier.name.toLowerCase() === supplier.name.toLowerCase() ||
         (p.supplier.phone && supplier.phone && p.supplier.phone === supplier.phone)
     );
-    
+
     const totalPurchases = supplierPurchases.length;
     const totalAmount = supplierPurchases.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
     const paidAmount = supplierPurchases.filter(p => p.paymentStatus === 'paid').reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
     const pendingAmount = supplierPurchases.filter(p => p.paymentStatus === 'pending').reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
     const partialAmount = supplierPurchases.filter(p => p.paymentStatus === 'partial').reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
     const outstandingAmount = pendingAmount + partialAmount;
-    
+
     // Generate purchase history HTML
     let purchasesHtml = '';
     if (supplierPurchases.length > 0) {
@@ -1793,7 +1798,7 @@ function viewSupplierDetails(supplierName) {
             } else {
                 statusBadge = '<span class="badge badge-warning">💰 Partial</span>';
             }
-            
+
             return `
                 <tr>
                     <td><strong>#${p.id}</strong></td>
@@ -1811,7 +1816,7 @@ function viewSupplierDetails(supplierName) {
     } else {
         purchasesHtml = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No purchases yet</td></tr>';
     }
-    
+
     const content = `
         <div class="supplier-details-card">
             <div class="supplier-info-section">
@@ -1919,7 +1924,7 @@ function viewSupplierDetails(supplierName) {
             </div>
         </div>
     `;
-    
+
     document.getElementById('supplier-details-content').innerHTML = content;
     document.getElementById('supplier-details-modal').classList.add('active');
 }
@@ -1935,24 +1940,24 @@ function editSupplier(supplierId) {
         alert('Supplier not found');
         return;
     }
-    
+
     const newName = prompt('Enter Supplier Name:', supplier.name);
     if (newName === null) return; // User cancelled
-    
+
     if (!newName || newName.trim() === '') {
         alert('Supplier name cannot be empty');
         return;
     }
-    
+
     const newPhone = prompt('Enter Phone Number:', supplier.phone || '');
     const newGst = prompt('Enter GST Number:', supplier.gst || '');
-    
+
     const updatedSupplier = {
         name: newName.trim(),
         phone: newPhone ? newPhone.trim() : null,
         gst: newGst ? newGst.trim() : null
     };
-    
+
     APIService.updateSupplier(supplierId, updatedSupplier)
         .then(() => {
             alert('Supplier updated successfully!');
@@ -1969,18 +1974,18 @@ function editSupplier(supplierId) {
 // Delete Supplier
 async function deleteSupplier(supplierId, supplierName) {
     // Check if supplier has any purchases
-    const supplierPurchases = purchases.filter(p => 
+    const supplierPurchases = purchases.filter(p =>
         p.supplier.name.toLowerCase() === supplierName.toLowerCase()
     );
-    
+
     if (supplierPurchases.length > 0) {
         const confirmMsg = `⚠️ Warning: ${supplierName} has ${supplierPurchases.length} purchase(s) in the system.\n\nDeleting this supplier will NOT delete the purchase records, but the supplier information will be removed.\n\nAre you sure you want to delete this supplier?`;
-        
+
         if (!confirm(confirmMsg)) return;
     } else {
         if (!confirm(`Are you sure you want to delete supplier "${supplierName}"?`)) return;
     }
-    
+
     try {
         await APIService.deleteSupplier(supplierId);
         alert('Supplier deleted successfully!');
@@ -2000,7 +2005,7 @@ async function loadBills() {
         bills = await APIService.getBills();
         console.log(`✅ Loaded ${bills.length} bills`);
         console.log('Bills data:', bills);
-        
+
         // Log each bill's structure
         bills.forEach(bill => {
             console.log(`Bill #${bill.id}:`, {
@@ -2023,18 +2028,18 @@ async function loadBills() {
 function viewBillDetails(billId) {
     const bill = bills.find(b => b.id === billId);
     if (!bill) return;
-    
-    let itemsList = bill.items.map((item, idx) => 
+
+    let itemsList = bill.items.map((item, idx) =>
         `${idx + 1}. ${item.name} (${item.size} ${item.unit}) x ${item.quantity} @ ₹${item.price} = ₹${item.amount.toFixed(2)} + GST(${item.gst}%) ₹${item.gstAmount.toFixed(2)} = ₹${item.total.toFixed(2)}`
     ).join('\n');
-    
+
     let gstDetails = '';
     if (bill.gstBreakdown.type === 'SGST+CGST') {
         gstDetails = `SGST: ₹${bill.gstBreakdown.sgst.toFixed(2)}\nCGST: ₹${bill.gstBreakdown.cgst.toFixed(2)}`;
     } else {
         gstDetails = `IGST: ₹${bill.gstBreakdown.igst.toFixed(2)}`;
     }
-    
+
     alert(`Bill #${bill.id}\n\nCustomer: ${bill.customer.name}\nPhone: ${bill.customer.phone || 'N/A'}\nState: ${bill.customer.state === 'same' ? 'Same State' : 'Other State'}\n\nItems:\n${itemsList}\n\nSubtotal: ₹${bill.subtotal.toFixed(2)}\n${gstDetails}\nTotal: ₹${bill.total.toFixed(2)}`);
 }
 
@@ -2046,24 +2051,24 @@ function viewBillHistory() {
 function renderSales() {
     console.log(`🔄 Rendering sales table with ${bills.length} bills`);
     const tbody = document.getElementById('sales-tbody');
-    
+
     // Reset listener flag before clearing content
     if (tbody) {
         tbody.dataset.listenerAttached = 'false';
     }
-    
+
     tbody.innerHTML = '';
-    
+
     if (bills.length === 0) {
         tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 2rem;">No sales records found</td></tr>';
         return;
     }
-    
+
     bills.slice().reverse().forEach(bill => {
         console.log('Bill data:', bill);
         console.log('Bill items:', bill.items);
         console.log('Items type:', typeof bill.items, 'Is array:', Array.isArray(bill.items));
-        
+
         // Normalize bill format - handle both old and new formats
         const customer = bill.customer || {
             name: bill.customerName,
@@ -2072,18 +2077,18 @@ function renderSales() {
             address: bill.customerAddress,
             state: bill.customerState
         };
-        
+
         const row = document.createElement('tr');
         const date = new Date(bill.createdAt).toLocaleDateString('en-IN');
         const time = new Date(bill.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-        
+
         // Ensure items is an array
         const items = Array.isArray(bill.items) ? bill.items : [];
         const itemCount = items.length;
         console.log('Item count:', itemCount);
-        
+
         const stateText = customer.state === 'same' ? 'Same State' : 'Other State';
-        
+
         // Create payment status dropdown
         const paymentStatus = bill.paymentStatus || 'paid';
         const paymentDropdown = `
@@ -2093,7 +2098,7 @@ function renderSales() {
                 <option value="partial" ${paymentStatus === 'partial' ? 'selected' : ''}>💰 Partial</option>
             </select>
         `;
-        
+
         row.innerHTML = `
             <td><strong>#${bill.id}</strong></td>
             <td>${date}<br><small>${time}</small></td>
@@ -2113,9 +2118,9 @@ function renderSales() {
         `;
         tbody.appendChild(row);
     });
-    
+
     updateSalesSummary();
-    
+
     // Setup event listeners after rendering
     setupSalesTableActions();
 }
@@ -2123,52 +2128,52 @@ function renderSales() {
 // Setup event delegation for sales table action buttons
 function setupSalesTableActions() {
     console.log('🔧 Setting up sales table actions...');
-    
+
     // Remove existing listener if any
     const salesTbody = document.getElementById('sales-tbody');
     if (!salesTbody) {
         console.warn('Sales tbody not found, will retry...');
         return;
     }
-    
+
     // Use event delegation on the tbody directly (more reliable)
     // Remove the data attribute to prevent duplicate listeners
     if (salesTbody.dataset.listenerAttached === 'true') {
         console.log('Listener already attached, skipping...');
         return;
     }
-    
+
     // Add event listener to tbody
     salesTbody.addEventListener('click', (e) => {
         console.log('Sales table clicked:', e.target);
-        
+
         // Find the button (might be the target or a parent)
         let target = e.target;
-        
+
         // If clicked on emoji/text inside button, get the button
         if (!target.classList.contains('action-btn')) {
             target = target.closest('.action-btn');
         }
-        
+
         if (!target || !target.classList.contains('action-btn')) {
             console.log('Not an action button');
             return;
         }
-        
+
         const billId = parseInt(target.dataset.billId);
         console.log('Button clicked, billId:', billId, 'Button classes:', target.className);
-        
+
         if (!billId) {
             console.error('No billId found on button');
             return;
         }
-        
+
         // Prevent multiple clicks
         if (target.disabled) {
             console.log('Button already processing...');
             return;
         }
-        
+
         if (target.classList.contains('btn-view')) {
             console.log('View button clicked for bill:', billId);
             viewBillDetailsModal(billId);
@@ -2177,36 +2182,36 @@ function setupSalesTableActions() {
             deleteBill(billId);
         }
     });
-    
+
     // Mark as attached
     salesTbody.dataset.listenerAttached = 'true';
-    
+
     console.log('✅ Sales table actions setup complete');
 }
 
 // Simple function to update payment status from dropdown
 async function quickUpdatePaymentStatus(billId, newStatus) {
     console.log(`Updating bill #${billId} to status: ${newStatus}`);
-    
+
     const bill = bills.find(b => b.id == billId);
     if (!bill) {
         alert('Bill not found!');
         return;
     }
-    
+
     // If partial payment is selected, show payment details card
     if (newStatus === 'partial') {
         showPartialPaymentCard(billId, bill);
         return;
     }
-    
+
     // Show loading state
     const dropdown = document.querySelector(`select[data-bill-id="${billId}"]`);
     if (dropdown) {
         dropdown.disabled = true;
         dropdown.style.opacity = '0.6';
     }
-    
+
     try {
         // Normalize bill data
         const customer = bill.customer || {
@@ -2216,7 +2221,7 @@ async function quickUpdatePaymentStatus(billId, newStatus) {
             address: bill.customerAddress,
             state: bill.customerState
         };
-        
+
         // Initialize payment tracking
         let paymentTracking = bill.paymentTracking || {
             totalAmount: bill.total || 0,
@@ -2224,7 +2229,7 @@ async function quickUpdatePaymentStatus(billId, newStatus) {
             amountPending: bill.total || 0,
             payments: []
         };
-        
+
         // Update payment tracking based on status
         if (newStatus === 'paid') {
             paymentTracking = {
@@ -2245,7 +2250,7 @@ async function quickUpdatePaymentStatus(billId, newStatus) {
                 payments: []
             };
         }
-        
+
         // Prepare update data
         const updateData = {
             customer: {
@@ -2274,25 +2279,25 @@ async function quickUpdatePaymentStatus(billId, newStatus) {
             paymentStatus: newStatus,
             paymentTracking: paymentTracking
         };
-        
+
         // Update via API
         await APIService.updateBill(billId, updateData);
-        
+
         // Reload bills and re-render
         await loadBills();
         renderSales();
-        
+
         // Show success message
         const statusLabels = {
             'paid': '✅ Paid',
             'pending': '⏳ Pending'
         };
         alert(`Payment status updated to: ${statusLabels[newStatus]}`);
-        
+
     } catch (error) {
         console.error('Error updating payment status:', error);
         alert('Failed to update payment status. Please try again.');
-        
+
         // Reload to reset the dropdown
         await loadBills();
         renderSales();
@@ -2306,7 +2311,7 @@ function showPartialPaymentCard(billId, bill) {
     if (existingCard) {
         existingCard.remove();
     }
-    
+
     // Initialize payment tracking if not exists
     const paymentTracking = bill.paymentTracking || {
         totalAmount: bill.total || 0,
@@ -2314,7 +2319,7 @@ function showPartialPaymentCard(billId, bill) {
         amountPending: bill.total || 0,
         payments: []
     };
-    
+
     // Create the card
     const card = document.createElement('div');
     card.id = 'partial-payment-card';
@@ -2331,7 +2336,7 @@ function showPartialPaymentCard(billId, bill) {
         min-width: 400px;
         max-width: 90%;
     `;
-    
+
     card.innerHTML = `
         <h3 style="margin: 0 0 1.5rem 0; color: #667eea;">💰 Partial Payment - Bill #${billId}</h3>
         
@@ -2388,7 +2393,7 @@ function showPartialPaymentCard(billId, bill) {
             </button>
         </div>
     `;
-    
+
     // Create overlay
     const overlay = document.createElement('div');
     overlay.id = 'partial-payment-overlay';
@@ -2402,11 +2407,11 @@ function showPartialPaymentCard(billId, bill) {
         z-index: 9999;
     `;
     overlay.onclick = () => closePartialPaymentCard(billId);
-    
+
     // Add to page
     document.body.appendChild(overlay);
     document.body.appendChild(card);
-    
+
     // Focus on input
     setTimeout(() => {
         document.getElementById(`partial-amount-input-${billId}`).focus();
@@ -2417,20 +2422,20 @@ function showPartialPaymentCard(billId, bill) {
 function updatePartialPaymentPreview(billId) {
     const bill = bills.find(b => b.id == billId);
     if (!bill) return;
-    
+
     const paymentTracking = bill.paymentTracking || {
         totalAmount: bill.total || 0,
         amountPaid: 0,
         amountPending: bill.total || 0,
         payments: []
     };
-    
+
     const input = document.getElementById(`partial-amount-input-${billId}`);
     const preview = document.getElementById(`payment-preview-${billId}`);
     const newRemainingSpan = document.getElementById(`new-remaining-${billId}`);
-    
+
     const amountReceived = parseFloat(input.value) || 0;
-    
+
     if (amountReceived > 0) {
         const newRemaining = paymentTracking.amountPending - amountReceived;
         newRemainingSpan.textContent = `₹${Math.max(0, newRemaining).toFixed(2)}`;
@@ -2447,38 +2452,38 @@ async function confirmPartialPaymentUpdate(billId) {
         alert('Bill not found!');
         return;
     }
-    
+
     const input = document.getElementById(`partial-amount-input-${billId}`);
     const amountReceived = parseFloat(input.value);
-    
+
     if (!amountReceived || amountReceived <= 0) {
         alert('Please enter a valid amount received');
         input.focus();
         return;
     }
-    
+
     const paymentTracking = bill.paymentTracking || {
         totalAmount: bill.total || 0,
         amountPaid: 0,
         amountPending: bill.total || 0,
         payments: []
     };
-    
+
     if (amountReceived > paymentTracking.amountPending) {
         alert(`Amount cannot be more than remaining amount: ₹${paymentTracking.amountPending.toFixed(2)}`);
         input.focus();
         return;
     }
-    
+
     // Disable button to prevent double-click
     event.target.disabled = true;
     event.target.textContent = 'Processing...';
-    
+
     try {
         // Update payment tracking
         const newAmountPaid = paymentTracking.amountPaid + amountReceived;
         const newAmountPending = paymentTracking.amountPending - amountReceived;
-        
+
         const updatedPaymentTracking = {
             totalAmount: paymentTracking.totalAmount,
             amountPaid: newAmountPaid,
@@ -2492,10 +2497,10 @@ async function confirmPartialPaymentUpdate(billId) {
                 }
             ]
         };
-        
+
         // Determine final status
         const finalStatus = newAmountPending <= 0.01 ? 'paid' : 'partial';
-        
+
         // Normalize bill data
         const customer = bill.customer || {
             name: bill.customerName,
@@ -2504,7 +2509,7 @@ async function confirmPartialPaymentUpdate(billId) {
             address: bill.customerAddress,
             state: bill.customerState
         };
-        
+
         // Prepare update data
         const updateData = {
             customer: {
@@ -2533,24 +2538,24 @@ async function confirmPartialPaymentUpdate(billId) {
             paymentStatus: finalStatus,
             paymentTracking: updatedPaymentTracking
         };
-        
+
         // Update via API
         await APIService.updateBill(billId, updateData);
-        
+
         // Close card
         closePartialPaymentCard(billId);
-        
+
         // Reload bills and re-render
         await loadBills();
         renderSales();
-        
+
         // Show success message
         if (finalStatus === 'paid') {
             alert(`✅ Payment completed!\n\nTotal Received: ₹${newAmountPaid.toFixed(2)}\nBill is now fully paid.`);
         } else {
             alert(`💰 Partial payment recorded!\n\nReceived: ₹${amountReceived.toFixed(2)}\nRemaining: ₹${newAmountPending.toFixed(2)}`);
         }
-        
+
     } catch (error) {
         console.error('Error updating partial payment:', error);
         alert('Failed to update payment. Please try again.');
@@ -2563,10 +2568,10 @@ async function confirmPartialPaymentUpdate(billId) {
 function closePartialPaymentCard(billId) {
     const card = document.getElementById('partial-payment-card');
     const overlay = document.getElementById('partial-payment-overlay');
-    
+
     if (card) card.remove();
     if (overlay) overlay.remove();
-    
+
     // Reset dropdown to current status
     const bill = bills.find(b => b.id == billId);
     if (bill) {
@@ -2580,7 +2585,7 @@ function closePartialPaymentCard(billId) {
 function filterSales() {
     const search = document.getElementById('search-sales').value.toLowerCase();
     const rows = document.querySelectorAll('#sales-tbody tr');
-    
+
     rows.forEach(row => {
         const text = row.textContent.toLowerCase();
         row.style.display = text.includes(search) ? '' : 'none';
@@ -2591,7 +2596,7 @@ function updateSalesSummary() {
     const totalSales = bills.reduce((sum, bill) => sum + bill.total, 0);
     const totalGST = bills.reduce((sum, bill) => sum + bill.totalGST, 0);
     const totalCount = bills.length;
-    
+
     // Calculate actual pending amount using payment tracking
     let pendingAmount = 0;
     bills.forEach(bill => {
@@ -2601,11 +2606,11 @@ function updateSalesSummary() {
             pendingAmount += bill.paymentTracking.amountPending;
         }
     });
-    
+
     document.getElementById('sales-total').textContent = `₹${totalSales.toFixed(2)}`;
     document.getElementById('sales-count').textContent = totalCount;
     document.getElementById('sales-gst').textContent = `₹${totalGST.toFixed(2)}`;
-    
+
     // Update or create pending payments card
     const pendingCard = document.getElementById('sales-pending');
     if (pendingCard) {
@@ -2616,20 +2621,20 @@ function updateSalesSummary() {
 function viewBillDetailsModal(billId) {
     console.log('viewBillDetailsModal called with billId:', billId, 'type:', typeof billId);
     console.log('Available bills:', bills.map(b => ({ id: b.id, type: typeof b.id })));
-    
+
     const bill = bills.find(b => b.id == billId); // Use == instead of === for type coercion
-    
+
     if (!bill) {
         console.error('Bill not found with ID:', billId);
         alert('Bill not found!');
         return;
     }
-    
+
     console.log('Found bill:', bill);
     console.log('Bill items:', bill.items);
     console.log('Bill items type:', typeof bill.items);
     console.log('Bill items is array:', Array.isArray(bill.items));
-    
+
     // Normalize bill format - handle both old and new formats
     const customer = bill.customer || {
         name: bill.customerName,
@@ -2638,10 +2643,10 @@ function viewBillDetailsModal(billId) {
         address: bill.customerAddress,
         state: bill.customerState
     };
-    
+
     const date = new Date(bill.createdAt).toLocaleDateString('en-IN');
     const time = new Date(bill.createdAt).toLocaleTimeString('en-IN');
-    
+
     // Ensure items is an array - handle string JSON or already parsed array
     let items = [];
     if (typeof bill.items === 'string') {
@@ -2654,10 +2659,10 @@ function viewBillDetailsModal(billId) {
     } else if (Array.isArray(bill.items)) {
         items = bill.items;
     }
-    
+
     console.log('Parsed items:', items);
     console.log('Items count:', items.length);
-    
+
     let itemsHtml = '';
     if (items.length === 0) {
         itemsHtml = '<tr><td colspan="9" style="text-align: center; padding: 1rem; color: #6c757d;">No items found</td></tr>';
@@ -2676,7 +2681,7 @@ function viewBillDetailsModal(billId) {
             </tr>
         `).join('');
     }
-    
+
     // Parse gstBreakdown if it's a string
     let gstBreakdown = bill.gstBreakdown;
     if (typeof gstBreakdown === 'string') {
@@ -2687,9 +2692,9 @@ function viewBillDetailsModal(billId) {
             gstBreakdown = {};
         }
     }
-    
+
     console.log('GST Breakdown:', gstBreakdown);
-    
+
     let gstBreakdownHtml = '';
     if (gstBreakdown && gstBreakdown.type === 'SGST+CGST') {
         gstBreakdownHtml = `
@@ -2718,7 +2723,7 @@ function viewBillDetailsModal(billId) {
             </div>
         `;
     }
-    
+
     // Payment status badge
     const paymentStatus = bill.paymentStatus || 'paid';
     let statusBadge = '';
@@ -2733,7 +2738,7 @@ function viewBillDetailsModal(billId) {
         statusBadge = '💰 Partial';
         statusColor = '#ffc107';
     }
-    
+
     // Payment tracking details
     let paymentTrackingHtml = '';
     if (bill.paymentTracking && (paymentStatus === 'partial' || paymentStatus === 'paid')) {
@@ -2758,7 +2763,7 @@ function viewBillDetailsModal(billId) {
             </div>
         `;
     }
-    
+
     const content = `
         <div style="max-width: 900px; margin: 0 auto;">
             <!-- Header Card -->
@@ -2876,7 +2881,7 @@ function viewBillDetailsModal(billId) {
             </div>
         </div>
     `;
-    
+
     document.getElementById('bill-details-content').innerHTML = content;
     document.getElementById('bill-details-modal').classList.add('active');
 }
@@ -2887,9 +2892,9 @@ function closeBillDetailsModal() {
 
 async function deleteBill(billId) {
     console.log('deleteBill called with billId:', billId);
-    
+
     if (!confirm('Are you sure you want to delete this bill? This action cannot be undone.')) return;
-    
+
     try {
         await APIService.deleteBill(billId);
         bills = bills.filter(b => b.id != billId); // Use != for type coercion
@@ -2904,17 +2909,17 @@ async function deleteBill(billId) {
 function updatePaymentStatus(billId) {
     console.log('updatePaymentStatus called with billId:', billId);
     console.log('Available bills:', bills.map(b => ({ id: b.id, type: typeof b.id })));
-    
+
     const bill = bills.find(b => b.id == billId); // Use == for type coercion
-    
+
     if (!bill) {
         console.error('Bill not found with ID:', billId);
         alert('Bill not found! Please refresh the page and try again.');
         return;
     }
-    
+
     console.log('Found bill:', bill);
-    
+
     // Check if modal exists
     const modal = document.getElementById('update-payment-modal');
     if (!modal) {
@@ -2922,32 +2927,32 @@ function updatePaymentStatus(billId) {
         alert('Error: Payment update modal not found. Please refresh the page.');
         return;
     }
-    
+
     const billIdElement = document.getElementById('update-bill-id');
     const statusElement = document.getElementById('update-current-status');
-    
+
     if (!billIdElement || !statusElement) {
         console.error('Modal elements not found:', { billIdElement, statusElement });
         alert('Error: Modal elements not found. Please refresh the page.');
         return;
     }
-    
+
     const currentStatus = bill.paymentStatus || 'paid';
     const statusLabels = {
         'paid': '✅ Paid',
         'pending': '⏳ Pending',
         'partial': '💰 Partial'
     };
-    
+
     // Store the bill ID for later use
     window.currentBillIdForUpdate = billId;
-    
+
     // Populate modal
     billIdElement.textContent = billId;
     statusElement.innerHTML = `<span class="badge badge-${currentStatus === 'paid' ? 'success' : currentStatus === 'pending' ? 'danger' : 'warning'}">${statusLabels[currentStatus]}</span>`;
-    
+
     console.log('Opening payment modal for bill:', billId);
-    
+
     // Show modal
     modal.classList.add('active');
 }
@@ -2955,7 +2960,7 @@ function updatePaymentStatus(billId) {
 function closeUpdatePaymentModal() {
     document.getElementById('update-payment-modal').classList.remove('active');
     window.currentBillIdForUpdate = null;
-    
+
     // Reset form
     document.getElementById('partial-payment-input').style.display = 'none';
     document.querySelectorAll('#update-payment-modal .payment-status-options')[0].style.display = 'flex';
@@ -2965,14 +2970,14 @@ function closeUpdatePaymentModal() {
 async function selectPaymentStatus(newStatus) {
     const billId = window.currentBillIdForUpdate;
     if (!billId) return;
-    
+
     let bill = bills.find(b => b.id == billId); // Use == for type coercion
     if (!bill) {
         console.error('Bill not found with ID:', billId);
         alert('Bill not found!');
         return;
     }
-    
+
     // Normalize bill format - handle both old and new formats
     bill = {
         ...bill,
@@ -2992,16 +2997,16 @@ async function selectPaymentStatus(newStatus) {
             payments: []
         }
     };
-    
+
     // If partial payment, show input form
     if (newStatus === 'partial') {
         // Hide payment options
         document.querySelectorAll('#update-payment-modal .payment-status-options')[0].style.display = 'none';
-        
+
         // Show partial payment input
         const partialInput = document.getElementById('partial-payment-input');
         partialInput.style.display = 'block';
-        
+
         // Ensure payment tracking is properly initialized
         if (!bill.paymentTracking.totalAmount) {
             bill.paymentTracking.totalAmount = bill.total;
@@ -3015,22 +3020,22 @@ async function selectPaymentStatus(newStatus) {
         if (!bill.paymentTracking.payments) {
             bill.paymentTracking.payments = [];
         }
-        
+
         // Display amounts
         document.getElementById('bill-total-amount').textContent = `₹${bill.paymentTracking.totalAmount.toFixed(2)}`;
         document.getElementById('bill-already-paid').textContent = `₹${bill.paymentTracking.amountPaid.toFixed(2)}`;
         document.getElementById('bill-remaining-pending').textContent = `₹${bill.paymentTracking.amountPending.toFixed(2)}`;
         document.getElementById('partial-amount-input').value = '';
         document.getElementById('partial-amount-input').max = bill.paymentTracking.amountPending;
-        
+
         return;
     }
-    
+
     const statusLabels = {
         'paid': '✅ Paid',
         'pending': '⏳ Pending'
     };
-    
+
     // For paid status, mark as fully paid
     if (newStatus === 'paid') {
         bill.paymentTracking = {
@@ -3044,7 +3049,7 @@ async function selectPaymentStatus(newStatus) {
             }]
         };
     }
-    
+
     // For pending status, reset payments
     if (newStatus === 'pending') {
         bill.paymentTracking = {
@@ -3054,15 +3059,15 @@ async function selectPaymentStatus(newStatus) {
             payments: []
         };
     }
-    
+
     bill.paymentStatus = newStatus;
-    
+
     try {
         // Ensure all numeric values are valid and customer name is not empty
         if (!bill.customer || !bill.customer.name) {
             throw new Error('Customer name is required');
         }
-        
+
         const updateData = {
             customer: {
                 name: bill.customer.name,
@@ -3095,12 +3100,12 @@ async function selectPaymentStatus(newStatus) {
                 payments: Array.isArray(bill.paymentTracking.payments) ? bill.paymentTracking.payments : []
             }
         };
-        
+
         console.log('Sending update data:', JSON.stringify(updateData, null, 2));
-        
+
         // Send the complete bill object to the server
         await APIService.updateBill(bill.id, updateData);
-        
+
         // Reload bills to get fresh data
         await loadBills();
         renderSales();
@@ -3116,29 +3121,29 @@ async function selectPaymentStatus(newStatus) {
 function calculateBillPending() {
     const billId = window.currentBillIdForUpdate;
     if (!billId) return;
-    
+
     let bill = bills.find(b => b.id == billId); // Use == for type coercion
     if (!bill) return;
-    
+
     // Normalize bill format
     bill = {
         ...bill,
         paymentTracking: bill.paymentTracking || {}
     };
-    
+
     const amountReceived = parseFloat(document.getElementById('partial-amount-input').value) || 0;
     const newPending = bill.paymentTracking.amountPending - amountReceived;
-    
+
     document.getElementById('bill-remaining-pending').textContent = `₹${Math.max(0, newPending).toFixed(2)}`;
 }
 
 async function confirmPartialPayment() {
     const billId = window.currentBillIdForUpdate;
     if (!billId) return;
-    
+
     let bill = bills.find(b => b.id == billId); // Use == for type coercion
     if (!bill) return;
-    
+
     // Normalize bill format
     bill = {
         ...bill,
@@ -3158,7 +3163,7 @@ async function confirmPartialPayment() {
             payments: []
         }
     };
-    
+
     // Ensure payment tracking fields exist
     if (!bill.paymentTracking.totalAmount) {
         bill.paymentTracking.totalAmount = bill.total;
@@ -3172,19 +3177,19 @@ async function confirmPartialPayment() {
     if (!bill.paymentTracking.payments) {
         bill.paymentTracking.payments = [];
     }
-    
+
     const amountReceived = parseFloat(document.getElementById('partial-amount-input').value);
-    
+
     if (!amountReceived || amountReceived <= 0) {
         alert('Please enter a valid amount received');
         return;
     }
-    
+
     if (amountReceived > bill.paymentTracking.amountPending) {
         alert('Amount received cannot be more than pending amount');
         return;
     }
-    
+
     // Update payment tracking
     bill.paymentTracking.amountPaid += amountReceived;
     bill.paymentTracking.amountPending -= amountReceived;
@@ -3193,7 +3198,7 @@ async function confirmPartialPayment() {
         date: new Date().toISOString(),
         note: 'Partial payment received'
     });
-    
+
     // Check if fully paid now
     if (bill.paymentTracking.amountPending <= 0.01) {
         bill.paymentStatus = 'paid';
@@ -3202,13 +3207,13 @@ async function confirmPartialPayment() {
         bill.paymentStatus = 'partial';
         alert(`Partial payment recorded!\nReceived: ₹${amountReceived.toFixed(2)}\nRemaining: ₹${bill.paymentTracking.amountPending.toFixed(2)}`);
     }
-    
+
     try {
         // Ensure customer name is not empty
         if (!bill.customer || !bill.customer.name) {
             throw new Error('Customer name is required');
         }
-        
+
         // Send the complete bill object to the server with properly formatted data
         await APIService.updateBill(bill.id, {
             customer: {
@@ -3242,7 +3247,7 @@ async function confirmPartialPayment() {
                 payments: Array.isArray(bill.paymentTracking.payments) ? bill.paymentTracking.payments : []
             }
         });
-        
+
         // Reload bills to get fresh data
         await loadBills();
         renderSales();
@@ -3272,20 +3277,20 @@ function closeBillHistoryModal() {
 function renderBillHistory() {
     const tbody = document.getElementById('bill-history-tbody');
     tbody.innerHTML = '';
-    
+
     // Get recent bills (last 20)
     const recentBills = bills.slice().reverse().slice(0, 20);
-    
+
     if (recentBills.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No bills generated yet</td></tr>';
         return;
     }
-    
+
     recentBills.forEach(bill => {
         const row = document.createElement('tr');
         const date = new Date(bill.createdAt).toLocaleDateString('en-IN');
         const time = new Date(bill.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-        
+
         let statusBadge = '';
         if (bill.paymentStatus === 'paid') {
             statusBadge = '<span class="badge badge-success">✅ Paid</span>';
@@ -3294,7 +3299,7 @@ function renderBillHistory() {
         } else {
             statusBadge = '<span class="badge badge-warning">💰 Partial</span>';
         }
-        
+
         row.innerHTML = `
             <td><strong>#${bill.id}</strong></td>
             <td>${date}<br><small style="color: var(--text-secondary);">${time}</small></td>
@@ -3326,20 +3331,20 @@ function editCustomer(customerId) {
         alert('Customer not found');
         return;
     }
-    
+
     const newName = prompt('Enter Customer Name:', customer.name);
     if (newName === null) return; // User cancelled
-    
+
     if (!newName || newName.trim() === '') {
         alert('Customer name cannot be empty');
         return;
     }
-    
+
     const newPhone = prompt('Enter Phone Number:', customer.phone || '');
     const newGst = prompt('Enter GST Number:', customer.gst || '');
     const newAddress = prompt('Enter Address:', customer.address || '');
     const newState = prompt('Enter State (same/other):', customer.state || '');
-    
+
     const updatedCustomer = {
         name: newName.trim(),
         phone: newPhone ? newPhone.trim() : null,
@@ -3347,7 +3352,7 @@ function editCustomer(customerId) {
         address: newAddress ? newAddress.trim() : null,
         state: newState ? newState.trim() : null
     };
-    
+
     APIService.updateCustomer(customerId, updatedCustomer)
         .then(() => {
             alert('Customer updated successfully!');
@@ -3364,18 +3369,18 @@ function editCustomer(customerId) {
 // Delete Customer
 async function deleteCustomer(customerId, customerName) {
     // Check if customer has any bills
-    const customerBills = bills.filter(b => 
+    const customerBills = bills.filter(b =>
         b.customer.name.toLowerCase() === customerName.toLowerCase()
     );
-    
+
     if (customerBills.length > 0) {
         const confirmMsg = `⚠️ Warning: ${customerName} has ${customerBills.length} bill(s) in the system.\n\nDeleting this customer will NOT delete the bill records, but the customer information will be removed.\n\nAre you sure you want to delete this customer?`;
-        
+
         if (!confirm(confirmMsg)) return;
     } else {
         if (!confirm(`Are you sure you want to delete customer "${customerName}"?`)) return;
     }
-    
+
     try {
         await APIService.deleteCustomer(customerId);
         alert('Customer deleted successfully!');
@@ -3391,7 +3396,7 @@ async function deleteCustomer(customerId, customerName) {
 function filterCustomerReports() {
     const search = document.getElementById('search-customer-reports').value.toLowerCase();
     const rows = document.querySelectorAll('#customer-reports-tbody tr');
-    
+
     rows.forEach(row => {
         const text = row.textContent.toLowerCase();
         row.style.display = text.includes(search) ? '' : 'none';
@@ -3401,19 +3406,19 @@ function filterCustomerReports() {
 function renderCustomerReports() {
     const tbody = document.getElementById('customer-reports-tbody');
     tbody.innerHTML = '';
-    
+
     if (customers.length === 0) {
         tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-secondary);">📊 No customer data available</td></tr>';
         return;
     }
-    
+
     // Calculate data for each customer
     const customerData = customers.map(customer => {
-        const customerBills = bills.filter(b => 
+        const customerBills = bills.filter(b =>
             b.customer.name.toLowerCase() === customer.name.toLowerCase() ||
             (b.customer.phone && customer.phone && b.customer.phone === customer.phone)
         );
-        
+
         const totalOrders = customerBills.length;
         const totalAmount = customerBills.reduce((sum, b) => sum + b.total, 0);
         const paidAmount = customerBills
@@ -3425,11 +3430,11 @@ function renderCustomerReports() {
         const partialAmount = customerBills
             .filter(b => b.paymentStatus === 'partial')
             .reduce((sum, b) => sum + b.total, 0);
-        
-        const lastPurchase = customerBills.length > 0 
+
+        const lastPurchase = customerBills.length > 0
             ? new Date(Math.max(...customerBills.map(b => new Date(b.createdAt)))).toLocaleDateString('en-IN')
             : 'N/A';
-        
+
         return {
             customer,
             totalOrders,
@@ -3441,13 +3446,13 @@ function renderCustomerReports() {
             outstandingAmount: pendingAmount + partialAmount
         };
     });
-    
+
     // Sort by total amount (highest first)
     customerData.sort((a, b) => b.totalAmount - a.totalAmount);
-    
+
     customerData.forEach(data => {
         const row = document.createElement('tr');
-        
+
         let paymentStatus = '';
         if (data.outstandingAmount === 0) {
             paymentStatus = '<span class="badge badge-success">✅ Clear</span>';
@@ -3456,7 +3461,7 @@ function renderCustomerReports() {
         } else {
             paymentStatus = '<span class="badge badge-warning">💰 Partial</span>';
         }
-        
+
         row.innerHTML = `
             <td onclick="viewCustomerDetails('${data.customer.name.replace(/'/g, "\\'")}')"><strong>${data.customer.name}</strong></td>
             <td>${data.customer.phone || '-'}</td>
@@ -3480,19 +3485,19 @@ function renderCustomerReports() {
 function viewCustomerDetails(customerName) {
     const customer = customers.find(c => c.name === customerName);
     if (!customer) return;
-    
-    const customerBills = bills.filter(b => 
+
+    const customerBills = bills.filter(b =>
         b.customer.name.toLowerCase() === customer.name.toLowerCase() ||
         (b.customer.phone && customer.phone && b.customer.phone === customer.phone)
     );
-    
+
     const totalOrders = customerBills.length;
     const totalAmount = customerBills.reduce((sum, b) => sum + b.total, 0);
     const paidAmount = customerBills.filter(b => (b.paymentStatus || 'paid') === 'paid').reduce((sum, b) => sum + b.total, 0);
     const pendingAmount = customerBills.filter(b => b.paymentStatus === 'pending').reduce((sum, b) => sum + b.total, 0);
     const partialAmount = customerBills.filter(b => b.paymentStatus === 'partial').reduce((sum, b) => sum + b.total, 0);
     const outstandingAmount = pendingAmount + partialAmount;
-    
+
     // Generate purchase history HTML
     let billsHtml = '';
     if (customerBills.length > 0) {
@@ -3508,7 +3513,7 @@ function viewCustomerDetails(customerName) {
             } else {
                 statusBadge = '<span class="badge badge-warning">💰 Partial</span>';
             }
-            
+
             return `
                 <tr>
                     <td><strong>#${b.id}</strong></td>
@@ -3525,7 +3530,7 @@ function viewCustomerDetails(customerName) {
     } else {
         billsHtml = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No purchases yet</td></tr>';
     }
-    
+
     const content = `
         <div class="supplier-details-card">
             <div class="supplier-info-section">
@@ -3640,7 +3645,7 @@ function viewCustomerDetails(customerName) {
             </div>
         </div>
     `;
-    
+
     document.getElementById('customer-details-content').innerHTML = content;
     document.getElementById('customer-details-modal').classList.add('active');
 }
@@ -3657,27 +3662,27 @@ function renderDashboard() {
         switchView('inventory');
         return;
     }
-    
+
     // Get selected period
     const period = document.getElementById('dashboard-period')?.value || 'all';
-    
+
     // Filter data based on period
     const filteredBills = filterByPeriod(bills, period);
     const filteredPurchases = filterByPeriod(purchases, period);
-    
+
     // Update period info banner
     updatePeriodInfo(period);
-    
+
     // Calculate metrics
     const totalRevenue = filteredBills.reduce((sum, bill) => sum + (parseFloat(bill.total) || 0), 0);
     const totalPurchases = filteredPurchases.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
     const totalBillsCount = filteredBills.length;
-    
+
     // Calculate Average Order Value (AOV)
     const averageOrderValue = totalBillsCount > 0 ? (totalRevenue / totalBillsCount) : 0;
-    
+
     const inventoryValue = inventory.reduce((sum, item) => sum + (item.quantity * (parseFloat(item.price) || 0)), 0);
-    
+
     // Calculate actual pending payments using payment tracking
     let pendingPayments = 0;
     filteredBills.forEach(bill => {
@@ -3687,61 +3692,61 @@ function renderDashboard() {
             pendingPayments += parseFloat(bill.paymentTracking.amountPending) || 0;
         }
     });
-    
+
     // Update metric cards
     document.getElementById('dash-total-revenue').textContent = `₹${totalRevenue.toFixed(2)}`;
     document.getElementById('dash-aov').textContent = `₹${averageOrderValue.toFixed(2)}`;
     document.getElementById('dash-inventory-value').textContent = `₹${inventoryValue.toFixed(2)}`;
     document.getElementById('dash-pending-payments').textContent = `₹${pendingPayments.toFixed(2)}`;
-    
+
     // Sales Overview
     const totalBills = filteredBills.length;
     const paidBills = filteredBills.filter(b => (b.paymentStatus || 'paid') === 'paid').length;
     const pendingBills = filteredBills.filter(b => b.paymentStatus === 'pending' || b.paymentStatus === 'partial').length;
     const collectionRate = totalBills > 0 ? ((paidBills / totalBills) * 100).toFixed(1) : 0;
-    
+
     document.getElementById('dash-total-bills').textContent = totalBills;
     document.getElementById('dash-paid-bills').textContent = paidBills;
     document.getElementById('dash-pending-bills').textContent = pendingBills;
     document.getElementById('dash-collection-rate').textContent = `${collectionRate}%`;
     document.getElementById('dash-collection-bar').style.width = `${collectionRate}%`;
-    
+
     // Inventory Status
     const totalProducts = inventory.length;
     const lowStock = inventory.filter(item => item.quantity > 0 && item.quantity < 5).length;
     const outOfStock = inventory.filter(item => item.quantity === 0).length;
-    
+
     document.getElementById('dash-total-products').textContent = totalProducts;
     document.getElementById('dash-low-stock').textContent = lowStock;
     document.getElementById('dash-out-stock').textContent = outOfStock;
-    
+
     // Inventory Alerts
     renderInventoryAlerts();
-    
+
     // Purchase Summary
     const purchaseCount = filteredPurchases.length;
     const supplierCount = suppliers.length;
     const paidPurchases = filteredPurchases.filter(p => p.paymentStatus === 'paid').reduce((sum, p) => sum + p.total, 0);
     const supplierPaymentRate = totalPurchases > 0 ? ((paidPurchases / totalPurchases) * 100).toFixed(1) : 0;
-    
+
     document.getElementById('dash-total-purchases').textContent = `₹${totalPurchases.toFixed(2)}`;
     document.getElementById('dash-purchase-count').textContent = purchaseCount;
     document.getElementById('dash-supplier-count').textContent = supplierCount;
     document.getElementById('dash-supplier-payment-rate').textContent = `${supplierPaymentRate}%`;
     document.getElementById('dash-supplier-payment-bar').style.width = `${supplierPaymentRate}%`;
-    
+
     // Customer Insights
     const customerCount = customers.length;
     const avgBill = totalBills > 0 ? (totalRevenue / totalBills).toFixed(2) : 0;
     const gstCollected = filteredBills.reduce((sum, bill) => sum + bill.totalGST, 0);
-    
+
     document.getElementById('dash-customer-count').textContent = customerCount;
     document.getElementById('dash-avg-bill').textContent = `₹${avgBill}`;
     document.getElementById('dash-gst-collected').textContent = `₹${gstCollected.toFixed(2)}`;
-    
+
     // Top Products (pass filtered bills)
     renderTopProducts(filteredBills);
-    
+
     // Recent Activity (pass filtered data)
     renderRecentActivity(filteredBills, filteredPurchases);
 }
@@ -3750,9 +3755,9 @@ function renderInventoryAlerts() {
     const alertsContainer = document.getElementById('dash-inventory-alerts');
     const lowStockItems = inventory.filter(item => item.quantity > 0 && item.quantity < 5);
     const outOfStockItems = inventory.filter(item => item.quantity === 0);
-    
+
     let alertsHtml = '';
-    
+
     outOfStockItems.forEach(item => {
         alertsHtml += `
             <div class="alert-item danger">
@@ -3760,7 +3765,7 @@ function renderInventoryAlerts() {
             </div>
         `;
     });
-    
+
     lowStockItems.forEach(item => {
         alertsHtml += `
             <div class="alert-item">
@@ -3768,17 +3773,17 @@ function renderInventoryAlerts() {
             </div>
         `;
     });
-    
+
     if (alertsHtml === '') {
         alertsHtml = '<p style="text-align: center; color: var(--text-secondary); padding: 1rem;">✅ All products have sufficient stock</p>';
     }
-    
+
     alertsContainer.innerHTML = alertsHtml;
 }
 
 function renderTopProducts(filteredBills = bills) {
     const container = document.getElementById('dash-top-products');
-    
+
     // Calculate product sales
     const productSales = {};
     filteredBills.forEach(bill => {
@@ -3798,17 +3803,17 @@ function renderTopProducts(filteredBills = bills) {
         });
     });
 
-    
+
     // Sort by quantity sold
     const topProducts = Object.values(productSales)
         .sort((a, b) => b.quantity - a.quantity)
         .slice(0, 5);
-    
+
     if (topProducts.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No sales data available yet</p>';
         return;
     }
-    
+
     let html = '';
     topProducts.forEach((product, index) => {
         const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
@@ -3828,16 +3833,16 @@ function renderTopProducts(filteredBills = bills) {
             </div>
         `;
     });
-    
+
     container.innerHTML = html;
 }
 
 function renderRecentActivity(filteredBills = bills, filteredPurchases = purchases) {
     const container = document.getElementById('dash-recent-activity');
-    
+
     // Combine bills and purchases with timestamps
     const activities = [];
-    
+
     filteredBills.slice(-10).forEach(bill => {
         activities.push({
             type: 'sale',
@@ -3847,7 +3852,7 @@ function renderRecentActivity(filteredBills = bills, filteredPurchases = purchas
             status: bill.paymentStatus || 'paid'
         });
     });
-    
+
     filteredPurchases.slice(-10).forEach(purchase => {
         activities.push({
             type: 'purchase',
@@ -3857,28 +3862,28 @@ function renderRecentActivity(filteredBills = bills, filteredPurchases = purchas
             status: purchase.paymentStatus
         });
     });
-    
+
     // Sort by time (most recent first)
     activities.sort((a, b) => b.time - a.time);
-    
+
     // Take top 10
     const recentActivities = activities.slice(0, 10);
-    
+
     if (recentActivities.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No recent activity</p>';
         return;
     }
 
-    
+
     let html = '';
     recentActivities.forEach(activity => {
         const timeAgo = getTimeAgo(activity.time);
-        const statusBadge = activity.status === 'paid' ? 
-            '<span class="badge badge-success">✅</span>' : 
-            activity.status === 'pending' ? 
-            '<span class="badge badge-danger">⏳</span>' : 
-            '<span class="badge badge-warning">💰</span>';
-        
+        const statusBadge = activity.status === 'paid' ?
+            '<span class="badge badge-success">✅</span>' :
+            activity.status === 'pending' ?
+                '<span class="badge badge-danger">⏳</span>' :
+                '<span class="badge badge-warning">💰</span>';
+
         html += `
             <div class="activity-item">
                 <div class="activity-icon">${activity.icon}</div>
@@ -3889,18 +3894,18 @@ function renderRecentActivity(filteredBills = bills, filteredPurchases = purchas
             </div>
         `;
     });
-    
+
     container.innerHTML = html;
 }
 
 function getTimeAgo(date) {
     const seconds = Math.floor((new Date() - date) / 1000);
-    
+
     if (seconds < 60) return 'Just now';
     if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
     if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
-    
+
     return date.toLocaleDateString('en-IN');
 }
 
@@ -3916,19 +3921,19 @@ function filterByPeriod(data, period) {
     if (period === 'all') {
         return data;
     }
-    
+
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
     const currentQuarter = Math.floor(currentMonth / 3);
-    
+
     return data.filter(item => {
         const itemDate = new Date(item.createdAt);
         const itemYear = itemDate.getFullYear();
         const itemMonth = itemDate.getMonth();
         const itemQuarter = Math.floor(itemMonth / 3);
-        
-        switch(period) {
+
+        switch (period) {
             case 'month':
                 return itemYear === currentYear && itemMonth === currentMonth;
             case 'quarter':
@@ -3943,15 +3948,15 @@ function filterByPeriod(data, period) {
 
 function updatePeriodInfo(period) {
     const now = new Date();
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                        'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
     const currentMonth = monthNames[now.getMonth()];
     const currentYear = now.getFullYear();
     const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
-    
+
     let infoText = '';
-    
-    switch(period) {
+
+    switch (period) {
         case 'month':
             infoText = `📅 Showing data for: ${currentMonth} ${currentYear}`;
             break;
@@ -3964,7 +3969,7 @@ function updatePeriodInfo(period) {
         default:
             infoText = `📅 Showing data for: All Time`;
     }
-    
+
     document.getElementById('period-info-text').textContent = infoText;
 }
 
@@ -3972,26 +3977,26 @@ function updatePeriodInfo(period) {
 // PDF Generation Function
 function generateBillPDF(bill) {
     console.log('generateBillPDF called with bill:', bill);
-    
+
     // Validate bill object
     if (!bill) {
         console.error('Bill is undefined or null');
         alert('Error: Bill data is missing. Cannot generate PDF.');
         return;
     }
-    
+
     if (!bill.customer) {
         console.error('Bill customer is undefined');
         alert('Error: Customer data is missing. Cannot generate PDF.');
         return;
     }
-    
+
     if (!bill.items || !Array.isArray(bill.items)) {
         console.error('Bill items is undefined or not an array');
         alert('Error: Bill items data is missing. Cannot generate PDF.');
         return;
     }
-    
+
     // Ensure all numeric fields have defaults
     bill.subtotal = parseFloat(bill.subtotal) || 0;
     bill.totalGST = parseFloat(bill.totalGST) || 0;
@@ -4000,7 +4005,7 @@ function generateBillPDF(bill) {
     bill.createdAt = bill.createdAt || new Date();
     bill.gstBreakdown = bill.gstBreakdown || {};
     bill.paymentStatus = bill.paymentStatus || 'paid';
-    
+
     // Ensure all items have numeric fields
     bill.items = bill.items.map(item => ({
         ...item,
@@ -4014,19 +4019,19 @@ function generateBillPDF(bill) {
         size: item.size || '',
         unit: item.unit || ''
     }));
-    
+
     console.log('Bill after normalization:', bill);
-    
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    
+
     // Load saved company and banking details
     const savedCompany = localStorage.getItem('companyDetails');
     const savedBanking = localStorage.getItem('bankingDetails');
-    
+
     const company = savedCompany ? JSON.parse(savedCompany) : {};
     const banking = savedBanking ? JSON.parse(savedBanking) : {};
-    
+
     // Company Details (use saved or defaults)
     const companyName = company.name || "PLASTIWOOD";
     const companyAddress = company.address || "Your Business Address Here";
@@ -4035,48 +4040,48 @@ function generateBillPDF(bill) {
     const companyEmail = company.email || "your.email@example.com";
     const companyPAN = company.pan || "";
     const companyWebsite = company.website || "";
-    
+
     // Colors
     const primaryColor = [37, 99, 235]; // Blue
     const darkColor = [15, 23, 42];
     const lightGray = [241, 245, 249];
-    
+
     // Header with gradient effect
     doc.setFillColor(...primaryColor);
     doc.rect(0, 0, 210, 45, 'F');
-    
+
     // Company Name
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
     doc.setFont(undefined, 'bold');
     doc.text(companyName, 105, 15, { align: 'center' });
-    
+
     // GST Invoice Title
     doc.setFontSize(16);
     doc.text('TAX INVOICE', 105, 25, { align: 'center' });
-    
+
     // Company Details
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
     doc.text(companyAddress, 105, 31, { align: 'center' });
-    
+
     let contactLine = `Phone: ${companyPhone}`;
     if (companyEmail) contactLine += ` | Email: ${companyEmail}`;
     doc.text(contactLine, 105, 36, { align: 'center' });
-    
+
     let gstLine = `GST: ${companyGST}`;
     if (companyPAN) gstLine += ` | PAN: ${companyPAN}`;
     if (companyWebsite) gstLine += ` | ${companyWebsite}`;
     doc.text(gstLine, 105, 41, { align: 'center' });
-    
+
     // Reset text color
     doc.setTextColor(...darkColor);
-    
+
     // Invoice Details Box
     let yPos = 55;
     doc.setFillColor(...lightGray);
     doc.rect(10, yPos, 190, 30, 'F');
-    
+
     // Left side - Bill details
     doc.setFontSize(10);
     doc.setFont(undefined, 'bold');
@@ -4084,7 +4089,7 @@ function generateBillPDF(bill) {
     doc.setFont(undefined, 'normal');
     doc.text(`Date: ${new Date(bill.createdAt).toLocaleDateString('en-IN')}`, 15, yPos + 14);
     doc.text(`Payment Status: ${bill.paymentStatus.toUpperCase()}`, 15, yPos + 21);
-    
+
     // Right side - Customer details
     doc.setFont(undefined, 'bold');
     doc.text('Bill To:', 110, yPos + 7);
@@ -4093,7 +4098,7 @@ function generateBillPDF(bill) {
     if (bill.customer.phone) {
         doc.text(`Phone: ${bill.customer.phone}`, 110, yPos + 21);
     }
-    
+
     // Customer GST and Address
     yPos += 35;
     if (bill.customer.gst) {
@@ -4106,14 +4111,14 @@ function generateBillPDF(bill) {
         yPos += 5;
     }
     doc.text(`State: ${bill.customer.state === 'same' ? 'Same State (SGST+CGST)' : 'Other State (IGST)'}`, 15, yPos);
-    
+
     // Items Table
     yPos += 10;
-    
+
     const tableHeaders = [
         ['S.No', 'Item Description', 'HSN/SAC', 'Qty', 'Unit', 'Rate (Rs.)', 'Amount (Rs.)', 'GST %', 'GST (Rs.)', 'Total (Rs.)']
     ];
-    
+
     const tableData = bill.items.map((item, index) => [
         (index + 1).toString(),
         item.name,
@@ -4126,7 +4131,7 @@ function generateBillPDF(bill) {
         item.gstAmount.toFixed(2),
         item.total.toFixed(2)
     ]);
-    
+
     doc.autoTable({
         startY: yPos,
         head: tableHeaders,
@@ -4159,40 +4164,40 @@ function generateBillPDF(bill) {
             fillColor: [248, 250, 252]
         }
     });
-    
+
     // Get final Y position after table
     yPos = doc.lastAutoTable.finalY + 10;
-    
+
     // Summary Box
     const summaryX = 120;
     const summaryWidth = 80;
-    
+
     doc.setFillColor(...lightGray);
     doc.rect(summaryX, yPos, summaryWidth, 45, 'F');
-    
+
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
-    
+
     // Subtotal
     doc.text('Subtotal:', summaryX + 5, yPos + 7);
     doc.text('Rs. ' + bill.subtotal.toFixed(2), summaryX + summaryWidth - 5, yPos + 7, { align: 'right' });
-    
+
     // GST Breakdown
     if (bill.gstBreakdown.type === 'SGST+CGST') {
         doc.text('SGST:', summaryX + 5, yPos + 14);
         doc.text('Rs. ' + bill.gstBreakdown.sgst.toFixed(2), summaryX + summaryWidth - 5, yPos + 14, { align: 'right' });
-        
+
         doc.text('CGST:', summaryX + 5, yPos + 21);
         doc.text('Rs. ' + bill.gstBreakdown.cgst.toFixed(2), summaryX + summaryWidth - 5, yPos + 21, { align: 'right' });
     } else {
         doc.text('IGST:', summaryX + 5, yPos + 14);
         doc.text('Rs. ' + bill.gstBreakdown.igst.toFixed(2), summaryX + summaryWidth - 5, yPos + 14, { align: 'right' });
     }
-    
+
     // Total GST
     doc.text('Total GST:', summaryX + 5, yPos + 28);
     doc.text('Rs. ' + bill.totalGST.toFixed(2), summaryX + summaryWidth - 5, yPos + 28, { align: 'right' });
-    
+
     // Grand Total
     doc.setFont(undefined, 'bold');
     doc.setFontSize(12);
@@ -4201,11 +4206,11 @@ function generateBillPDF(bill) {
     doc.setTextColor(255, 255, 255);
     doc.text('Grand Total:', summaryX + 5, yPos + 40);
     doc.text('Rs. ' + bill.total.toFixed(2), summaryX + summaryWidth - 5, yPos + 40, { align: 'right' });
-    
+
     // Reset colors
     doc.setTextColor(...darkColor);
     doc.setFont(undefined, 'normal');
-    
+
     // Amount in words
     yPos += 50;
     doc.setFontSize(10);
@@ -4213,7 +4218,7 @@ function generateBillPDF(bill) {
     doc.text('Amount in Words:', 15, yPos);
     doc.setFont(undefined, 'normal');
     doc.text(numberToWords(bill.total) + ' Rupees Only', 15, yPos + 6);
-    
+
     // Terms and Conditions
     yPos += 15;
     doc.setFontSize(9);
@@ -4224,7 +4229,7 @@ function generateBillPDF(bill) {
     doc.text('1. Goods once sold will not be taken back or exchanged', 15, yPos + 5);
     doc.text('2. All disputes are subject to local jurisdiction only', 15, yPos + 10);
     doc.text('3. Payment should be made within 30 days from the date of invoice', 15, yPos + 15);
-    
+
     // Banking Details (if available)
     if (Object.keys(banking).length > 0) {
         yPos += 25;
@@ -4233,7 +4238,7 @@ function generateBillPDF(bill) {
         doc.text('Banking Details:', 15, yPos);
         doc.setFont(undefined, 'normal');
         doc.setFontSize(8);
-        
+
         let bankYPos = yPos + 5;
         if (banking.bankName) {
             doc.text(`Bank: ${banking.bankName}`, 15, bankYPos);
@@ -4259,7 +4264,7 @@ function generateBillPDF(bill) {
             doc.text(`UPI ID: ${banking.upiId}`, 15, bankYPos);
         }
     }
-    
+
     // Footer
     const pageHeight = doc.internal.pageSize.height;
     doc.setFontSize(9);
@@ -4267,12 +4272,12 @@ function generateBillPDF(bill) {
     doc.text('For ' + companyName, 150, pageHeight - 20);
     doc.setFont(undefined, 'normal');
     doc.text('Authorized Signatory', 150, pageHeight - 10);
-    
+
     // Thank you message
     doc.setFontSize(10);
     doc.setFont(undefined, 'bold');
     doc.text('Thank you for your business!', 105, pageHeight - 10, { align: 'center' });
-    
+
     // Save PDF
     const fileName = `Invoice_${bill.id}_${bill.customer.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(fileName);
@@ -4283,54 +4288,54 @@ function numberToWords(num) {
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
     const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    
+
     if (num === 0) return 'Zero';
-    
+
     // Split into rupees and paise
     const rupees = Math.floor(num);
     const paise = Math.round((num - rupees) * 100);
-    
+
     function convertLessThanThousand(n) {
         if (n === 0) return '';
-        
+
         if (n < 10) return ones[n];
         if (n < 20) return teens[n - 10];
         if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
-        
+
         return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertLessThanThousand(n % 100) : '');
     }
-    
+
     function convertToWords(n) {
         if (n === 0) return '';
-        
+
         if (n < 1000) return convertLessThanThousand(n);
-        
+
         if (n < 100000) {
             const thousands = Math.floor(n / 1000);
             const remainder = n % 1000;
-            return convertLessThanThousand(thousands) + ' Thousand' + 
-                   (remainder !== 0 ? ' ' + convertLessThanThousand(remainder) : '');
+            return convertLessThanThousand(thousands) + ' Thousand' +
+                (remainder !== 0 ? ' ' + convertLessThanThousand(remainder) : '');
         }
-        
+
         if (n < 10000000) {
             const lakhs = Math.floor(n / 100000);
             const remainder = n % 100000;
-            return convertLessThanThousand(lakhs) + ' Lakh' + 
-                   (remainder !== 0 ? ' ' + convertToWords(remainder) : '');
+            return convertLessThanThousand(lakhs) + ' Lakh' +
+                (remainder !== 0 ? ' ' + convertToWords(remainder) : '');
         }
-        
+
         const crores = Math.floor(n / 10000000);
         const remainder = n % 10000000;
-        return convertLessThanThousand(crores) + ' Crore' + 
-               (remainder !== 0 ? ' ' + convertToWords(remainder) : '');
+        return convertLessThanThousand(crores) + ' Crore' +
+            (remainder !== 0 ? ' ' + convertToWords(remainder) : '');
     }
-    
+
     let result = convertToWords(rupees);
-    
+
     if (paise > 0) {
         result += ' and ' + convertToWords(paise) + ' Paise';
     }
-    
+
     return result;
 }
 
@@ -4339,14 +4344,14 @@ function downloadBillPDF(billId) {
     console.log('downloadBillPDF called with billId:', billId, 'type:', typeof billId);
     console.log('Available bills:', bills);
     console.log('Bills IDs:', bills.map(b => ({ id: b.id, type: typeof b.id })));
-    
+
     const bill = bills.find(b => {
         console.log(`Comparing b.id (${b.id}, ${typeof b.id}) with billId (${billId}, ${typeof billId})`);
         return b.id == billId;
     });
-    
+
     console.log('Found bill:', bill);
-    
+
     if (bill) {
         // Normalize bill format - handle both old and new formats
         const normalizedBill = {
@@ -4362,11 +4367,11 @@ function downloadBillPDF(billId) {
             gstBreakdown: bill.gstBreakdown || {},
             paymentTracking: bill.paymentTracking || {}
         };
-        
+
         console.log('Normalized bill:', normalizedBill);
         console.log('Bill customer:', normalizedBill.customer);
         console.log('Bill items:', normalizedBill.items);
-        
+
         generateBillPDF(normalizedBill);
     } else {
         console.error('Bill not found with ID:', billId);
@@ -4383,17 +4388,17 @@ let bankingDetails = {};
 function loadSettings() {
     const savedCompany = localStorage.getItem('companyDetails');
     const savedBanking = localStorage.getItem('bankingDetails');
-    
+
     if (savedCompany) {
         companyDetails = JSON.parse(savedCompany);
         populateCompanyForm();
     }
-    
+
     if (savedBanking) {
         bankingDetails = JSON.parse(savedBanking);
         populateBankingForm();
     }
-    
+
     displayCurrentSettings();
 }
 
@@ -4421,9 +4426,9 @@ function populateBankingForm() {
 // Save company details
 function saveCompanyDetails(event) {
     event.preventDefault();
-    
+
     if (!checkOwnerPermission()) return;
-    
+
     companyDetails = {
         name: document.getElementById('company-name').value,
         address: document.getElementById('company-address').value,
@@ -4433,7 +4438,7 @@ function saveCompanyDetails(event) {
         pan: document.getElementById('company-pan').value,
         website: document.getElementById('company-website').value
     };
-    
+
     localStorage.setItem('companyDetails', JSON.stringify(companyDetails));
     displayCurrentSettings();
     alert('✅ Company details saved successfully!');
@@ -4442,9 +4447,9 @@ function saveCompanyDetails(event) {
 // Save banking details
 function saveBankingDetails(event) {
     event.preventDefault();
-    
+
     if (!checkOwnerPermission()) return;
-    
+
     bankingDetails = {
         bankName: document.getElementById('bank-name').value,
         accountName: document.getElementById('bank-account-name').value,
@@ -4453,7 +4458,7 @@ function saveBankingDetails(event) {
         branch: document.getElementById('bank-branch').value,
         upiId: document.getElementById('upi-id').value
     };
-    
+
     localStorage.setItem('bankingDetails', JSON.stringify(bankingDetails));
     displayCurrentSettings();
     alert('✅ Banking details saved successfully!');
@@ -4462,14 +4467,14 @@ function saveBankingDetails(event) {
 // Display current settings
 function displayCurrentSettings() {
     const container = document.getElementById('current-settings-display');
-    
+
     if (Object.keys(companyDetails).length === 0 && Object.keys(bankingDetails).length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No settings saved yet. Fill in the forms above to save your business details.</p>';
         return;
     }
-    
+
     let html = '';
-    
+
     if (Object.keys(companyDetails).length > 0) {
         html += '<h3 style="color: var(--primary); margin-bottom: 1rem;">🏢 Company Details</h3>';
         if (companyDetails.name) html += `<div class="setting-item"><strong>Company Name</strong><span>${companyDetails.name}</span></div>`;
@@ -4480,7 +4485,7 @@ function displayCurrentSettings() {
         if (companyDetails.pan) html += `<div class="setting-item"><strong>PAN Number</strong><span>${companyDetails.pan}</span></div>`;
         if (companyDetails.website) html += `<div class="setting-item"><strong>Website</strong><span>${companyDetails.website}</span></div>`;
     }
-    
+
     if (Object.keys(bankingDetails).length > 0) {
         html += '<h3 style="color: var(--primary); margin: 2rem 0 1rem;">🏦 Banking Details</h3>';
         if (bankingDetails.bankName) html += `<div class="setting-item"><strong>Bank Name</strong><span>${bankingDetails.bankName}</span></div>`;
@@ -4490,7 +4495,7 @@ function displayCurrentSettings() {
         if (bankingDetails.branch) html += `<div class="setting-item"><strong>Branch</strong><span>${bankingDetails.branch}</span></div>`;
         if (bankingDetails.upiId) html += `<div class="setting-item"><strong>UPI ID</strong><span>${bankingDetails.upiId}</span></div>`;
     }
-    
+
     container.innerHTML = html;
 }
 
@@ -4565,10 +4570,10 @@ window.saveBankingDetails = saveBankingDetails;
 // Mobile-friendly table scrolling
 function setupMobileTableScroll() {
     const tableContainers = document.querySelectorAll('.table-container');
-    
+
     tableContainers.forEach(container => {
         let hasScrolled = false;
-        
+
         container.addEventListener('scroll', () => {
             if (!hasScrolled) {
                 hasScrolled = true;

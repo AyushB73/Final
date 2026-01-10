@@ -90,7 +90,7 @@ class APIService {
 
     // Purchases API
     static async getPurchases() {
-        return await this.request('/api/purchases');
+        return await this.request(`/api/purchases?_t=${Date.now()}`);
     }
 
     static async addPurchase(purchase) {
