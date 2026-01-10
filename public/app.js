@@ -3599,16 +3599,17 @@ function renderCustomerReports() {
         );
 
         const totalOrders = customerBills.length;
-        const totalAmount = customerBills.reduce((sum, b) => sum + b.total, 0);
-        const paidAmount = customerBills
-            .filter(b => (b.paymentStatus || 'paid') === 'paid')
-            .reduce((sum, b) => sum + b.total, 0);
-        const pendingAmount = customerBills
-            .filter(b => b.paymentStatus === 'pending')
-            .reduce((sum, b) => sum + b.total, 0);
-        const partialAmount = customerBills
-            .filter(b => b.paymentStatus === 'partial')
-            .reduce((sum, b) => sum + b.total, 0);
+        const totalAmount = customerBills.reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0);
+
+        // Calculate actually paid amount considering partial payments
+        const paidAmount = customerBills.reduce((sum, b) => {
+            const status = b.paymentStatus || 'paid';
+            if (status === 'paid') return sum + (parseFloat(b.total) || 0);
+            if (status === 'partial' && b.paymentTracking) return sum + (parseFloat(b.paymentTracking.amountPaid) || 0);
+            return sum;
+        }, 0);
+
+        const outstandingAmount = totalAmount - paidAmount;
 
         const lastPurchase = customerBills.length > 0
             ? new Date(Math.max(...customerBills.map(b => new Date(b.createdAt)))).toLocaleDateString('en-IN')
@@ -3619,10 +3620,8 @@ function renderCustomerReports() {
             totalOrders,
             totalAmount,
             paidAmount,
-            pendingAmount,
-            partialAmount,
             lastPurchase,
-            outstandingAmount: pendingAmount + partialAmount
+            outstandingAmount
         };
     });
 
@@ -3671,11 +3670,22 @@ function viewCustomerDetails(customerName) {
     );
 
     const totalOrders = customerBills.length;
-    const totalAmount = customerBills.reduce((sum, b) => sum + b.total, 0);
-    const paidAmount = customerBills.filter(b => (b.paymentStatus || 'paid') === 'paid').reduce((sum, b) => sum + b.total, 0);
-    const pendingAmount = customerBills.filter(b => b.paymentStatus === 'pending').reduce((sum, b) => sum + b.total, 0);
-    const partialAmount = customerBills.filter(b => b.paymentStatus === 'partial').reduce((sum, b) => sum + b.total, 0);
-    const outstandingAmount = pendingAmount + partialAmount;
+    const totalAmount = customerBills.reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0);
+
+    // Calculate actually paid amount considering partial payments
+    const paidAmount = customerBills.reduce((sum, b) => {
+        const status = b.paymentStatus || 'paid';
+        if (status === 'paid') return sum + (parseFloat(b.total) || 0);
+        if (status === 'partial' && b.paymentTracking) return sum + (parseFloat(b.paymentTracking.amountPaid) || 0);
+        return sum;
+    }, 0);
+
+    const outstandingAmount = totalAmount - paidAmount;
+
+    // For individual status breakups in the bars
+    const pendingAmountTotal = customerBills.filter(b => b.paymentStatus === 'pending').reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0);
+    const partialAmountPaidOnly = customerBills.filter(b => b.paymentStatus === 'partial').reduce((sum, b) => sum + (parseFloat(b.paymentTracking?.amountPaid) || 0), 0);
+    const partialAmountPendingOnly = customerBills.filter(b => b.paymentStatus === 'partial').reduce((sum, b) => sum + (parseFloat(b.paymentTracking?.amountPending) || 0), 0);
 
     // Generate purchase history HTML
     let billsHtml = '';
@@ -3788,16 +3798,16 @@ function viewCustomerDetails(customerName) {
                     <div class="payment-bar-item">
                         <div class="payment-bar-label">
                             <span>⏳ Pending</span>
-                            <span>₹${pendingAmount.toFixed(2)}</span>
+                            <span>₹${(pendingAmountTotal + partialAmountPendingOnly).toFixed(2)}</span>
                         </div>
                         <div class="payment-bar">
-                            <div class="payment-bar-fill danger" style="width: ${totalAmount > 0 ? (pendingAmount / totalAmount * 100) : 0}%"></div>
+                            <div class="payment-bar-fill danger" style="width: ${totalAmount > 0 ? ((pendingAmountTotal + partialAmountPendingOnly) / totalAmount * 100) : 0}%"></div>
                         </div>
                     </div>
                     <div class="payment-bar-item">
                         <div class="payment-bar-label">
-                            <span>💰 Partial</span>
-                            <span>₹${partialAmount.toFixed(2)}</span>
+                            <span>💰 Partial (Paid)</span>
+                            <span>₹${partialAmountPaidOnly.toFixed(2)}</span>
                         </div>
                         <div class="payment-bar">
                             <div class="payment-bar-fill warning" style="width: ${totalAmount > 0 ? (partialAmount / totalAmount * 100) : 0}%"></div>
@@ -3852,11 +3862,14 @@ async function downloadCustomerReportPDF(customerName) {
         (b.customer.phone && customer.phone && b.customer.phone === customer.phone)
     );
 
-    const totalAmount = customerBills.reduce((sum, b) => sum + b.total, 0);
-    const paidAmount = customerBills.filter(b => (b.paymentStatus || 'paid') === 'paid').reduce((sum, b) => sum + b.total, 0);
-    const pendingAmount = customerBills.filter(b => b.paymentStatus === 'pending').reduce((sum, b) => sum + b.total, 0);
-    const partialAmount = customerBills.filter(b => b.paymentStatus === 'partial').reduce((sum, b) => sum + b.total, 0);
-    const outstandingAmount = pendingAmount + partialAmount;
+    const totalAmount = customerBills.reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0);
+    const paidAmount = customerBills.reduce((sum, b) => {
+        const status = b.paymentStatus || 'paid';
+        if (status === 'paid') return sum + (parseFloat(b.total) || 0);
+        if (status === 'partial' && b.paymentTracking) return sum + (parseFloat(b.paymentTracking.amountPaid) || 0);
+        return sum;
+    }, 0);
+    const outstandingAmount = totalAmount - paidAmount;
 
     // Header
     doc.setFillColor(41, 128, 185);
