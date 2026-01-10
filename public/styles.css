@@ -3322,117 +3322,22 @@ table td .action-btn {
 /* Settings View Styles */
 .settings-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 2rem;
-    padding: 2rem;
-}
-
-.settings-card {
-    background: var(--bg-primary);
-    border-radius: 12px;
-    padding: 2rem;
-    box-shadow: var(--shadow-md);
-}
-
-.settings-card h2 {
-    color: var(--primary);
-    margin-bottom: 1.5rem;
-    font-size: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.settings-card form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.settings-card input,
-.settings-card textarea {
-    padding: 0.75rem;
-    border: 2px solid var(--border);
-    border-radius: 8px;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-}
-
-.settings-card input:focus,
-.settings-card textarea:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.settings-card textarea {
-    resize: vertical;
-    font-family: inherit;
-}
-
-#current-settings-display {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.setting-item {
-    padding: 1rem;
-    background: var(--bg-secondary);
-    border-radius: 8px;
-    border-left: 4px solid var(--primary);
-}
-
-.setting-item strong {
-    color: var(--text-primary);
-    display: block;
-    margin-bottom: 0.25rem;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.setting-item span {
-    color: var(--text-secondary);
-    font-size: 1rem;
-}
-
-@media (max-width: 768px) {
-    .settings-container {
-        grid-template-columns: 1fr;
-        padding: 1rem;
-    }
-
-    .settings-card {
-        padding: 1.5rem;
-    }
-}
-
-
-
-main {
-    padding: 0;
-}
-
-.table-container {
-    border-radius: 0;
-}
-
-
-/* Settings View Styles */
-.settings-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
+    align-items: start;
+    /* CRITICAL: Align all cards to the top */
+    padding: 1rem 0;
 }
 
 .settings-card {
     background: white;
-    padding: 2rem;
+    padding: 1.5rem;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     border: 1px solid var(--border);
     transition: all 0.3s ease;
+    height: auto;
+    /* Fallback for content-based height */
 }
 
 .settings-card:hover {
@@ -3440,6 +3345,7 @@ main {
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
+.settings-card h2,
 .settings-card h3 {
     margin-bottom: 1.5rem;
     font-size: 1.25rem;
@@ -3452,11 +3358,16 @@ main {
     border-bottom: 2px solid var(--border);
 }
 
+.settings-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
 .settings-card input,
 .settings-card textarea {
     width: 100%;
     padding: 0.875rem 1rem;
-    margin-bottom: 1rem;
     border: 2px solid var(--border);
     border-radius: 10px;
     font-size: 1rem;
@@ -3476,40 +3387,58 @@ main {
     min-height: 80px;
 }
 
-.settings-display {
-    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
-    padding: 1.5rem;
-    border-radius: 12px;
-    border: 2px solid var(--border);
-}
-
-.settings-display h4 {
+.setting-item {
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
     margin-bottom: 1rem;
-    color: var(--primary);
-    font-size: 1.1rem;
-    font-weight: 600;
 }
 
-.settings-display p {
-    margin: 0.5rem 0;
-    font-size: 0.95rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
+.setting-item strong {
+    color: var(--text-primary);
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.settings-display strong {
+.setting-item span {
     color: var(--text-secondary);
-    font-weight: 600;
-    min-width: 120px;
+    font-size: 1rem;
 }
 
-.settings-display span {
-    flex: 1;
-    text-align: right;
-    word-break: break-word;
+/* Tablet Layout */
+@media (max-width: 1024px) {
+    .settings-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
+
+/* Mobile Layout */
+@media (max-width: 768px) {
+    .settings-container {
+        grid-template-columns: 1fr;
+        padding: 0.5rem;
+    }
+
+    .settings-card {
+        padding: 1.25rem;
+    }
+}
+
+
+
+main {
+    padding: 0;
+}
+
+.table-container {
+    border-radius: 0;
+}
+
+
 
 /* Enhanced Mobile Responsive Styles for Settings */
 @media (max-width: 768px) {
