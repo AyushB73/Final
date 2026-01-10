@@ -1789,7 +1789,9 @@ function renderSupplierReports() {
         }
 
         row.innerHTML = `
-            <td onclick="viewSupplierDetails('${data.supplier.name.replace(/'/g, "\\'")}')"><strong>${data.supplier.name}</strong></td>
+            <td onclick="downloadSupplierReportPDF('${data.supplier.name.replace(/'/g, "\\'")}')" style="cursor: pointer; color: var(--primary); text-decoration: underline;">
+                <strong>${data.supplier.name}</strong>
+            </td>
             <td>${data.supplier.phone || '-'}</td>
             <td>${data.supplier.gst || '-'}</td>
             <td>${data.totalPurchases}</td>
