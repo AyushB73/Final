@@ -1480,7 +1480,7 @@ function viewPurchaseDetails(purchaseId) {
                 </div>
             </div>
             
-            <!--Summary Section-- >
+            <!-- Summary Section -->
             <div class="bill-summary-box">
                 <div class="summary-row">
                     <span>Subtotal (Before Tax):</span>
@@ -1496,13 +1496,13 @@ function viewPurchaseDetails(purchaseId) {
                 </div>
             </div>
             
-            <!--Update Payment Button-- >
-    <div style="margin-top: 1.5rem; text-align: center;">
-        <button class="btn btn-primary" onclick="updatePurchasePaymentStatus(${purchase.id})">
-            💳 Update Payment Status
-        </button>
-    </div>
-        </div >
+            <!-- Update Payment Button -->
+            <div style="margin-top: 1.5rem; text-align: center;">
+                <button class="btn btn-primary" onclick="updatePurchasePaymentStatus(${purchase.id})">
+                    💳 Update Payment Status
+                </button>
+            </div>
+        </div>
     `;
 
     document.getElementById('purchase-details-content').innerHTML = content;
@@ -1530,7 +1530,7 @@ function updatePurchasePaymentStatus(purchaseId) {
 
     // Populate modal
     document.getElementById('update-purchase-id').textContent = purchaseId;
-    document.getElementById('update-purchase-current-status').innerHTML = `< span class="badge badge-${currentStatus === 'paid' ? 'success' : currentStatus === 'pending' ? 'danger' : 'warning'}" > ${statusLabels[currentStatus]}</span > `;
+    document.getElementById('update-purchase-current-status').innerHTML = `<span class="badge badge-${currentStatus === 'paid' ? 'success' : currentStatus === 'pending' ? 'danger' : 'warning'}">${statusLabels[currentStatus]}</span>`;
 
     // Close purchase details modal and show payment update modal
     closePurchaseDetailsModal();
@@ -1806,9 +1806,9 @@ function renderSupplierReports() {
         }
 
         row.innerHTML = `
-    < td onclick = "downloadSupplierReportPDF('${data.supplier.name.replace(/'/g, "\\'")}') " style="cursor: pointer; color: var(--primary); text - decoration: underline; ">
-        < strong > ${data.supplier.name}</strong >
-            </td >
+            <td onclick="downloadSupplierReportPDF('${data.supplier.name.replace(/'/g, "\\'")}')" style="cursor: pointer; color: var(--primary); text-decoration: underline;">
+                <strong>${data.supplier.name}</strong>
+            </td>
             <td>${data.supplier.phone || '-'}</td>
             <td>${data.supplier.gst || '-'}</td>
             <td>${data.totalPurchases}</td>
@@ -1820,9 +1820,9 @@ function renderSupplierReports() {
             <td>
                 <button class="action-btn" onclick="viewSupplierDetails('${data.supplier.name.replace(/'/g, "\\'")}')">View</button>
                 <button class="action-btn" onclick="editSupplier(${data.supplier.id})">Edit</button>
-                <button class="action-btn delete" onclick="deleteSupplier(${data.supplier.id}, '${data.supplier.name.replace(/'/g, "\\'")}') ">Delete</button>
-            </td >
-    `;
+                <button class="action-btn delete" onclick="deleteSupplier(${data.supplier.id}, '${data.supplier.name.replace(/'/g, "\\'")}')">Delete</button>
+            </td>
+        `;
         tbody.appendChild(row);
     });
 }
@@ -2302,15 +2302,15 @@ function renderSales() {
         // Create payment status dropdown
         const paymentStatus = (bill.paymentStatus || 'paid').toLowerCase();
         const paymentDropdown = `
-    < select class="payment-status-select" data - bill - id="${bill.id}" onchange = "quickUpdatePaymentStatus(${bill.id}, this.value)" style = "padding: 0.5rem; border-radius: 5px; border: 2px solid ${paymentStatus === 'paid' ? '#28a745' : paymentStatus === 'pending' ? '#dc3545' : '#ffc107'}; background: ${paymentStatus === 'paid' ? '#d4edda' : paymentStatus === 'pending' ? '#f8d7da' : '#fff3cd'}; color: ${paymentStatus === 'paid' ? '#155724' : paymentStatus === 'pending' ? '#721c24' : '#856404'}; font-weight: 600; cursor: pointer;" >
+            <select class="payment-status-select" data-bill-id="${bill.id}" onchange="quickUpdatePaymentStatus(${bill.id}, this.value)" style="padding: 0.5rem; border-radius: 5px; border: 2px solid ${paymentStatus === 'paid' ? '#28a745' : paymentStatus === 'pending' ? '#dc3545' : '#ffc107'}; background: ${paymentStatus === 'paid' ? '#d4edda' : paymentStatus === 'pending' ? '#f8d7da' : '#fff3cd'}; color: ${paymentStatus === 'paid' ? '#155724' : paymentStatus === 'pending' ? '#721c24' : '#856404'}; font-weight: 600; cursor: pointer;">
                 <option value="paid" ${paymentStatus === 'paid' ? 'selected' : ''}>✅ Paid</option>
                 <option value="pending" ${paymentStatus === 'pending' ? 'selected' : ''}>⏳ Pending</option>
                 <option value="partial" ${paymentStatus === 'partial' ? 'selected' : ''}>💰 Partial</option>
-            </select >
-    `;
+            </select>
+        `;
 
         row.innerHTML = `
-    < td > <strong>#${bill.id}</strong></td >
+            <td><strong>#${bill.id}</strong></td>
             <td>${date}<br><small>${time}</small></td>
             <td>${customer.name}</td>
             <td>${customer.phone || '-'}</td>
@@ -2325,7 +2325,7 @@ function renderSales() {
                 <button class="action-btn action-btn-sm btn-view" data-bill-id="${bill.id}" title="View Details">👁️</button>
                 <button class="action-btn action-btn-sm delete btn-delete" data-bill-id="${bill.id}" title="Delete">🗑️</button>
             </td>
-`;
+        `;
         tbody.appendChild(row);
     });
 
@@ -2416,7 +2416,7 @@ async function quickUpdatePaymentStatus(billId, newStatus) {
     }
 
     // Show loading state
-    const dropdown = document.querySelector(`select[data - bill - id= "${billId}"]`);
+    const dropdown = document.querySelector(`select[data-bill-id="${billId}"]`);
     if (dropdown) {
         dropdown.disabled = true;
         dropdown.style.opacity = '0.6';
@@ -2908,10 +2908,10 @@ function viewBillDetailsModal(billId) {
     let gstBreakdownHtml = '';
     if (gstBreakdown && gstBreakdown.type === 'SGST+CGST') {
         gstBreakdownHtml = `
-    < div style = "display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;" >
+            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
                 <span style="color: #6c757d;">SGST:</span>
                 <span style="font-weight: 600;">₹${(parseFloat(gstBreakdown.sgst) || 0).toFixed(2)}</span>
-            </div >
+            </div>
     <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
         <span style="color: #6c757d;">CGST:</span>
         <span style="font-weight: 600;">₹${(parseFloat(gstBreakdown.cgst) || 0).toFixed(2)}</span>
@@ -2919,19 +2919,19 @@ function viewBillDetailsModal(billId) {
 `;
     } else if (gstBreakdown && gstBreakdown.type === 'IGST') {
         gstBreakdownHtml = `
-    < div style = "display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;" >
+            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
                 <span style="color: #6c757d;">IGST:</span>
                 <span style="font-weight: 600;">₹${(parseFloat(gstBreakdown.igst) || 0).toFixed(2)}</span>
-            </div >
-    `;
+            </div>
+        `;
     } else {
         // If no breakdown type, show total GST
         gstBreakdownHtml = `
-    < div style = "display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;" >
+            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
                 <span style="color: #6c757d;">Total GST:</span>
                 <span style="font-weight: 600;">₹${(parseFloat(bill.totalGST) || 0).toFixed(2)}</span>
-            </div >
-    `;
+            </div>
+        `;
     }
 
     // Payment status badge
@@ -2954,7 +2954,7 @@ function viewBillDetailsModal(billId) {
     if (bill.paymentTracking && (paymentStatus === 'partial' || paymentStatus === 'paid')) {
         const tracking = bill.paymentTracking;
         paymentTrackingHtml = `
-    < div style = "background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-top: 1rem;" >
+            <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
                 <h4 style="margin: 0 0 0.75rem 0; color: #495057; font-size: 0.95rem;">💳 Payment Details</h4>
                 <div style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
                     <span style="color: #6c757d;">Total Amount:</span>
@@ -2969,15 +2969,14 @@ function viewBillDetailsModal(billId) {
                     <span style="color: #dc3545;">Amount Pending:</span>
                     <span style="font-weight: 600; color: #dc3545;">₹${(parseFloat(tracking.amountPending) || 0).toFixed(2)}</span>
                 </div>
-                ` : ''
-            }
-            </div >
-    `;
+                ` : ''}
+            </div>
+        `;
     }
 
     const content = `
-    < div style = "max-width: 900px; margin: 0 auto;" >
-            < !--Header Card-- >
+        <div style="max-width: 900px; margin: 0 auto;">
+            <!-- Header Card -->
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 12px 12px 0 0; margin: -1rem -1rem 0 -1rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                     <div>
@@ -2991,7 +2990,7 @@ function viewBillDetailsModal(billId) {
                 </div>
             </div>
             
-            <!--Customer Details Card-- >
+            <!-- Customer Details Card -->
             <div style="background: white; padding: 1.5rem; border: 1px solid #e9ecef; border-top: none;">
                 <h3 style="margin: 0 0 1rem 0; color: #495057; font-size: 1.1rem; display: flex; align-items: center;">
                     <span style="margin-right: 0.5rem;">👤</span> Customer Information
@@ -3022,7 +3021,7 @@ function viewBillDetailsModal(billId) {
                 ` : ''}
             </div>
             
-            <!--Items Table Card-- >
+            <!-- Items Table Card -->
             <div style="background: white; padding: 1.5rem; border: 1px solid #e9ecef; border-top: none; margin-top: 1rem;">
                 <h3 style="margin: 0 0 1rem 0; color: #495057; font-size: 1.1rem; display: flex; align-items: center;">
                     <span style="margin-right: 0.5rem;">📦</span> Items (${items.length})
@@ -3049,7 +3048,7 @@ function viewBillDetailsModal(billId) {
                 </div>
             </div>
             
-            <!--Summary Card-- >
+            <!-- Summary Card -->
             <div style="background: white; padding: 1.5rem; border: 1px solid #e9ecef; border-top: none; border-radius: 0 0 12px 12px; margin-bottom: 1rem;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                     <!-- GST Breakdown -->
@@ -3079,7 +3078,7 @@ function viewBillDetailsModal(billId) {
                 ${paymentTrackingHtml}
             </div>
             
-            <!--Action Button-- >
+            <!-- Action Button -->
     <div style="text-align: center; margin-top: 1.5rem;">
         <button
             onclick="downloadBillPDF(${bill.id})"
@@ -3090,7 +3089,7 @@ function viewBillDetailsModal(billId) {
             📄 Download PDF Invoice
         </button>
     </div>
-        </div >
+        </div>
     `;
 
     document.getElementById('bill-details-content').innerHTML = content;
@@ -3520,14 +3519,14 @@ function renderBillHistory() {
         }
 
         row.innerHTML = `
-    < td > <strong>#${bill.id}</strong></td >
+            <td><strong>#${bill.id}</strong></td>
             <td>${date}<br><small style="color: var(--text-secondary);">${time}</small></td>
             <td>${bill.customer.name}</td>
             <td>${bill.customer.phone || '-'}</td>
             <td>${bill.items.length}</td>
             <td><strong>₹${bill.total.toFixed(2)}</strong></td>
             <td>${statusBadge}</td>
-`;
+        `;
         tbody.appendChild(row);
     });
 }
@@ -3683,8 +3682,8 @@ function renderCustomerReports() {
         }
 
         row.innerHTML = `
-    < td onclick = "viewCustomerDetails('${data.customer.name.replace(/'/g, "\\'")}') "><strong>${data.customer.name}</strong></td>
-        < td > ${data.customer.phone || '-'}</td >
+            <td onclick="viewCustomerDetails('${data.customer.name.replace(/'/g, "\\'")}')"><strong>${data.customer.name}</strong></td>
+            <td>${data.customer.phone || '-'}</td>
             <td>${data.customer.gst || '-'}</td>
             <td>${data.totalOrders}</td>
             <td>₹${data.totalAmount.toFixed(2)}</td>
@@ -3695,9 +3694,9 @@ function renderCustomerReports() {
             <td>
                 <button class="action-btn" onclick="viewCustomerDetails('${data.customer.name.replace(/'/g, "\\'")}')">View</button>
                 <button class="action-btn" onclick="editCustomer(${data.customer.id})">Edit</button>
-                <button class="action-btn delete" onclick="deleteCustomer(${data.customer.id}, '${data.customer.name.replace(/'/g, "\\'")}') ">Delete</button>
-            </td >
-    `;
+                <button class="action-btn delete" onclick="deleteCustomer(${data.customer.id}, '${data.customer.name.replace(/'/g, "\\'")}')">Delete</button>
+            </td>
+        `;
         tbody.appendChild(row);
     });
 }
@@ -3748,7 +3747,7 @@ function viewCustomerDetails(customerName) {
             }
 
             return `
-    < tr >
+                <tr>
                     <td><strong>#${b.id}</strong></td>
                     <td>${date}<br><small>${time}</small></td>
                     <td>${b.items.length} items</td>
@@ -3757,15 +3756,15 @@ function viewCustomerDetails(customerName) {
                     <td>
                         <button class="action-btn" onclick="viewBillDetailsModal(${b.id})">View</button>
                     </td>
-                </tr >
-    `;
+                </tr>
+            `;
         }).join('');
     } else {
         billsHtml = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No purchases yet</td></tr>';
     }
 
     const content = `
-    < div class="supplier-details-card" >
+        <div class="supplier-details-card">
             <div class="supplier-info-section">
                 <h3>👤 Customer Information</h3>
                 <div class="info-grid">
@@ -3824,8 +3823,8 @@ function viewCustomerDetails(customerName) {
                         <button onclick="downloadCustomerReportPDF('${customer.name.replace(/'/g, "\\'")}')" class="btn-icon" title="Download PDF">📄</button>
                         <button onclick="downloadCustomerReportCSV('${customer.name.replace(/'/g, "\\'")}')" class="btn-icon" title="Download CSV">📊</button>
                     </div>
-                </div >
-            </div >
+                </div>
+            </div>
             
             <div class="payment-breakdown">
                 <h3>💳 Payment Breakdown</h3>
@@ -3880,7 +3879,7 @@ function viewCustomerDetails(customerName) {
                     </table>
                 </div>
             </div>
-        </div >
+        </div>
     `;
 
     document.getElementById('customer-details-content').innerHTML = content;
