@@ -1032,11 +1032,22 @@ function updatePurchaseProductSelects() {
     });
 }
 
+function updatePurchaseItemSNos() {
+    const rows = document.querySelectorAll('#purchase-items-container .purchase-item-row');
+    rows.forEach((row, index) => {
+        const snoSpan = row.querySelector('.item-sno');
+        if (snoSpan) {
+            snoSpan.textContent = `${index + 1}.`;
+        }
+    });
+}
+
 function addPurchaseItemRow() {
     const container = document.getElementById('purchase-items-container');
     const newRow = document.createElement('div');
     newRow.className = 'purchase-item-row';
     newRow.innerHTML = `
+        <span class="item-sno" style="padding: 0.5rem; font-weight: bold; min-width: 30px; display: inline-flex; align-items: center;"></span>
         <select class="purchase-product" required>
             <option value="">Select Product</option>
         </select>
@@ -1046,10 +1057,12 @@ function addPurchaseItemRow() {
     `;
     container.appendChild(newRow);
     updatePurchaseProductSelects();
+    updatePurchaseItemSNos();
 }
 
 function removePurchaseItemRow(button) {
     button.parentElement.remove();
+    updatePurchaseItemSNos();
 }
 
 async function addPurchase(event) {
@@ -1899,8 +1912,9 @@ async function downloadSupplierReportPDF(supplierName) {
     // 3. Transactions Table
     doc.autoTable({
         startY: 85,
-        head: [['Date', 'Invoice No', 'Items', 'Total (Rs.)', 'Payment Status']],
-        body: supplierPurchases.map(p => [
+        head: [['S.No', 'Date', 'Invoice No', 'Items', 'Total (Rs.)', 'Payment Status']],
+        body: supplierPurchases.map((p, index) => [
+            index + 1,
             new Date(p.purchaseDate).toLocaleDateString('en-IN'),
             p.invoiceNo || '-',
             Array.isArray(p.items) ? p.items.length : 0,
