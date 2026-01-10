@@ -350,16 +350,21 @@ app.get('/api/bills', async (req, res) => {
       try {
         // Log raw items data for debugging
         console.log(`Bill #${bill.id} raw items:`, bill.items);
-        const parsedItems = JSON.parse(bill.items || '[]');
-        console.log(`Bill #${bill.id} parsed items count:`, parsedItems.length);
+        // Check if fields are strings before parsing (handles cases where DB driver already parsed JSON)
+        const items = typeof bill.items === 'string' ? JSON.parse(bill.items || '[]') : (bill.items || []);
+        const gstBreakdown = typeof bill.gstBreakdown === 'string' ? JSON.parse(bill.gstBreakdown || '{}') : (bill.gstBreakdown || {});
+        const paymentTracking = typeof bill.paymentTracking === 'string' ? JSON.parse(bill.paymentTracking || '{}') : (bill.paymentTracking || {});
+
+        // console.log(`Bill #${bill.id} items type:`, typeof bill.items);
+        // console.log(`Bill #${bill.id} parsed items count:`, items.length);
 
         // Create clean bill object without spreading old fields
         return {
           id: bill.id,
           createdAt: bill.createdAt,
-          items: parsedItems,
-          gstBreakdown: JSON.parse(bill.gstBreakdown || '{}'),
-          paymentTracking: JSON.parse(bill.paymentTracking || '{}'),
+          items: items,
+          gstBreakdown: gstBreakdown,
+          paymentTracking: paymentTracking,
           subtotal: parseFloat(bill.subtotal) || 0,
           totalGST: parseFloat(bill.totalGST) || 0,
           total: parseFloat(bill.total) || 0,
