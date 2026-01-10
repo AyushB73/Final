@@ -3814,7 +3814,7 @@ function viewCustomerDetails(customerName) {
                             <span>₹${partialAmountPaidOnly.toFixed(2)}</span>
                         </div>
                         <div class="payment-bar">
-                            <div class="payment-bar-fill warning" style="width: ${totalAmount > 0 ? (partialAmount / totalAmount * 100) : 0}%"></div>
+                            <div class="payment-bar-fill warning" style="width: ${totalAmount > 0 ? (partialAmountPaidOnly / totalAmount * 100) : 0}%"></div>
                         </div>
                     </div>
                 </div>
