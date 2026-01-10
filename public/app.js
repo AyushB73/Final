@@ -1899,7 +1899,7 @@ async function downloadSupplierReportPDF(supplierName) {
     // 3. Transactions Table
     doc.autoTable({
         startY: 85,
-        head: [['Date', 'Invoice No', 'Items', 'Total (₹)', 'Payment Status']],
+        head: [['Date', 'Invoice No', 'Items', 'Total (Rs.)', 'Payment Status']],
         body: supplierPurchases.map(p => [
             new Date(p.purchaseDate).toLocaleDateString('en-IN'),
             p.invoiceNo || '-',
