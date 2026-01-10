@@ -324,6 +324,25 @@
                     </div>
                 </div>
 
+                <div class="sales-summary">
+                    <div class="stat-card">
+                        <h3>Total Purchases</h3>
+                        <p class="stat-value" id="purchases-total">₹0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Purchase Orders</h3>
+                        <p class="stat-value" id="purchases-count">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Pending Payments</h3>
+                        <p class="stat-value" id="purchases-pending">₹0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Suppliers</h3>
+                        <p class="stat-value" id="suppliers-count">0</p>
+                    </div>
+                </div>
+
                 <div class="search-bar">
                     <input type="text" id="search-purchases" placeholder="🔍 Search by supplier name, invoice number, date..." onkeyup="filterPurchases()">
                 </div>
@@ -348,24 +367,7 @@
                     </table>
                 </div>
 
-                <div class="sales-summary">
-                    <div class="stat-card">
-                        <h3>Total Purchases</h3>
-                        <p class="stat-value" id="purchases-total">₹0.00</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Total Purchase Orders</h3>
-                        <p class="stat-value" id="purchases-count">0</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Pending Payments</h3>
-                        <p class="stat-value" id="purchases-pending">₹0.00</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Total Suppliers</h3>
-                        <p class="stat-value" id="suppliers-count">0</p>
-                    </div>
-                </div>
+
             </div>
 
             <!-- Sales View -->
@@ -379,6 +381,25 @@
                         <button class="btn btn-primary" onclick="switchView('billing')">
                             <span>+</span> New Sale
                         </button>
+                    </div>
+                </div>
+
+                <div class="sales-summary">
+                    <div class="stat-card">
+                        <h3>Total Sales</h3>
+                        <p class="stat-value" id="sales-total">₹0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Bills</h3>
+                        <p class="stat-value" id="sales-count">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total GST Collected</h3>
+                        <p class="stat-value" id="sales-gst">₹0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Pending Payments</h3>
+                        <p class="stat-value" id="sales-pending">₹0.00</p>
                     </div>
                 </div>
 
@@ -409,24 +430,7 @@
                     </table>
                 </div>
 
-                <div class="sales-summary">
-                    <div class="stat-card">
-                        <h3>Total Sales</h3>
-                        <p class="stat-value" id="sales-total">₹0.00</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Total Bills</h3>
-                        <p class="stat-value" id="sales-count">0</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Total GST Collected</h3>
-                        <p class="stat-value" id="sales-gst">₹0.00</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Pending Payments</h3>
-                        <p class="stat-value" id="sales-pending">₹0.00</p>
-                    </div>
-                </div>
+
             </div>
 
             <!-- Billing View -->
