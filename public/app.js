@@ -1443,12 +1443,16 @@ function viewPurchaseDetails(purchaseId) {
                         <span class="info-value">${purchase.supplier.gst || 'N/A'}</span>
                     </div>
                 </div>
-                ${purchase.billImage ? `
-                <div style="margin-top: 1rem; text-align: right;">
+                <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                    <button class="action-btn" onclick="downloadPurchasePDF(${purchase.id})" style="background: var(--accent); color: white;">
+                        📄 Download PDF
+                    </button>
+                    ${purchase.billImage ? `
                     <button class="action-btn" onclick="const win = window.open(); win.document.write('<img src=\\'${purchase.billImage}\\' style=\\'max-width:100%;\\'>');" style="background: var(--primary); color: white;">
                         📄 View Bill Document
                     </button>
-                </div>` : ''}
+                    ` : ''}
+                </div>
             </div>
             
             <!-- Items Section -->
@@ -1476,7 +1480,7 @@ function viewPurchaseDetails(purchaseId) {
                 </div>
             </div>
             
-            <!-- Summary Section -->
+            <!--Summary Section-- >
             <div class="bill-summary-box">
                 <div class="summary-row">
                     <span>Subtotal (Before Tax):</span>
@@ -1492,13 +1496,13 @@ function viewPurchaseDetails(purchaseId) {
                 </div>
             </div>
             
-            <!-- Update Payment Button -->
-            <div style="margin-top: 1.5rem; text-align: center;">
-                <button class="btn btn-primary" onclick="updatePurchasePaymentStatus(${purchase.id})">
-                    💳 Update Payment Status
-                </button>
-            </div>
-        </div>
+            <!--Update Payment Button-- >
+    <div style="margin-top: 1.5rem; text-align: center;">
+        <button class="btn btn-primary" onclick="updatePurchasePaymentStatus(${purchase.id})">
+            💳 Update Payment Status
+        </button>
+    </div>
+        </div >
     `;
 
     document.getElementById('purchase-details-content').innerHTML = content;
@@ -1526,7 +1530,7 @@ function updatePurchasePaymentStatus(purchaseId) {
 
     // Populate modal
     document.getElementById('update-purchase-id').textContent = purchaseId;
-    document.getElementById('update-purchase-current-status').innerHTML = `<span class="badge badge-${currentStatus === 'paid' ? 'success' : currentStatus === 'pending' ? 'danger' : 'warning'}">${statusLabels[currentStatus]}</span>`;
+    document.getElementById('update-purchase-current-status').innerHTML = `< span class="badge badge-${currentStatus === 'paid' ? 'success' : currentStatus === 'pending' ? 'danger' : 'warning'}" > ${statusLabels[currentStatus]}</span > `;
 
     // Close purchase details modal and show payment update modal
     closePurchaseDetailsModal();
@@ -1570,9 +1574,9 @@ async function selectPurchasePaymentStatus(newStatus) {
         }
 
         // Display amounts
-        document.getElementById('purchase-total-amount').textContent = `₹${purchase.paymentTracking.totalAmount.toFixed(2)}`;
-        document.getElementById('purchase-already-paid').textContent = `₹${purchase.paymentTracking.amountPaid.toFixed(2)}`;
-        document.getElementById('purchase-remaining-pending').textContent = `₹${purchase.paymentTracking.amountPending.toFixed(2)}`;
+        document.getElementById('purchase-total-amount').textContent = `₹${purchase.paymentTracking.totalAmount.toFixed(2)} `;
+        document.getElementById('purchase-already-paid').textContent = `₹${purchase.paymentTracking.amountPaid.toFixed(2)} `;
+        document.getElementById('purchase-remaining-pending').textContent = `₹${purchase.paymentTracking.amountPending.toFixed(2)} `;
         document.getElementById('partial-purchase-amount-input').value = '';
         document.getElementById('partial-purchase-amount-input').max = purchase.paymentTracking.amountPending;
 
@@ -1627,7 +1631,7 @@ async function selectPurchasePaymentStatus(newStatus) {
         });
         renderPurchases();
         closeUpdatePurchasePaymentModal();
-        alert(`Purchase payment status updated to: ${statusLabels[newStatus]}`);
+        alert(`Purchase payment status updated to: ${statusLabels[newStatus]} `);
     } catch (error) {
         console.error('Error updating purchase payment status:', error);
         alert('Failed to update payment status. Please try again.');
@@ -1644,7 +1648,7 @@ function calculatePurchasePending() {
     const amountPaid = parseFloat(document.getElementById('partial-purchase-amount-input').value) || 0;
     const newPending = purchase.paymentTracking.amountPending - amountPaid;
 
-    document.getElementById('purchase-remaining-pending').textContent = `₹${Math.max(0, newPending).toFixed(2)}`;
+    document.getElementById('purchase-remaining-pending').textContent = `₹${Math.max(0, newPending).toFixed(2)} `;
 }
 
 async function confirmPartialPurchasePayment() {
@@ -1678,10 +1682,10 @@ async function confirmPartialPurchasePayment() {
     // Check if fully paid now
     if (purchase.paymentTracking.amountPending <= 0.01) {
         purchase.paymentStatus = 'paid';
-        alert(`Payment completed! Total paid: ₹${purchase.paymentTracking.amountPaid.toFixed(2)}`);
+        alert(`Payment completed! Total paid: ₹${purchase.paymentTracking.amountPaid.toFixed(2)} `);
     } else {
         purchase.paymentStatus = 'partial';
-        alert(`Partial payment recorded!\nPaid: ₹${amountPaid.toFixed(2)}\nRemaining: ₹${purchase.paymentTracking.amountPending.toFixed(2)}`);
+        alert(`Partial payment recorded!\nPaid: ₹${amountPaid.toFixed(2)} \nRemaining: ₹${purchase.paymentTracking.amountPending.toFixed(2)} `);
     }
 
     try {
@@ -1802,9 +1806,9 @@ function renderSupplierReports() {
         }
 
         row.innerHTML = `
-            <td onclick="downloadSupplierReportPDF('${data.supplier.name.replace(/'/g, "\\'")}')" style="cursor: pointer; color: var(--primary); text-decoration: underline;">
-                <strong>${data.supplier.name}</strong>
-            </td>
+    < td onclick = "downloadSupplierReportPDF('${data.supplier.name.replace(/'/g, "\\'")}') " style="cursor: pointer; color: var(--primary); text - decoration: underline; ">
+        < strong > ${data.supplier.name}</strong >
+            </td >
             <td>${data.supplier.phone || '-'}</td>
             <td>${data.supplier.gst || '-'}</td>
             <td>${data.totalPurchases}</td>
@@ -1816,9 +1820,9 @@ function renderSupplierReports() {
             <td>
                 <button class="action-btn" onclick="viewSupplierDetails('${data.supplier.name.replace(/'/g, "\\'")}')">View</button>
                 <button class="action-btn" onclick="editSupplier(${data.supplier.id})">Edit</button>
-                <button class="action-btn delete" onclick="deleteSupplier(${data.supplier.id}, '${data.supplier.name.replace(/'/g, "\\'")}')">Delete</button>
-            </td>
-        `;
+                <button class="action-btn delete" onclick="deleteSupplier(${data.supplier.id}, '${data.supplier.name.replace(/'/g, "\\'")}') ">Delete</button>
+            </td >
+    `;
         tbody.appendChild(row);
     });
 }
@@ -1852,21 +1856,36 @@ async function downloadSupplierReportPDF(supplierName) {
 
     // --- PDF GENERATION ---
 
+    // Load saved company details
+    const company = JSON.parse(localStorage.getItem('companyDetails') || '{}');
+
     // 1. Header Section
     doc.setFillColor(41, 128, 185); // Primary Color (Blue)
     doc.rect(0, 0, 210, 40, 'F');
 
     doc.setTextColor(255, 255, 255);
+
+    // Business Logo
+    if (company.logo) {
+        try {
+            doc.addImage(company.logo, 'PNG', 12, 7, 25, 25);
+        } catch (e) {
+            console.error('Logo add error:', e);
+        }
+    }
+
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
-    doc.text("PLASTIWOOD", 105, 15, { align: "center" });
+    doc.text(company.name || "PLASTIWOOD", 105, 15, { align: "center" });
 
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
     doc.text("Supplier Account Statement", 105, 25, { align: "center" });
 
     doc.setFontSize(10);
-    doc.text(`Report Date: ${new Date().toLocaleDateString('en-IN')}`, 105, 33, { align: "center" });
+    doc.text(`Report Date: ${new Date().toLocaleDateString('en-IN')} `, 105, 33, { align: "center" });
+    doc.setFontSize(8);
+    doc.text(`${company.address || ''} | GST: ${company.gst || 'N/A'} `, 105, 38, { align: 'center' });
 
     // 2. Supplier Details Section
     doc.setTextColor(44, 62, 80); // Dark text
@@ -1881,24 +1900,24 @@ async function downloadSupplierReportPDF(supplierName) {
     doc.setFont("helvetica", "bold");
 
     // Left Column
-    doc.text(`Name:`, 14, 60);
-    doc.text(`Phone:`, 14, 66);
-    doc.text(`GST No:`, 14, 72);
+    doc.text(`Name: `, 14, 60);
+    doc.text(`Phone: `, 14, 66);
+    doc.text(`GST No: `, 14, 72);
 
     doc.setFont("helvetica", "normal");
-    doc.text(`${supplier.name}`, 40, 60);
-    doc.text(`${supplier.phone || 'N/A'}`, 40, 66);
-    doc.text(`${supplier.gst || 'N/A'}`, 40, 72);
+    doc.text(`${supplier.name} `, 40, 60);
+    doc.text(`${supplier.phone || 'N/A'} `, 40, 66);
+    doc.text(`${supplier.gst || 'N/A'} `, 40, 72);
 
     // Right Column (Summary)
     doc.setFont("helvetica", "bold");
-    doc.text(`Total Orders:`, 120, 60);
-    doc.text(`Total Business:`, 120, 66);
-    doc.text(`Outstanding:`, 120, 72);
+    doc.text(`Total Orders: `, 120, 60);
+    doc.text(`Total Business: `, 120, 66);
+    doc.text(`Outstanding: `, 120, 72);
 
     doc.setFont("helvetica", "normal");
-    doc.text(`${totalPurchases}`, 160, 60);
-    doc.text(`Rs. ${totalAmount.toFixed(2)}`, 160, 66);
+    doc.text(`${totalPurchases} `, 160, 60);
+    doc.text(`Rs.${totalAmount.toFixed(2)} `, 160, 66);
 
     // Color code outstanding
     if (pendingAmount > 0) {
@@ -1906,7 +1925,7 @@ async function downloadSupplierReportPDF(supplierName) {
     } else {
         doc.setTextColor(39, 174, 96); // Green
     }
-    doc.text(`Rs. ${pendingAmount.toFixed(2)}`, 160, 72);
+    doc.text(`Rs.${pendingAmount.toFixed(2)} `, 160, 72);
     doc.setTextColor(44, 62, 80); // Reset color
 
     // 3. Transactions Table
@@ -1927,13 +1946,27 @@ async function downloadSupplierReportPDF(supplierName) {
         alternateRowStyles: { fillColor: [240, 248, 255] }
     });
 
+    // Signature
+    const finalY = doc.lastAutoTable.finalY + 15;
+    const banking = JSON.parse(localStorage.getItem('bankingDetails') || '{}');
+    if (banking.signature) {
+        try {
+            doc.addImage(banking.signature, 'PNG', 150, finalY, 40, 20);
+            doc.setTextColor(0);
+            doc.setFontSize(8);
+            doc.text("Authorized Signatory", 170, finalY + 25, { align: 'center' });
+        } catch (e) {
+            console.error('Signature add error:', e);
+        }
+    }
+
     // 4. Footer
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setTextColor(150);
-        doc.text(`Page ${i} of ${pageCount} - Generated by Plastiwood System`, 105, 290, { align: "center" });
+        doc.text(`Page ${i} of ${pageCount} - Generated by ${company.name || 'Plastiwood'} System`, 105, 290, { align: "center" });
     }
 
     // Save PDF
@@ -2073,7 +2106,13 @@ function viewSupplierDetails(supplierName) {
             </div>
             
             <div class="purchase-history-section">
-                <h3>📋 Purchase History</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3>📋 Purchase History</h3>
+                    <div class="report-actions">
+                        <button onclick="downloadSupplierReportPDF('${supplier.name.replace(/'/g, "\\'")}')" class="btn btn-secondary btn-small" title="Download PDF Report">📄 PDF</button>
+                        <button onclick="downloadSupplierReportCSV('${supplier.name.replace(/'/g, "\\'")}')" class="btn btn-secondary btn-small" title="Download CSV Report">📊 CSV</button>
+                    </div>
+                </div>
                 <div class="table-container">
                     <table>
                         <thead>
@@ -2150,11 +2189,11 @@ async function deleteSupplier(supplierId, supplierName) {
     );
 
     if (supplierPurchases.length > 0) {
-        const confirmMsg = `⚠️ Warning: ${supplierName} has ${supplierPurchases.length} purchase(s) in the system.\n\nDeleting this supplier will NOT delete the purchase records, but the supplier information will be removed.\n\nAre you sure you want to delete this supplier?`;
+        const confirmMsg = `⚠️ Warning: ${supplierName} has ${supplierPurchases.length} purchase(s) in the system.\n\nDeleting this supplier will NOT delete the purchase records, but the supplier information will be removed.\n\nAre you sure you want to delete this supplier ? `;
 
         if (!confirm(confirmMsg)) return;
     } else {
-        if (!confirm(`Are you sure you want to delete supplier "${supplierName}"?`)) return;
+        if (!confirm(`Are you sure you want to delete supplier "${supplierName}" ? `)) return;
     }
 
     try {
@@ -2179,7 +2218,7 @@ async function loadBills() {
 
         // Log each bill's structure
         bills.forEach(bill => {
-            console.log(`Bill #${bill.id}:`, {
+            console.log(`Bill #${bill.id}: `, {
                 id: bill.id,
                 hasCustomer: !!bill.customer,
                 hasItems: !!bill.items,
@@ -2201,17 +2240,17 @@ function viewBillDetails(billId) {
     if (!bill) return;
 
     let itemsList = bill.items.map((item, idx) =>
-        `${idx + 1}. ${item.name} (${item.size} ${item.unit}) x ${item.quantity} @ ₹${item.price} = ₹${item.amount.toFixed(2)} + GST(${item.gst}%) ₹${item.gstAmount.toFixed(2)} = ₹${item.total.toFixed(2)}`
+        `${idx + 1}. ${item.name} (${item.size} ${item.unit}) x ${item.quantity} @ ₹${item.price} = ₹${item.amount.toFixed(2)} + GST(${item.gst} %) ₹${item.gstAmount.toFixed(2)} = ₹${item.total.toFixed(2)} `
     ).join('\n');
 
     let gstDetails = '';
     if (bill.gstBreakdown.type === 'SGST+CGST') {
-        gstDetails = `SGST: ₹${bill.gstBreakdown.sgst.toFixed(2)}\nCGST: ₹${bill.gstBreakdown.cgst.toFixed(2)}`;
+        gstDetails = `SGST: ₹${bill.gstBreakdown.sgst.toFixed(2)} \nCGST: ₹${bill.gstBreakdown.cgst.toFixed(2)} `;
     } else {
-        gstDetails = `IGST: ₹${bill.gstBreakdown.igst.toFixed(2)}`;
+        gstDetails = `IGST: ₹${bill.gstBreakdown.igst.toFixed(2)} `;
     }
 
-    alert(`Bill #${bill.id}\n\nCustomer: ${bill.customer.name}\nPhone: ${bill.customer.phone || 'N/A'}\nState: ${bill.customer.state === 'same' ? 'Same State' : 'Other State'}\n\nItems:\n${itemsList}\n\nSubtotal: ₹${bill.subtotal.toFixed(2)}\n${gstDetails}\nTotal: ₹${bill.total.toFixed(2)}`);
+    alert(`Bill #${bill.id} \n\nCustomer: ${bill.customer.name} \nPhone: ${bill.customer.phone || 'N/A'} \nState: ${bill.customer.state === 'same' ? 'Same State' : 'Other State'} \n\nItems: \n${itemsList} \n\nSubtotal: ₹${bill.subtotal.toFixed(2)} \n${gstDetails} \nTotal: ₹${bill.total.toFixed(2)} `);
 }
 
 function viewBillHistory() {
@@ -2263,15 +2302,15 @@ function renderSales() {
         // Create payment status dropdown
         const paymentStatus = (bill.paymentStatus || 'paid').toLowerCase();
         const paymentDropdown = `
-            <select class="payment-status-select" data-bill-id="${bill.id}" onchange="quickUpdatePaymentStatus(${bill.id}, this.value)" style="padding: 0.5rem; border-radius: 5px; border: 2px solid ${paymentStatus === 'paid' ? '#28a745' : paymentStatus === 'pending' ? '#dc3545' : '#ffc107'}; background: ${paymentStatus === 'paid' ? '#d4edda' : paymentStatus === 'pending' ? '#f8d7da' : '#fff3cd'}; color: ${paymentStatus === 'paid' ? '#155724' : paymentStatus === 'pending' ? '#721c24' : '#856404'}; font-weight: 600; cursor: pointer;">
+    < select class="payment-status-select" data - bill - id="${bill.id}" onchange = "quickUpdatePaymentStatus(${bill.id}, this.value)" style = "padding: 0.5rem; border-radius: 5px; border: 2px solid ${paymentStatus === 'paid' ? '#28a745' : paymentStatus === 'pending' ? '#dc3545' : '#ffc107'}; background: ${paymentStatus === 'paid' ? '#d4edda' : paymentStatus === 'pending' ? '#f8d7da' : '#fff3cd'}; color: ${paymentStatus === 'paid' ? '#155724' : paymentStatus === 'pending' ? '#721c24' : '#856404'}; font-weight: 600; cursor: pointer;" >
                 <option value="paid" ${paymentStatus === 'paid' ? 'selected' : ''}>✅ Paid</option>
                 <option value="pending" ${paymentStatus === 'pending' ? 'selected' : ''}>⏳ Pending</option>
                 <option value="partial" ${paymentStatus === 'partial' ? 'selected' : ''}>💰 Partial</option>
-            </select>
-        `;
+            </select >
+    `;
 
         row.innerHTML = `
-            <td><strong>#${bill.id}</strong></td>
+    < td > <strong>#${bill.id}</strong></td >
             <td>${date}<br><small>${time}</small></td>
             <td>${customer.name}</td>
             <td>${customer.phone || '-'}</td>
@@ -2286,7 +2325,7 @@ function renderSales() {
                 <button class="action-btn action-btn-sm btn-view" data-bill-id="${bill.id}" title="View Details">👁️</button>
                 <button class="action-btn action-btn-sm delete btn-delete" data-bill-id="${bill.id}" title="Delete">🗑️</button>
             </td>
-        `;
+`;
         tbody.appendChild(row);
     });
 
@@ -2362,7 +2401,7 @@ function setupSalesTableActions() {
 
 // Simple function to update payment status from dropdown
 async function quickUpdatePaymentStatus(billId, newStatus) {
-    console.log(`Updating bill #${billId} to status: ${newStatus}`);
+    console.log(`Updating bill #${billId} to status: ${newStatus} `);
 
     const bill = bills.find(b => b.id == billId);
     if (!bill) {
@@ -2377,7 +2416,7 @@ async function quickUpdatePaymentStatus(billId, newStatus) {
     }
 
     // Show loading state
-    const dropdown = document.querySelector(`select[data-bill-id="${billId}"]`);
+    const dropdown = document.querySelector(`select[data - bill - id= "${billId}"]`);
     if (dropdown) {
         dropdown.disabled = true;
         dropdown.style.opacity = '0.6';
@@ -2463,7 +2502,7 @@ async function quickUpdatePaymentStatus(billId, newStatus) {
             'paid': '✅ Paid',
             'pending': '⏳ Pending'
         };
-        alert(`Payment status updated to: ${statusLabels[newStatus]}`);
+        alert(`Payment status updated to: ${statusLabels[newStatus]} `);
 
     } catch (error) {
         console.error('Error updating payment status:', error);
@@ -2495,21 +2534,21 @@ function showPartialPaymentCard(billId, bill) {
     const card = document.createElement('div');
     card.id = 'partial-payment-card';
     card.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        z-index: 10000;
-        min-width: 400px;
-        max-width: 90%;
-    `;
+position: fixed;
+top: 50 %;
+left: 50 %;
+transform: translate(-50 %, -50 %);
+background: white;
+padding: 2rem;
+border - radius: 12px;
+box - shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+z - index: 10000;
+min - width: 400px;
+max - width: 90 %;
+`;
 
     card.innerHTML = `
-        <h3 style="margin: 0 0 1.5rem 0; color: #667eea;">💰 Partial Payment - Bill #${billId}</h3>
+    < h3 style = "margin: 0 0 1.5rem 0; color: #667eea;" >💰 Partial Payment - Bill #${billId}</h3 >
         
         <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
@@ -2563,20 +2602,20 @@ function showPartialPaymentCard(billId, bill) {
                 ❌ Cancel
             </button>
         </div>
-    `;
+`;
 
     // Create overlay
     const overlay = document.createElement('div');
     overlay.id = 'partial-payment-overlay';
     overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0,0,0,0.5);
-        z-index: 9999;
-    `;
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: rgba(0, 0, 0, 0.5);
+z - index: 9999;
+`;
     overlay.onclick = () => closePartialPaymentCard(billId);
 
     // Add to page
@@ -2585,7 +2624,7 @@ function showPartialPaymentCard(billId, bill) {
 
     // Focus on input
     setTimeout(() => {
-        document.getElementById(`partial-amount-input-${billId}`).focus();
+        document.getElementById(`partial - amount - input - ${billId} `).focus();
     }, 100);
 }
 
@@ -2601,15 +2640,15 @@ function updatePartialPaymentPreview(billId) {
         payments: []
     };
 
-    const input = document.getElementById(`partial-amount-input-${billId}`);
-    const preview = document.getElementById(`payment-preview-${billId}`);
-    const newRemainingSpan = document.getElementById(`new-remaining-${billId}`);
+    const input = document.getElementById(`partial - amount - input - ${billId} `);
+    const preview = document.getElementById(`payment - preview - ${billId} `);
+    const newRemainingSpan = document.getElementById(`new- remaining - ${billId} `);
 
     const amountReceived = parseFloat(input.value) || 0;
 
     if (amountReceived > 0) {
         const newRemaining = paymentTracking.amountPending - amountReceived;
-        newRemainingSpan.textContent = `₹${Math.max(0, newRemaining).toFixed(2)}`;
+        newRemainingSpan.textContent = `₹${Math.max(0, newRemaining).toFixed(2)} `;
         preview.style.display = 'block';
     } else {
         preview.style.display = 'none';
@@ -2624,7 +2663,7 @@ async function confirmPartialPaymentUpdate(billId) {
         return;
     }
 
-    const input = document.getElementById(`partial-amount-input-${billId}`);
+    const input = document.getElementById(`partial - amount - input - ${billId} `);
     const amountReceived = parseFloat(input.value);
 
     if (!amountReceived || amountReceived <= 0) {
@@ -2641,7 +2680,7 @@ async function confirmPartialPaymentUpdate(billId) {
     };
 
     if (amountReceived > paymentTracking.amountPending) {
-        alert(`Amount cannot be more than remaining amount: ₹${paymentTracking.amountPending.toFixed(2)}`);
+        alert(`Amount cannot be more than remaining amount: ₹${paymentTracking.amountPending.toFixed(2)} `);
         input.focus();
         return;
     }
@@ -2722,9 +2761,9 @@ async function confirmPartialPaymentUpdate(billId) {
 
         // Show success message
         if (finalStatus === 'paid') {
-            alert(`✅ Payment completed!\n\nTotal Received: ₹${newAmountPaid.toFixed(2)}\nBill is now fully paid.`);
+            alert(`✅ Payment completed!\n\nTotal Received: ₹${newAmountPaid.toFixed(2)} \nBill is now fully paid.`);
         } else {
-            alert(`💰 Partial payment recorded!\n\nReceived: ₹${amountReceived.toFixed(2)}\nRemaining: ₹${newAmountPending.toFixed(2)}`);
+            alert(`💰 Partial payment recorded!\n\nReceived: ₹${amountReceived.toFixed(2)} \nRemaining: ₹${newAmountPending.toFixed(2)} `);
         }
 
     } catch (error) {
@@ -2746,7 +2785,7 @@ function closePartialPaymentCard(billId) {
     // Reset dropdown to current status
     const bill = bills.find(b => b.id == billId);
     if (bill) {
-        const dropdown = document.querySelector(`select[data-bill-id="${billId}"]`);
+        const dropdown = document.querySelector(`select[data - bill - id= "${billId}"]`);
         if (dropdown) {
             dropdown.value = bill.paymentStatus || 'paid';
         }
@@ -2778,14 +2817,14 @@ function updateSalesSummary() {
         }
     });
 
-    document.getElementById('sales-total').textContent = `₹${totalSales.toFixed(2)}`;
+    document.getElementById('sales-total').textContent = `₹${totalSales.toFixed(2)} `;
     document.getElementById('sales-count').textContent = totalCount;
-    document.getElementById('sales-gst').textContent = `₹${totalGST.toFixed(2)}`;
+    document.getElementById('sales-gst').textContent = `₹${totalGST.toFixed(2)} `;
 
     // Update or create pending payments card
     const pendingCard = document.getElementById('sales-pending');
     if (pendingCard) {
-        pendingCard.textContent = `₹${pendingAmount.toFixed(2)}`;
+        pendingCard.textContent = `₹${pendingAmount.toFixed(2)} `;
     }
 }
 
@@ -2839,7 +2878,7 @@ function viewBillDetailsModal(billId) {
         itemsHtml = '<tr><td colspan="9" style="text-align: center; padding: 1rem; color: #6c757d;">No items found</td></tr>';
     } else {
         itemsHtml = items.map((item, idx) => `
-            <tr>
+    < tr >
                 <td style="text-align: center;">${idx + 1}</td>
                 <td><strong>${item.name || 'N/A'}</strong></td>
                 <td>${item.size || ''} ${item.unit || ''}</td>
@@ -2849,8 +2888,8 @@ function viewBillDetailsModal(billId) {
                 <td style="text-align: center;">${parseFloat(item.gst) || 0}%</td>
                 <td style="text-align: right;">₹${(parseFloat(item.gstAmount) || 0).toFixed(2)}</td>
                 <td style="text-align: right;"><strong>₹${(parseFloat(item.total) || 0).toFixed(2)}</strong></td>
-            </tr>
-        `).join('');
+            </tr >
+    `).join('');
     }
 
     // Parse gstBreakdown if it's a string
@@ -2869,30 +2908,30 @@ function viewBillDetailsModal(billId) {
     let gstBreakdownHtml = '';
     if (gstBreakdown && gstBreakdown.type === 'SGST+CGST') {
         gstBreakdownHtml = `
-            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
+    < div style = "display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;" >
                 <span style="color: #6c757d;">SGST:</span>
                 <span style="font-weight: 600;">₹${(parseFloat(gstBreakdown.sgst) || 0).toFixed(2)}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
-                <span style="color: #6c757d;">CGST:</span>
-                <span style="font-weight: 600;">₹${(parseFloat(gstBreakdown.cgst) || 0).toFixed(2)}</span>
-            </div>
-        `;
+            </div >
+    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
+        <span style="color: #6c757d;">CGST:</span>
+        <span style="font-weight: 600;">₹${(parseFloat(gstBreakdown.cgst) || 0).toFixed(2)}</span>
+    </div>
+`;
     } else if (gstBreakdown && gstBreakdown.type === 'IGST') {
         gstBreakdownHtml = `
-            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
+    < div style = "display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;" >
                 <span style="color: #6c757d;">IGST:</span>
                 <span style="font-weight: 600;">₹${(parseFloat(gstBreakdown.igst) || 0).toFixed(2)}</span>
-            </div>
-        `;
+            </div >
+    `;
     } else {
         // If no breakdown type, show total GST
         gstBreakdownHtml = `
-            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;">
+    < div style = "display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e9ecef;" >
                 <span style="color: #6c757d;">Total GST:</span>
                 <span style="font-weight: 600;">₹${(parseFloat(bill.totalGST) || 0).toFixed(2)}</span>
-            </div>
-        `;
+            </div >
+    `;
     }
 
     // Payment status badge
@@ -2915,7 +2954,7 @@ function viewBillDetailsModal(billId) {
     if (bill.paymentTracking && (paymentStatus === 'partial' || paymentStatus === 'paid')) {
         const tracking = bill.paymentTracking;
         paymentTrackingHtml = `
-            <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+    < div style = "background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-top: 1rem;" >
                 <h4 style="margin: 0 0 0.75rem 0; color: #495057; font-size: 0.95rem;">💳 Payment Details</h4>
                 <div style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
                     <span style="color: #6c757d;">Total Amount:</span>
@@ -2930,14 +2969,15 @@ function viewBillDetailsModal(billId) {
                     <span style="color: #dc3545;">Amount Pending:</span>
                     <span style="font-weight: 600; color: #dc3545;">₹${(parseFloat(tracking.amountPending) || 0).toFixed(2)}</span>
                 </div>
-                ` : ''}
-            </div>
-        `;
+                ` : ''
+            }
+            </div >
+    `;
     }
 
     const content = `
-        <div style="max-width: 900px; margin: 0 auto;">
-            <!-- Header Card -->
+    < div style = "max-width: 900px; margin: 0 auto;" >
+            < !--Header Card-- >
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 12px 12px 0 0; margin: -1rem -1rem 0 -1rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                     <div>
@@ -2951,7 +2991,7 @@ function viewBillDetailsModal(billId) {
                 </div>
             </div>
             
-            <!-- Customer Details Card -->
+            <!--Customer Details Card-- >
             <div style="background: white; padding: 1.5rem; border: 1px solid #e9ecef; border-top: none;">
                 <h3 style="margin: 0 0 1rem 0; color: #495057; font-size: 1.1rem; display: flex; align-items: center;">
                     <span style="margin-right: 0.5rem;">👤</span> Customer Information
@@ -2982,7 +3022,7 @@ function viewBillDetailsModal(billId) {
                 ` : ''}
             </div>
             
-            <!-- Items Table Card -->
+            <!--Items Table Card-- >
             <div style="background: white; padding: 1.5rem; border: 1px solid #e9ecef; border-top: none; margin-top: 1rem;">
                 <h3 style="margin: 0 0 1rem 0; color: #495057; font-size: 1.1rem; display: flex; align-items: center;">
                     <span style="margin-right: 0.5rem;">📦</span> Items (${items.length})
@@ -3009,7 +3049,7 @@ function viewBillDetailsModal(billId) {
                 </div>
             </div>
             
-            <!-- Summary Card -->
+            <!--Summary Card-- >
             <div style="background: white; padding: 1.5rem; border: 1px solid #e9ecef; border-top: none; border-radius: 0 0 12px 12px; margin-bottom: 1rem;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                     <!-- GST Breakdown -->
@@ -3039,18 +3079,18 @@ function viewBillDetailsModal(billId) {
                 ${paymentTrackingHtml}
             </div>
             
-            <!-- Action Button -->
-            <div style="text-align: center; margin-top: 1.5rem;">
-                <button 
-                    onclick="downloadBillPDF(${bill.id})" 
-                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 1rem 2.5rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: transform 0.2s;"
-                    onmouseover="this.style.transform='translateY(-2px)'"
-                    onmouseout="this.style.transform='translateY(0)'"
-                >
-                    📄 Download PDF Invoice
-                </button>
-            </div>
-        </div>
+            <!--Action Button-- >
+    <div style="text-align: center; margin-top: 1.5rem;">
+        <button
+            onclick="downloadBillPDF(${bill.id})"
+            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 1rem 2.5rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: transform 0.2s;"
+            onmouseover="this.style.transform='translateY(-2px)'"
+            onmouseout="this.style.transform='translateY(0)'"
+        >
+            📄 Download PDF Invoice
+        </button>
+    </div>
+        </div >
     `;
 
     document.getElementById('bill-details-content').innerHTML = content;
@@ -3128,7 +3168,7 @@ function updatePaymentStatus(billId) {
 
     // Populate modal
     billIdElement.textContent = billId;
-    statusElement.innerHTML = `<span class="badge badge-${currentStatus === 'paid' ? 'success' : currentStatus === 'pending' ? 'danger' : 'warning'}">${statusLabels[currentStatus]}</span>`;
+    statusElement.innerHTML = `< span class="badge badge-${currentStatus === 'paid' ? 'success' : currentStatus === 'pending' ? 'danger' : 'warning'}" > ${statusLabels[currentStatus]}</span > `;
 
     console.log('Opening payment modal for bill:', billId);
 
@@ -3201,9 +3241,9 @@ async function selectPaymentStatus(newStatus) {
         }
 
         // Display amounts
-        document.getElementById('bill-total-amount').textContent = `₹${bill.paymentTracking.totalAmount.toFixed(2)}`;
-        document.getElementById('bill-already-paid').textContent = `₹${bill.paymentTracking.amountPaid.toFixed(2)}`;
-        document.getElementById('bill-remaining-pending').textContent = `₹${bill.paymentTracking.amountPending.toFixed(2)}`;
+        document.getElementById('bill-total-amount').textContent = `₹${bill.paymentTracking.totalAmount.toFixed(2)} `;
+        document.getElementById('bill-already-paid').textContent = `₹${bill.paymentTracking.amountPaid.toFixed(2)} `;
+        document.getElementById('bill-remaining-pending').textContent = `₹${bill.paymentTracking.amountPending.toFixed(2)} `;
         document.getElementById('partial-amount-input').value = '';
         document.getElementById('partial-amount-input').max = bill.paymentTracking.amountPending;
 
@@ -3289,7 +3329,7 @@ async function selectPaymentStatus(newStatus) {
         await loadBills();
         renderSales();
         closeUpdatePaymentModal();
-        alert(`Payment status updated to: ${statusLabels[newStatus]}`);
+        alert(`Payment status updated to: ${statusLabels[newStatus]} `);
     } catch (error) {
         console.error('Error updating bill payment status:', error);
         console.error('Error details:', error.message);
@@ -3313,7 +3353,7 @@ function calculateBillPending() {
     const amountReceived = parseFloat(document.getElementById('partial-amount-input').value) || 0;
     const newPending = bill.paymentTracking.amountPending - amountReceived;
 
-    document.getElementById('bill-remaining-pending').textContent = `₹${Math.max(0, newPending).toFixed(2)}`;
+    document.getElementById('bill-remaining-pending').textContent = `₹${Math.max(0, newPending).toFixed(2)} `;
 }
 
 async function confirmPartialPayment() {
@@ -3381,10 +3421,10 @@ async function confirmPartialPayment() {
     // Check if fully paid now
     if (bill.paymentTracking.amountPending <= 0.01) {
         bill.paymentStatus = 'paid';
-        alert(`Payment completed! Total received: ₹${bill.paymentTracking.amountPaid.toFixed(2)}`);
+        alert(`Payment completed! Total received: ₹${bill.paymentTracking.amountPaid.toFixed(2)} `);
     } else {
         bill.paymentStatus = 'partial';
-        alert(`Partial payment recorded!\nReceived: ₹${amountReceived.toFixed(2)}\nRemaining: ₹${bill.paymentTracking.amountPending.toFixed(2)}`);
+        alert(`Partial payment recorded!\nReceived: ₹${amountReceived.toFixed(2)} \nRemaining: ₹${bill.paymentTracking.amountPending.toFixed(2)} `);
     }
 
     try {
@@ -3480,14 +3520,14 @@ function renderBillHistory() {
         }
 
         row.innerHTML = `
-            <td><strong>#${bill.id}</strong></td>
+    < td > <strong>#${bill.id}</strong></td >
             <td>${date}<br><small style="color: var(--text-secondary);">${time}</small></td>
             <td>${bill.customer.name}</td>
             <td>${bill.customer.phone || '-'}</td>
             <td>${bill.items.length}</td>
             <td><strong>₹${bill.total.toFixed(2)}</strong></td>
             <td>${statusBadge}</td>
-        `;
+`;
         tbody.appendChild(row);
     });
 }
@@ -3553,11 +3593,11 @@ async function deleteCustomer(customerId, customerName) {
     );
 
     if (customerBills.length > 0) {
-        const confirmMsg = `⚠️ Warning: ${customerName} has ${customerBills.length} bill(s) in the system.\n\nDeleting this customer will NOT delete the bill records, but the customer information will be removed.\n\nAre you sure you want to delete this customer?`;
+        const confirmMsg = `⚠️ Warning: ${customerName} has ${customerBills.length} bill(s) in the system.\n\nDeleting this customer will NOT delete the bill records, but the customer information will be removed.\n\nAre you sure you want to delete this customer ? `;
 
         if (!confirm(confirmMsg)) return;
     } else {
-        if (!confirm(`Are you sure you want to delete customer "${customerName}"?`)) return;
+        if (!confirm(`Are you sure you want to delete customer "${customerName}" ? `)) return;
     }
 
     try {
@@ -3643,8 +3683,8 @@ function renderCustomerReports() {
         }
 
         row.innerHTML = `
-            <td onclick="viewCustomerDetails('${data.customer.name.replace(/'/g, "\\'")}')"><strong>${data.customer.name}</strong></td>
-            <td>${data.customer.phone || '-'}</td>
+    < td onclick = "viewCustomerDetails('${data.customer.name.replace(/'/g, "\\'")}') "><strong>${data.customer.name}</strong></td>
+        < td > ${data.customer.phone || '-'}</td >
             <td>${data.customer.gst || '-'}</td>
             <td>${data.totalOrders}</td>
             <td>₹${data.totalAmount.toFixed(2)}</td>
@@ -3655,9 +3695,9 @@ function renderCustomerReports() {
             <td>
                 <button class="action-btn" onclick="viewCustomerDetails('${data.customer.name.replace(/'/g, "\\'")}')">View</button>
                 <button class="action-btn" onclick="editCustomer(${data.customer.id})">Edit</button>
-                <button class="action-btn delete" onclick="deleteCustomer(${data.customer.id}, '${data.customer.name.replace(/'/g, "\\'")}')">Delete</button>
-            </td>
-        `;
+                <button class="action-btn delete" onclick="deleteCustomer(${data.customer.id}, '${data.customer.name.replace(/'/g, "\\'")}') ">Delete</button>
+            </td >
+    `;
         tbody.appendChild(row);
     });
 }
@@ -3708,7 +3748,7 @@ function viewCustomerDetails(customerName) {
             }
 
             return `
-                <tr>
+    < tr >
                     <td><strong>#${b.id}</strong></td>
                     <td>${date}<br><small>${time}</small></td>
                     <td>${b.items.length} items</td>
@@ -3717,15 +3757,15 @@ function viewCustomerDetails(customerName) {
                     <td>
                         <button class="action-btn" onclick="viewBillDetailsModal(${b.id})">View</button>
                     </td>
-                </tr>
-            `;
+                </tr >
+    `;
         }).join('');
     } else {
         billsHtml = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No purchases yet</td></tr>';
     }
 
     const content = `
-        <div class="supplier-details-card">
+    < div class="supplier-details-card" >
             <div class="supplier-info-section">
                 <h3>👤 Customer Information</h3>
                 <div class="info-grid">
@@ -3784,8 +3824,8 @@ function viewCustomerDetails(customerName) {
                         <button onclick="downloadCustomerReportPDF('${customer.name.replace(/'/g, "\\'")}')" class="btn-icon" title="Download PDF">📄</button>
                         <button onclick="downloadCustomerReportCSV('${customer.name.replace(/'/g, "\\'")}')" class="btn-icon" title="Download CSV">📊</button>
                     </div>
-                </div>
-            </div>
+                </div >
+            </div >
             
             <div class="payment-breakdown">
                 <h3>💳 Payment Breakdown</h3>
@@ -3840,7 +3880,7 @@ function viewCustomerDetails(customerName) {
                     </table>
                 </div>
             </div>
-        </div>
+        </div >
     `;
 
     document.getElementById('customer-details-content').innerHTML = content;
@@ -3877,18 +3917,33 @@ async function downloadCustomerReportPDF(customerName) {
     }, 0);
     const outstandingAmount = totalAmount - paidAmount;
 
+    // Load saved company details
+    const company = JSON.parse(localStorage.getItem('companyDetails') || '{}');
+
     // Header
     doc.setFillColor(41, 128, 185);
     doc.rect(0, 0, 210, 40, 'F');
     doc.setTextColor(255, 255, 255);
+
+    // Business Logo
+    if (company.logo) {
+        try {
+            doc.addImage(company.logo, 'PNG', 12, 7, 25, 25);
+        } catch (e) {
+            console.error('Logo add error:', e);
+        }
+    }
+
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
-    doc.text("PLASTIWOOD", 105, 15, { align: "center" });
+    doc.text(company.name || "PLASTIWOOD", 105, 15, { align: "center" });
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
     doc.text("Customer Account Statement", 105, 25, { align: "center" });
     doc.setFontSize(10);
-    doc.text(`Report Date: ${new Date().toLocaleDateString('en-IN')}`, 105, 33, { align: "center" });
+    doc.text(`Report Date: ${new Date().toLocaleDateString('en-IN')} `, 105, 33, { align: "center" });
+    doc.setFontSize(8);
+    doc.text(`${company.address || ''} | GST: ${company.gst || 'N/A'} `, 105, 38, { align: 'center' });
 
     // Customer Info
     doc.setTextColor(44, 62, 80);
@@ -3897,33 +3952,53 @@ async function downloadCustomerReportPDF(customerName) {
     doc.text("Customer Profile", 14, 50);
     doc.line(14, 52, 196, 52);
     doc.setFontSize(10);
-    doc.text(`Name:`, 14, 60);
-    doc.text(`Phone:`, 14, 66);
-    doc.text(`GST No:`, 14, 72);
+    doc.text(`Name: `, 14, 60);
+    doc.text(`Phone: `, 14, 66);
+    doc.text(`GST No: `, 14, 72);
     doc.setFont("helvetica", "normal");
-    doc.text(`${customer.name}`, 40, 60);
-    doc.text(`${customer.phone || 'N/A'}`, 40, 66);
-    doc.text(`${customer.gst || 'N/A'}`, 40, 72);
+    doc.text(`${customer.name} `, 40, 60);
+    doc.text(`${customer.phone || 'N/A'} `, 40, 66);
+    doc.text(`${customer.gst || 'N/A'} `, 40, 72);
 
     // Summary
     doc.setFont("helvetica", "bold");
-    doc.text(`Total Orders:`, 120, 60);
-    doc.text(`Total Business:`, 120, 66);
-    doc.text(`Outstanding:`, 120, 72);
+    doc.text(`Total Orders: `, 120, 60);
+    doc.text(`Total Business: `, 120, 66);
+    doc.text(`Outstanding: `, 120, 72);
     doc.setFont("helvetica", "normal");
-    doc.text(`${customerBills.length}`, 160, 60);
-    doc.text(`Rs. ${totalAmount.toFixed(2)}`, 160, 66);
+    doc.text(`${customerBills.length} `, 160, 60);
+    doc.text(`Rs.${totalAmount.toFixed(2)} `, 160, 66);
     if (outstandingAmount > 0) doc.setTextColor(231, 76, 60);
     else doc.setTextColor(39, 174, 96);
-    doc.text(`Rs. ${outstandingAmount.toFixed(2)}`, 160, 72);
+    doc.text(`Rs.${outstandingAmount.toFixed(2)} `, 160, 72);
     doc.setTextColor(44, 62, 80);
+
+    // Dynamic QR for Outstanding Balance
+    const banking = JSON.parse(localStorage.getItem('bankingDetails') || '{}');
+    if (outstandingAmount > 0 && banking.upiId) {
+        const qrSize = 30;
+        const qrX = 165;
+        const qrY = 48;
+        const payeeName = (company.name || 'PLASTIWOOD').replace(/[^a-zA-Z0-9\s]/g, '');
+        const upiUrl = `upi://pay?pa=${banking.upiId}&pn=${encodeURIComponent(payeeName)}&am=${outstandingAmount.toFixed(2)}&cu=INR`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}`;
+
+        try {
+            doc.addImage(qrUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+            doc.setFontSize(7);
+            doc.text("Scan to Pay", qrX + (qrSize / 2), qrY + qrSize + 3, { align: 'center' });
+            doc.text(`UPI: ${banking.upiId}`, qrX + (qrSize / 2), qrY + qrSize + 6, { align: 'center' });
+        } catch (e) {
+            console.error('QR error in Customer Report:', e);
+        }
+    }
 
     // Table
     doc.autoTable({
         startY: 85,
         head: [['Bill #', 'Date', 'Items', 'Amount (Rs.)', 'Status']],
         body: customerBills.map(b => [
-            `#${b.id}`,
+            `#${b.id} `,
             new Date(b.createdAt).toLocaleDateString('en-IN'),
             b.items.length,
             b.total.toFixed(2),
@@ -3933,6 +4008,19 @@ async function downloadCustomerReportPDF(customerName) {
         headStyles: { fillColor: [41, 128, 185], textColor: 255 },
         styles: { fontSize: 9 }
     });
+
+    const finalY = doc.lastAutoTable.finalY + 15;
+
+    // Load banking for signature
+    if (banking.signature) {
+        try {
+            doc.addImage(banking.signature, 'PNG', 150, finalY, 40, 20);
+            doc.setFontSize(8);
+            doc.text("Authorized Signatory", 170, finalY + 25, { align: 'center' });
+        } catch (e) {
+            console.error('Signature add error:', e);
+        }
+    }
 
     doc.save(`Customer_Report_${customer.name.replace(/\s+/g, '_')}.pdf`);
 }
@@ -3946,7 +4034,15 @@ function downloadCustomerReportCSV(customerName) {
         (b.customer.phone && customer.phone && b.customer.phone === customer.phone)
     );
 
+    const company = JSON.parse(localStorage.getItem('companyDetails') || '{}');
     let csvContent = "data:text/csv;charset=utf-8,";
+
+    // Add business info header
+    csvContent += `"${company.name || 'PLASTIWOOD'}"\n`;
+    csvContent += `"${(company.address || '').replace(/"/g, '""')}"\n`;
+    if (company.gst) csvContent += `"GST: ${company.gst}"\n`;
+    csvContent += `\n`; // Empty row
+
     csvContent += "Bill #,Date,Items Count,Amount (INR),Payment Status\n";
 
     customerBills.forEach(b => {
@@ -4561,12 +4657,16 @@ function generateBillPDF(bill) {
         const qrSize = 25;
         const qrX = 100;
         // Using a free API for QR code generation - In a real app, you'd generate this or use a more stable lib
-        const upiUrl = `upi://pay?pa=${banking.upiId}&pn=${encodeURIComponent(company.name)}&am=${bill.total.toFixed(2)}&cu=INR`;
+        const payeeName = (company.name || 'PLASTIWOOD').replace(/[^a-zA-Z0-9\s]/g, '');
+        const upiUrl = `upi://pay?pa=${banking.upiId}&pn=${encodeURIComponent(payeeName)}&am=${bill.total.toFixed(2)}&cu=INR`;
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}`;
 
         doc.text('Pay using UPI:', qrX, yPos);
         try {
             doc.addImage(qrUrl, 'PNG', qrX, yPos + 2, qrSize, qrSize);
+            doc.setFontSize(7);
+            doc.text(`UPI ID: ${banking.upiId}`, qrX, yPos + qrSize + 5);
+            doc.setFontSize(9);
         } catch (e) {
             console.error('QR error:', e);
         }
@@ -4868,6 +4968,135 @@ document.addEventListener('DOMContentLoaded', () => {
 // Expose functions globally for onclick handlers
 window.toggleMenu = toggleMenu;
 window.logout = logout;
+function downloadSupplierReportCSV(supplierName) {
+    const supplier = suppliers.find(s => s.name === supplierName);
+    if (!supplier) return;
+
+    const supplierPurchases = purchases.filter(p =>
+        p.supplier.name.toLowerCase() === supplierName.toLowerCase() ||
+        (p.supplier.phone && supplier.phone && p.supplier.phone === supplier.phone)
+    );
+
+    const company = JSON.parse(localStorage.getItem('companyDetails') || '{}');
+    let csvContent = "data:text/csv;charset=utf-8,";
+
+    // Add business info header
+    csvContent += `"${company.name || 'PLASTIWOOD'}"\n`;
+    csvContent += `"${(company.address || '').replace(/"/g, '""')}"\n`;
+    if (company.gst) csvContent += `"GST: ${company.gst}"\n`;
+    csvContent += `\n`; // Empty row
+
+    csvContent += "Purchase #,Date,Invoice No,Items Count,Amount (INR),Payment Status\n";
+
+    supplierPurchases.forEach(p => {
+        const date = new Date(p.purchaseDate).toLocaleDateString('en-IN');
+        csvContent += `${p.id},${date},${p.invoiceNo || '-'},${Array.isArray(p.items) ? p.items.length : 0},${p.total.toFixed(2)},${p.paymentStatus.toUpperCase()}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Supplier_Report_${supplier.name.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function downloadPurchasePDF(purchaseId) {
+    const purchase = purchases.find(p => p.id === purchaseId);
+    if (!purchase) {
+        alert('Purchase data not found');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Load saved company details
+    const company = JSON.parse(localStorage.getItem('companyDetails') || '{}');
+    const banking = JSON.parse(localStorage.getItem('bankingDetails') || '{}');
+
+    // Header
+    doc.setFillColor(44, 62, 80);
+    doc.rect(0, 0, 210, 40, 'F');
+    doc.setTextColor(255, 255, 255);
+
+    // Business Logo
+    if (company.logo) {
+        try {
+            doc.addImage(company.logo, 'PNG', 12, 7, 25, 25);
+        } catch (e) {
+            console.error('Logo add error:', e);
+        }
+    }
+
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text(company.name || "PLASTIWOOD", 105, 15, { align: "center" });
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text("Purchase Order Details", 105, 25, { align: "center" });
+    doc.setFontSize(8);
+    doc.text(`${company.address || ''} | GST: ${company.gst || 'N/A'}`, 105, 38, { align: 'center' });
+
+    // Purchase Info
+    doc.setTextColor(44, 62, 80);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Purchase Order #${purchase.id}`, 14, 50);
+    doc.line(14, 52, 196, 52);
+
+    doc.setFontSize(10);
+    doc.text("Supplier Details:", 14, 60);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Name: ${purchase.supplier.name}`, 14, 66);
+    doc.text(`Phone: ${purchase.supplier.phone || 'N/A'}`, 14, 72);
+    doc.text(`GST: ${purchase.supplier.gst || 'N/A'}`, 14, 78);
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Order Info:", 120, 60);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Invoice No: ${purchase.invoiceNo}`, 120, 66);
+    doc.text(`Date: ${new Date(purchase.purchaseDate).toLocaleDateString('en-IN')}`, 120, 72);
+    doc.text(`Payment Status: ${purchase.paymentStatus.toUpperCase()}`, 120, 78);
+
+    // Table
+    doc.autoTable({
+        startY: 85,
+        head: [['#', 'Item', 'Size/Unit', 'Qty', 'Rate', 'GST', 'Total']],
+        body: purchase.items.map((item, idx) => [
+            idx + 1,
+            item.name,
+            `${item.size} ${item.unit}`,
+            item.quantity,
+            `₹${item.rate.toFixed(2)}`,
+            `${item.gst}%`,
+            `₹${item.total.toFixed(2)}`
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [44, 62, 80], textColor: 255 },
+        styles: { fontSize: 9 }
+    });
+
+    let finalY = doc.lastAutoTable.finalY + 10;
+    doc.setFont("helvetica", "bold");
+    doc.text(`Total Amount: ₹${purchase.total.toFixed(2)}`, 196, finalY, { align: 'right' });
+
+    // Signature
+    finalY += 20;
+    if (banking.signature) {
+        try {
+            doc.addImage(banking.signature, 'PNG', 150, finalY, 40, 20);
+            doc.setFontSize(8);
+            doc.text("Authorized Signatory", 170, finalY + 25, { align: 'center' });
+        } catch (e) {
+            console.error('Signature add error:', e);
+        }
+    }
+
+    doc.save(`Purchase_Order_${purchase.id}.pdf`);
+}
+
 window.showAddItemModal = showAddItemModal;
 window.closeModal = closeModal;
 window.addInventoryItem = addInventoryItem;
@@ -4913,6 +5142,7 @@ window.calculatePurchasePending = calculatePurchasePending;
 window.showSupplierReports = showSupplierReports;
 window.closeSupplierReportsModal = closeSupplierReportsModal;
 window.filterSuppliers = filterSuppliers;
+window.downloadSupplierReportCSV = downloadSupplierReportCSV;
 window.viewSupplierDetails = viewSupplierDetails;
 window.closeSupplierDetailsModal = closeSupplierDetailsModal;
 window.deleteSupplier = deleteSupplier;
