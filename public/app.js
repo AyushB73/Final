@@ -3980,7 +3980,7 @@ async function downloadCustomerReportPDF(customerName) {
         const qrY = 44; // Moved up from 48
         const payeeName = (company.name || 'PLASTIWOOD').replace(/[^a-zA-Z0-9\s]/g, '');
         const upiId = (banking.upiId || '').trim();
-        const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${outstandingAmount.toFixed(2)}&cu=INR&mc=0000&mode=02&tn=Outstanding_Balance`;
+        const upiUrl = `upi://pay?pa=${upiId}&am=${outstandingAmount.toFixed(2)}&pn=${encodeURIComponent(payeeName)}&cu=INR&tn=Statement_Payment`;
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}`;
 
         try {
@@ -4659,7 +4659,7 @@ function generateBillPDF(bill) {
         // Using a free API for QR code generation - In a real app, you'd generate this or use a more stable lib
         const payeeName = (company.name || 'PLASTIWOOD').replace(/[^a-zA-Z0-9\s]/g, '');
         const upiId = (banking.upiId || '').trim();
-        const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${bill.total.toFixed(2)}&cu=INR&mc=0000&mode=02&tn=Bill#${bill.id}`;
+        const upiUrl = `upi://pay?pa=${upiId}&am=${bill.total.toFixed(2)}&pn=${encodeURIComponent(payeeName)}&cu=INR&tn=Bill_${bill.id}`;
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}`;
 
         doc.text('Pay using UPI:', qrX, yPos - 1); // Moved up slightly
