@@ -3977,7 +3977,7 @@ async function downloadCustomerReportPDF(customerName) {
     if (outstandingAmount > 0 && banking.upiId) {
         const qrSize = 30;
         const qrX = 165;
-        const qrY = 48;
+        const qrY = 44; // Moved up from 48
         const payeeName = (company.name || 'PLASTIWOOD').replace(/[^a-zA-Z0-9\s]/g, '');
         const upiUrl = `upi://pay?pa=${banking.upiId}&pn=${encodeURIComponent(payeeName)}&am=${outstandingAmount.toFixed(2)}&cu=INR`;
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}`;
@@ -3985,8 +3985,8 @@ async function downloadCustomerReportPDF(customerName) {
         try {
             doc.addImage(qrUrl, 'PNG', qrX, qrY, qrSize, qrSize);
             doc.setFontSize(7);
-            doc.text("Scan to Pay", qrX + (qrSize / 2), qrY + qrSize + 3, { align: 'center' });
-            doc.text(`UPI: ${banking.upiId}`, qrX + (qrSize / 2), qrY + qrSize + 6, { align: 'center' });
+            doc.text("Scan to Pay", qrX + (qrSize / 2), qrY + qrSize + 2, { align: 'center' }); // Tightened spacing
+            doc.text(`UPI: ${banking.upiId}`, qrX + (qrSize / 2), qrY + qrSize + 5, { align: 'center' }); // Tightened spacing
         } catch (e) {
             console.error('QR error in Customer Report:', e);
         }
@@ -4660,11 +4660,11 @@ function generateBillPDF(bill) {
         const upiUrl = `upi://pay?pa=${banking.upiId}&pn=${encodeURIComponent(payeeName)}&am=${bill.total.toFixed(2)}&cu=INR`;
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}`;
 
-        doc.text('Pay using UPI:', qrX, yPos);
+        doc.text('Pay using UPI:', qrX, yPos - 1); // Moved up slightly
         try {
-            doc.addImage(qrUrl, 'PNG', qrX, yPos + 2, qrSize, qrSize);
+            doc.addImage(qrUrl, 'PNG', qrX, yPos + 1, qrSize, qrSize); // Moved up slightly
             doc.setFontSize(7);
-            doc.text(`UPI ID: ${banking.upiId}`, qrX, yPos + qrSize + 5);
+            doc.text(`UPI ID: ${banking.upiId}`, qrX, yPos + qrSize + 4); // Tightened spacing
             doc.setFontSize(9);
         } catch (e) {
             console.error('QR error:', e);
