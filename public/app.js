@@ -4354,15 +4354,20 @@ function generateBillPDF(bill) {
     doc.text('Rs. ' + bill.subtotal.toFixed(2), summaryX + summaryWidth - 5, yPos + 7, { align: 'right' });
 
     // GST Breakdown
+    // GST Breakdown
+    const sgst = parseFloat(bill.gstBreakdown.sgst) || 0;
+    const cgst = parseFloat(bill.gstBreakdown.cgst) || 0;
+    const igst = parseFloat(bill.gstBreakdown.igst) || 0;
+
     if (bill.gstBreakdown.type === 'SGST+CGST') {
         doc.text('SGST:', summaryX + 5, yPos + 14);
-        doc.text('Rs. ' + bill.gstBreakdown.sgst.toFixed(2), summaryX + summaryWidth - 5, yPos + 14, { align: 'right' });
+        doc.text('Rs. ' + sgst.toFixed(2), summaryX + summaryWidth - 5, yPos + 14, { align: 'right' });
 
         doc.text('CGST:', summaryX + 5, yPos + 21);
-        doc.text('Rs. ' + bill.gstBreakdown.cgst.toFixed(2), summaryX + summaryWidth - 5, yPos + 21, { align: 'right' });
+        doc.text('Rs. ' + cgst.toFixed(2), summaryX + summaryWidth - 5, yPos + 21, { align: 'right' });
     } else {
         doc.text('IGST:', summaryX + 5, yPos + 14);
-        doc.text('Rs. ' + bill.gstBreakdown.igst.toFixed(2), summaryX + summaryWidth - 5, yPos + 14, { align: 'right' });
+        doc.text('Rs. ' + igst.toFixed(2), summaryX + summaryWidth - 5, yPos + 14, { align: 'right' });
     }
 
     // Total GST
