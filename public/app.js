@@ -4504,7 +4504,10 @@ function generateBillPDF(bill) {
     doc.setFont(undefined, 'normal');
     doc.text('Due Date:', metaX + 32, yPos + 20);
     doc.setFont(undefined, 'bold');
-    doc.text(new Date(bill.createdAt).toLocaleDateString('en-IN'), metaX + 32, yPos + 25);
+    // Calculate due date as 30 days after bill creation
+    const dueDate = new Date(bill.createdAt);
+    dueDate.setDate(dueDate.getDate() + 30);
+    doc.text(dueDate.toLocaleDateString('en-IN'), metaX + 32, yPos + 25);
 
     yPos = 55;
     doc.line(10, yPos, 200, yPos);

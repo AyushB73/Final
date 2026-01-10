@@ -4262,3 +4262,96 @@ button:active {
         background-position: -200% 0;
     }
 }
+
+/* ========================================
+   MOBILE-SPECIFIC BUG FIXES
+   ======================================== */
+
+/* Fix #1: Bill Details Modal - Make items table scrollable and visible on mobile */
+@media (max-width: 768px) {
+    .modal-content table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+    }
+
+    .modal-content table thead,
+    .modal-content table tbody,
+    .modal-content table tr {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+    }
+
+    .modal-content table th,
+    .modal-content table td {
+        min-width: 80px;
+        padding: 0.5rem !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* Ensure item names are visible */
+    .modal-content table td:nth-child(2) {
+        min-width: 120px;
+        white-space: normal;
+        word-wrap: break-word;
+    }
+}
+
+/* Fix #3: Customer Name Column - Prevent excessive scrolling in bills section */
+@media (max-width: 768px) {
+
+    #sales-tbody tr td[data-label="Customer Name"],
+    table tbody tr td:nth-child(3) {
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Allow expansion on tap */
+    #sales-tbody tr td[data-label="Customer Name"]:active,
+    table tbody tr td:nth-child(3):active {
+        white-space: normal;
+        overflow: visible;
+        max-width: none;
+    }
+}
+
+/* Fix #4: Billing Form - Make subtotal and bill details visible without scrolling */
+@media (max-width: 768px) {
+    .billing-container {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .bill-items {
+        max-height: 40vh;
+        overflow-y: auto;
+        margin-bottom: 1rem;
+    }
+
+    .bill-summary {
+        position: relative;
+        background: var(--surface);
+        padding: 1rem;
+        border-radius: 12px;
+        box-shadow: var(--shadow-md);
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        z-index: 10;
+    }
+
+    /* Ensure billing form doesn't cut off */
+    #billing-view {
+        padding-bottom: 120px;
+    }
+
+    /* Make table container scrollable but keep summary visible */
+    .table-container {
+        max-height: 40vh;
+        overflow-y: auto;
+        margin-bottom: 1rem;
+    }
+}
