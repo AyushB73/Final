@@ -32,7 +32,7 @@ async function initializeDatabase() {
     const dbPassword = process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '';
     const dbName = process.env.MYSQLDATABASE || process.env.DB_NAME || 'plastiwood_inventory';
     const dbPort = process.env.MYSQLPORT || process.env.DB_PORT || 3306;
-    
+
     // Debug: Log environment variables (hide password)
     console.log('🔍 Database Configuration:');
     console.log('Host:', dbHost);
@@ -41,12 +41,12 @@ async function initializeDatabase() {
     console.log('Port:', dbPort);
     console.log('Password:', dbPassword ? '***SET***' : 'EMPTY');
     console.log('NODE_ENV:', process.env.NODE_ENV);
-    
+
     // Validate required environment variables
     if (!dbHost || !dbUser || !dbName) {
       throw new Error('Missing required database environment variables. Please check Railway environment variables.');
     }
-    
+
     pool = mysql.createPool({
       host: dbHost,
       user: dbUser,
@@ -83,7 +83,7 @@ async function initializeDatabase() {
 // Create database tables
 async function createTables() {
   const connection = await pool.getConnection();
-  
+
   try {
     // Inventory table
     await connection.query(`
@@ -139,9 +139,20 @@ async function createTables() {
         total DECIMAL(10, 2),
         paymentStatus VARCHAR(50),
         paymentTracking JSON,
+        billImage LONGTEXT,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Upgrade Tables: Add billImage if not exists
+    try {
+      await connection.query('ALTER TABLE purchases ADD COLUMN billImage LONGTEXT');
+      console.log('✅ Added billImage column to purchases table');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ billImage column already exists or error:', err.message);
+      }
+    }
 
     // Customers table
     await connection.query(`
@@ -191,14 +202,14 @@ app.get('/api/health', async (req, res) => {
     // Test database connection
     const connection = await pool.getConnection();
     connection.release();
-    
-    res.json({ 
+
+    res.json({
       status: 'healthy',
       database: 'connected',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    res.status(503).json({ 
+    res.status(503).json({
       status: 'unhealthy',
       database: 'disconnected',
       error: error.message,
@@ -211,7 +222,7 @@ app.get('/api/health', async (req, res) => {
 app.get('/api/inventory', async (req, res) => {
   try {
     const inventory = await query('SELECT * FROM inventory ORDER BY id ASC');
-    
+
     // Ensure numeric fields are numbers, not strings
     const formattedInventory = inventory.map(item => ({
       ...item,
@@ -220,7 +231,7 @@ app.get('/api/inventory', async (req, res) => {
       price: parseFloat(item.price) || 0,
       gst: parseFloat(item.gst) || 0
     }));
-    
+
     res.json(formattedInventory);
   } catch (error) {
     console.error('Error fetching inventory:', error);
@@ -231,13 +242,13 @@ app.get('/api/inventory', async (req, res) => {
 app.post('/api/inventory', async (req, res) => {
   try {
     const { name, description, hsn, size, colour, unit, quantity, minStock, price, gst } = req.body;
-    
+
     const result = await query(
       `INSERT INTO inventory (name, description, hsn, size, colour, unit, quantity, minStock, price, gst) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [name, description, hsn, size, colour, unit, quantity || 0, minStock || 0, price, gst]
     );
-    
+
     const item = {
       id: result.insertId,
       name, description, hsn, size, colour, unit,
@@ -247,10 +258,10 @@ app.post('/api/inventory', async (req, res) => {
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    
+
     // Emit real-time update to all connected clients
     io.emit('inventory:updated', { action: 'add', item });
-    
+
     res.json(item);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -260,17 +271,17 @@ app.post('/api/inventory', async (req, res) => {
 app.put('/api/inventory/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    
+
     // Get current item first
     const [currentItem] = await query('SELECT * FROM inventory WHERE id=?', [id]);
-    
+
     if (!currentItem) {
       return res.status(404).json({ error: 'Item not found' });
     }
-    
+
     // Merge with new data (only update provided fields)
     const { name, description, hsn, size, colour, unit, quantity, minStock, price, gst } = req.body;
-    
+
     const updatedData = {
       name: name !== undefined ? name : currentItem.name,
       description: description !== undefined ? description : currentItem.description,
@@ -283,7 +294,7 @@ app.put('/api/inventory/:id', async (req, res) => {
       price: price !== undefined ? price : currentItem.price,
       gst: gst !== undefined ? gst : currentItem.gst
     };
-    
+
     await query(
       `UPDATE inventory SET name=?, description=?, hsn=?, size=?, colour=?, unit=?, 
        quantity=?, minStock=?, price=?, gst=?, updatedAt=NOW() WHERE id=?`,
@@ -301,12 +312,12 @@ app.put('/api/inventory/:id', async (req, res) => {
         id
       ]
     );
-    
+
     const [item] = await query('SELECT * FROM inventory WHERE id=?', [id]);
-    
+
     // Emit real-time update to all connected clients
     io.emit('inventory:updated', { action: 'update', item });
-    
+
     res.json(item);
   } catch (error) {
     console.error('❌ Error updating inventory:', error.message);
@@ -318,10 +329,10 @@ app.delete('/api/inventory/:id', async (req, res) => {
   try {
     const itemId = parseInt(req.params.id);
     await query('DELETE FROM inventory WHERE id=?', [itemId]);
-    
+
     // Emit real-time update to all connected clients
     io.emit('inventory:updated', { action: 'delete', itemId });
-    
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -333,7 +344,7 @@ app.get('/api/bills', async (req, res) => {
   try {
     const bills = await query('SELECT * FROM bills ORDER BY id DESC');
     console.log(`📊 Fetched ${bills.length} bills from database`);
-    
+
     // Parse JSON fields and ensure numeric types
     const parsedBills = bills.map((bill, index) => {
       try {
@@ -341,7 +352,7 @@ app.get('/api/bills', async (req, res) => {
         console.log(`Bill #${bill.id} raw items:`, bill.items);
         const parsedItems = JSON.parse(bill.items || '[]');
         console.log(`Bill #${bill.id} parsed items count:`, parsedItems.length);
-        
+
         // Create clean bill object without spreading old fields
         return {
           id: bill.id,
@@ -384,7 +395,7 @@ app.get('/api/bills', async (req, res) => {
         };
       }
     });
-    
+
     res.json(parsedBills);
   } catch (error) {
     console.error('❌ Error fetching bills:', error.message);
@@ -395,24 +406,24 @@ app.get('/api/bills', async (req, res) => {
 app.post('/api/bills', async (req, res) => {
   try {
     const { customer, items, subtotal, gstBreakdown, totalGST, total, paymentStatus, paymentTracking } = req.body;
-    
+
     console.log('POST /api/bills - Received data:');
     console.log('Customer:', customer);
     console.log('Items:', items);
     console.log('Items count:', items?.length || 0);
     console.log('Subtotal:', subtotal);
     console.log('Total:', total);
-    
+
     // Ensure all values are defined (use null instead of undefined)
     const customerName = customer?.name || null;
     const customerPhone = customer?.phone || null;
     const customerGst = customer?.gst || null;
     const customerAddress = customer?.address || null;
     const customerState = customer?.state || null;
-    
+
     const itemsJson = JSON.stringify(items || []);
     console.log('Items JSON to save:', itemsJson);
-    
+
     const result = await query(
       `INSERT INTO bills (customerName, customerPhone, customerGst, customerAddress, customerState, 
        items, subtotal, gstBreakdown, totalGST, total, paymentStatus, paymentTracking) 
@@ -432,24 +443,24 @@ app.post('/api/bills', async (req, res) => {
         JSON.stringify(paymentTracking || {})
       ]
     );
-    
+
     console.log('Bill inserted with ID:', result.insertId);
-    
+
     const bill = {
       id: result.insertId,
       customer, items, subtotal, gstBreakdown, totalGST, total, paymentStatus, paymentTracking,
       createdAt: new Date()
     };
-    
+
     console.log('Returning bill:', bill);
-    
+
     // Emit real-time update to all connected clients (for owner to see sales)
     io.emit('bill:created', { bill });
-    
+
     // Also emit inventory update since stock changed
     const updatedInventory = await query('SELECT * FROM inventory ORDER BY id ASC');
     io.emit('inventory:refresh', { inventory: updatedInventory });
-    
+
     res.json(bill);
   } catch (error) {
     console.error('❌ Error adding bill:', error.message);
@@ -461,15 +472,15 @@ app.put('/api/bills/:id', async (req, res) => {
   try {
     const { customer, items, subtotal, gstBreakdown, totalGST, total, paymentStatus, paymentTracking } = req.body;
     const id = parseInt(req.params.id);
-    
+
     console.log('PUT /api/bills/:id - Request body:', JSON.stringify(req.body, null, 2));
-    
+
     // Validate required fields
     if (!customer || !customer.name) {
       console.error('Customer data is missing or invalid');
       return res.status(400).json({ error: 'Customer data is required' });
     }
-    
+
     await query(
       `UPDATE bills SET customerName=?, customerPhone=?, customerGst=?, customerAddress=?, customerState=?,
        items=?, subtotal=?, gstBreakdown=?, totalGST=?, total=?, paymentStatus=?, paymentTracking=? WHERE id=?`,
@@ -479,9 +490,9 @@ app.put('/api/bills/:id', async (req, res) => {
         paymentStatus || 'paid', JSON.stringify(paymentTracking || {}), id
       ]
     );
-    
+
     const [bill] = await query('SELECT * FROM bills WHERE id=?', [id]);
-    
+
     // Parse and return the updated bill
     const parsedBill = {
       ...bill,
@@ -499,7 +510,7 @@ app.put('/api/bills/:id', async (req, res) => {
         state: bill.customerState
       }
     };
-    
+
     res.json(parsedBill);
   } catch (error) {
     console.error('Error updating bill:', error);
@@ -521,7 +532,7 @@ app.get('/api/purchases', async (req, res) => {
   try {
     const purchases = await query('SELECT * FROM purchases ORDER BY id DESC');
     console.log(`📦 Fetched ${purchases.length} purchases from database`);
-    
+
     const parsedPurchases = purchases.map((purchase, index) => {
       try {
         return {
@@ -534,6 +545,7 @@ app.get('/api/purchases', async (req, res) => {
           totalGST: parseFloat(purchase.totalGST) || 0,
           total: parseFloat(purchase.total) || 0,
           paymentStatus: purchase.paymentStatus || 'paid',
+          billImage: purchase.billImage,
           supplier: {
             name: purchase.supplierName,
             phone: purchase.supplierPhone,
@@ -561,7 +573,7 @@ app.get('/api/purchases', async (req, res) => {
         };
       }
     });
-    
+
     res.json(parsedPurchases);
   } catch (error) {
     console.error('❌ Error fetching purchases:', error.message);
@@ -573,9 +585,9 @@ app.get('/api/purchases', async (req, res) => {
 app.post('/api/purchases', async (req, res) => {
   try {
     const { supplier, invoiceNo, purchaseDate, items, subtotal, totalGST, total, paymentStatus, paymentTracking } = req.body;
-    
+
     console.log('📦 Raw request body:', JSON.stringify(req.body, null, 2));
-    
+
     // Validate required fields
     if (!supplier || !supplier.name || !invoiceNo || !purchaseDate || !items || items.length === 0) {
       const missingFields = [];
@@ -583,17 +595,17 @@ app.post('/api/purchases', async (req, res) => {
       if (!invoiceNo) missingFields.push('invoiceNo');
       if (!purchaseDate) missingFields.push('purchaseDate');
       if (!items || items.length === 0) missingFields.push('items');
-      
+
       console.error('❌ Missing fields:', missingFields);
       throw new Error('Missing required fields: ' + missingFields.join(', '));
     }
-    
+
     // Ensure all values are defined (use null instead of undefined or empty string)
     const supplierName = supplier.name || null;
     const supplierPhone = (supplier.phone && supplier.phone.trim() !== '') ? supplier.phone.trim() : null;
     const supplierGst = (supplier.gst && supplier.gst.trim() !== '') ? supplier.gst.trim() : null;
     const paymentTrackingData = paymentTracking || {};
-    
+
     // Prepare parameters array
     const params = [
       supplierName,
@@ -606,9 +618,10 @@ app.post('/api/purchases', async (req, res) => {
       totalGST || 0,
       total || 0,
       paymentStatus || 'pending',
-      JSON.stringify(paymentTrackingData)
+      JSON.stringify(paymentTrackingData),
+      req.body.billImage || null
     ];
-    
+
     // Check for undefined values
     const undefinedIndexes = [];
     params.forEach((param, index) => {
@@ -616,29 +629,30 @@ app.post('/api/purchases', async (req, res) => {
         undefinedIndexes.push(index);
       }
     });
-    
+
     if (undefinedIndexes.length > 0) {
-      const fieldNames = ['supplierName', 'supplierPhone', 'supplierGst', 'invoiceNo', 'purchaseDate', 'items', 'subtotal', 'totalGST', 'total', 'paymentStatus', 'paymentTracking'];
+      const fieldNames = ['supplierName', 'supplierPhone', 'supplierGst', 'invoiceNo', 'purchaseDate', 'items', 'subtotal', 'totalGST', 'total', 'paymentStatus', 'paymentTracking', 'billImage'];
       console.error('❌ Undefined parameters at indexes:', undefinedIndexes);
       console.error('❌ Undefined fields:', undefinedIndexes.map(i => fieldNames[i]));
       throw new Error('Undefined parameters: ' + undefinedIndexes.map(i => fieldNames[i]).join(', '));
     }
-    
+
     console.log('✅ All parameters valid:', params.map((p, i) => typeof p));
-    
+
     const result = await query(
       `INSERT INTO purchases (supplierName, supplierPhone, supplierGst, invoiceNo, purchaseDate,
-       items, subtotal, totalGST, total, paymentStatus, paymentTracking) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       items, subtotal, totalGST, total, paymentStatus, paymentTracking, billImage) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       params
     );
-    
+
     const purchase = {
       id: result.insertId,
       supplier, invoiceNo, purchaseDate, items, subtotal, totalGST, total, paymentStatus, paymentTracking,
+      billImage: req.body.billImage || null,
       createdAt: new Date()
     };
-    
+
     console.log('✅ Purchase added successfully:', purchase.id);
     res.json(purchase);
   } catch (error) {
@@ -652,16 +666,16 @@ app.put('/api/purchases/:id', async (req, res) => {
   try {
     const { supplier, invoiceNo, purchaseDate, items, subtotal, totalGST, total, paymentStatus, paymentTracking } = req.body;
     const id = parseInt(req.params.id);
-    
+
     // Ensure all values are defined (use null instead of undefined)
     const supplierName = supplier?.name || null;
     const supplierPhone = supplier?.phone || null;
     const supplierGst = supplier?.gst || null;
     const paymentTrackingData = paymentTracking || null;
-    
+
     await query(
       `UPDATE purchases SET supplierName=?, supplierPhone=?, supplierGst=?, invoiceNo=?, purchaseDate=?,
-       items=?, subtotal=?, totalGST=?, total=?, paymentStatus=?, paymentTracking=? WHERE id=?`,
+       items=?, subtotal=?, totalGST=?, total=?, paymentStatus=?, paymentTracking=?, billImage = COALESCE(?, billImage) WHERE id=?`,
       [
         supplierName,
         supplierPhone,
@@ -674,10 +688,11 @@ app.put('/api/purchases/:id', async (req, res) => {
         total || 0,
         paymentStatus || 'pending',
         JSON.stringify(paymentTrackingData || {}),
+        req.body.billImage || null,
         id
       ]
     );
-    
+
     const [purchase] = await query('SELECT * FROM purchases WHERE id=?', [id]);
     res.json(purchase);
   } catch (error) {
@@ -708,18 +723,18 @@ app.get('/api/customers', async (req, res) => {
 app.post('/api/customers', async (req, res) => {
   try {
     const { name, phone, gst, address, state } = req.body;
-    
+
     const result = await query(
       'INSERT INTO customers (name, phone, gst, address, state) VALUES (?, ?, ?, ?, ?)',
       [name, phone, gst, address, state]
     );
-    
+
     const customer = {
       id: result.insertId,
       name, phone, gst, address, state,
       createdAt: new Date()
     };
-    
+
     res.json(customer);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -730,12 +745,12 @@ app.put('/api/customers/:id', async (req, res) => {
   try {
     const { name, phone, gst, address, state, lastBillDate } = req.body;
     const id = parseInt(req.params.id);
-    
+
     await query(
       'UPDATE customers SET name=?, phone=?, gst=?, address=?, state=?, lastBillDate=? WHERE id=?',
       [name, phone, gst, address, state, lastBillDate, id]
     );
-    
+
     const [customer] = await query('SELECT * FROM customers WHERE id=?', [id]);
     res.json(customer);
   } catch (error) {
@@ -767,18 +782,18 @@ app.get('/api/suppliers', async (req, res) => {
 app.post('/api/suppliers', async (req, res) => {
   try {
     const { name, phone, gst } = req.body;
-    
+
     const result = await query(
       'INSERT INTO suppliers (name, phone, gst) VALUES (?, ?, ?)',
       [name, phone, gst]
     );
-    
+
     const supplier = {
       id: result.insertId,
       name, phone, gst,
       createdAt: new Date()
     };
-    
+
     res.json(supplier);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -789,12 +804,12 @@ app.put('/api/suppliers/:id', async (req, res) => {
   try {
     const { name, phone, gst } = req.body;
     const id = parseInt(req.params.id);
-    
+
     await query(
       'UPDATE suppliers SET name=?, phone=?, gst=? WHERE id=?',
       [name, phone, gst, id]
     );
-    
+
     const [supplier] = await query('SELECT * FROM suppliers WHERE id=?', [id]);
     res.json(supplier);
   } catch (error) {
@@ -817,7 +832,7 @@ app.delete('/api/suppliers/:id', async (req, res) => {
 app.post('/api/initialize', async (req, res) => {
   try {
     const [rows] = await query('SELECT COUNT(*) as count FROM inventory');
-    
+
     if (rows[0].count === 0) {
       const sampleInventory = [
         { name: 'Steel Rebar', description: 'TMT Steel Rebar', hsn: '72142000', size: '12mm', colour: 'Silver', unit: 'kg', quantity: 1000, minStock: 500, price: 65.00, gst: 18 },
@@ -826,7 +841,7 @@ app.post('/api/initialize', async (req, res) => {
         { name: 'Concrete Mix', description: 'Ready Mix Concrete', hsn: '38244090', size: 'M25', colour: 'Grey', unit: 'm3', quantity: 50, minStock: 20, price: 4500.00, gst: 18 },
         { name: 'Plastiwood Deck Board', description: 'Premium composite deck board', hsn: '39259000', size: '6ft', colour: 'Brown', unit: 'pcs', quantity: 150, minStock: 50, price: 2500.00, gst: 18 }
       ];
-      
+
       for (const item of sampleInventory) {
         await query(
           `INSERT INTO inventory (name, description, hsn, size, colour, unit, quantity, minStock, price, gst) 
@@ -835,7 +850,7 @@ app.post('/api/initialize', async (req, res) => {
         );
       }
     }
-    
+
     res.json({ success: true, message: 'Database initialized' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -855,11 +870,11 @@ app.get('/app', (req, res) => {
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('� User coennected:', socket.id);
-  
+
   socket.on('disconnect', () => {
     console.log('👤 User disconnected:', socket.id);
   });
-  
+
   socket.on('user:register', (data) => {
     socket.userRole = data.role;
     socket.userName = data.name;
