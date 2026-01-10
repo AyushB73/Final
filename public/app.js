@@ -1602,19 +1602,22 @@ async function selectPurchasePaymentStatus(newStatus) {
 
     purchase.paymentStatus = newStatus;
 
-    try {
-        await APIService.updatePurchase(purchase.id, {
-            ...purchase,
-            paymentStatus: newStatus,
-            paymentTracking: purchase.paymentTracking
-        });
-        renderPurchases();
-        closeUpdatePurchasePaymentModal();
-        alert(`Purchase payment status updated to: ${statusLabels[newStatus]}`);
-    } catch (error) {
-        console.error('Error updating purchase payment status:', error);
-        alert('Failed to update payment status. Please try again.');
-    }
+    // Format date to YYYY-MM-DD for MySQL
+    const formattedDate = new Date(purchase.purchaseDate).toISOString().split('T')[0];
+
+    await APIService.updatePurchase(purchase.id, {
+        ...purchase,
+        purchaseDate: formattedDate,
+        paymentStatus: newStatus,
+        paymentTracking: purchase.paymentTracking
+    });
+    renderPurchases();
+    closeUpdatePurchasePaymentModal();
+    alert(`Purchase payment status updated to: ${statusLabels[newStatus]}`);
+} catch (error) {
+    console.error('Error updating purchase payment status:', error);
+    alert('Failed to update payment status. Please try again.');
+}
 }
 
 function calculatePurchasePending() {
@@ -1668,8 +1671,12 @@ async function confirmPartialPurchasePayment() {
     }
 
     try {
+        // Format date to YYYY-MM-DD for MySQL
+        const formattedDate = new Date(purchase.purchaseDate).toISOString().split('T')[0];
+
         await APIService.updatePurchase(purchase.id, {
             ...purchase,
+            purchaseDate: formattedDate,
             paymentStatus: purchase.paymentStatus,
             paymentTracking: purchase.paymentTracking
         });
