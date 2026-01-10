@@ -416,7 +416,7 @@ thead {
 
 th {
     padding: 1.25rem 1rem;
-    text-align: left;
+    text-align: center;
     font-weight: 600;
     color: white;
     font-size: 0.875rem;
@@ -427,6 +427,7 @@ th {
 
 td {
     padding: 1.25rem 1rem;
+    text-align: center;
     border-top: 1px solid var(--border);
     vertical-align: middle;
 }
