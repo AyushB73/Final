@@ -618,6 +618,11 @@
             <div class="settings-card">
                 <h2>🏢 Company Details</h2>
                 <form id="company-details-form" onsubmit="saveCompanyDetails(event)">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Business Logo</label>
+                        <input type="file" id="company-logo" accept="image/*" style="padding: 0.5rem; border: 2px solid var(--border); border-radius: 8px; width: 100%;">
+                        <small style="color: var(--text-secondary);">Recommended: Transparent PNG, square or landscape</small>
+                    </div>
                     <input type="text" id="company-name" placeholder="Company Name *" required>
                     <textarea id="company-address" placeholder="Company Address *" rows="3" required></textarea>
                     <input type="text" id="company-phone" placeholder="Phone Number *" required>
@@ -625,6 +630,10 @@
                     <input type="text" id="company-gst" placeholder="GST Number">
                     <input type="text" id="company-pan" placeholder="PAN Number">
                     <input type="text" id="company-website" placeholder="Website URL">
+                    <div class="form-group" style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Terms & Conditions</label>
+                        <textarea id="company-terms" placeholder="Terms & Conditions (shown at bottom of invoice)" rows="4" style="width: 100%; padding: 0.875rem; border: 2px solid var(--border); border-radius: 10px;"></textarea>
+                    </div>
                     <button type="submit" class="btn btn-primary">💾 Save Company Details</button>
                 </form>
             </div>
@@ -639,6 +648,11 @@
                     <input type="text" id="bank-ifsc" placeholder="IFSC Code *" required>
                     <input type="text" id="bank-branch" placeholder="Branch Name">
                     <input type="text" id="upi-id" placeholder="UPI ID (Optional)">
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Authorized Signatory / Stamp Image</label>
+                        <input type="file" id="company-signature" accept="image/*" style="padding: 0.5rem; border: 2px solid var(--border); border-radius: 8px; width: 100%;">
+                        <small style="color: var(--text-secondary);">Image of your stamp or signature for the bottom of invoice</small>
+                    </div>
                     <button type="submit" class="btn btn-primary">💾 Save Banking Details</button>
                 </form>
             </div>
