@@ -1898,7 +1898,7 @@ async function downloadSupplierReportPDF(supplierName) {
 
     doc.setFont("helvetica", "normal");
     doc.text(`${totalPurchases}`, 160, 60);
-    doc.text(`₹${totalAmount.toFixed(2)}`, 160, 66);
+    doc.text(`Rs. ${totalAmount.toFixed(2)}`, 160, 66);
 
     // Color code outstanding
     if (pendingAmount > 0) {
@@ -1906,7 +1906,7 @@ async function downloadSupplierReportPDF(supplierName) {
     } else {
         doc.setTextColor(39, 174, 96); // Green
     }
-    doc.text(`₹${pendingAmount.toFixed(2)}`, 160, 72);
+    doc.text(`Rs. ${pendingAmount.toFixed(2)}`, 160, 72);
     doc.setTextColor(44, 62, 80); // Reset color
 
     // 3. Transactions Table
