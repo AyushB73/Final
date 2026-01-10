@@ -57,12 +57,27 @@ function setupNavigation() {
 }
 
 function switchView(viewName) {
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    // Check for owner-only views
+    if ((viewName === 'settings' || viewName === 'dashboard' || viewName === 'purchases') && !isOwner()) {
+        alert('Access Denied: This view is only available to the Owner.');
+        return;
+    }
 
+    // Update active classes for views
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(`${viewName}-view`).classList.add('active');
+
+    // Update active classes for ALL navigation buttons (Sidebar + Bottom Nav)
+    document.querySelectorAll('.nav-btn, .bottom-nav-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll(`[data-view="${viewName}"]`).forEach(btn => btn.classList.add('active'));
 
+    // Close mobile menu if open
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && sidebar.classList.contains('active')) {
+        toggleMenu();
+    }
+
+    // View-specific rendering
     if (viewName === 'dashboard') {
         renderDashboard();
     } else if (viewName === 'sales') {
@@ -70,11 +85,6 @@ function switchView(viewName) {
     } else if (viewName === 'purchases') {
         renderPurchases();
     } else if (viewName === 'settings') {
-        if (!isOwner()) {
-            alert('Access Denied: Settings are only available to the Owner.');
-            switchView('inventory');
-            return;
-        }
         loadSettings();
     }
 }
@@ -116,13 +126,12 @@ function applyRoleRestrictions(role) {
         const actionsHeader = document.getElementById('actions-header');
         if (actionsHeader) actionsHeader.style.display = 'none';
 
-        // Hide purchases tab for staff (sidebar)
-        const purchasesNavSidebar = document.getElementById('purchases-nav-sidebar');
-        if (purchasesNavSidebar) purchasesNavSidebar.style.display = 'none';
-
-        // Hide dashboard tab for staff (sidebar)
+        // Hide dashboard tab for staff
         const dashboardNavSidebar = document.getElementById('dashboard-nav-sidebar');
         if (dashboardNavSidebar) dashboardNavSidebar.style.display = 'none';
+
+        // Hide items in Bottom Nav for staff
+        document.querySelectorAll('.bottom-nav-btn[data-view="dashboard"]').forEach(el => el.style.display = 'none');
     }
 }
 
@@ -187,17 +196,17 @@ function renderInventory() {
         ` : '<td style="display: none;"></td>';
 
         row.innerHTML = `
-            <td>${item.id}</td>
-            <td><strong>${item.name}</strong></td>
-            <td>${item.description || '-'}</td>
-            <td>${item.hsn || '-'}</td>
-            <td>${item.size}</td>
-            <td>${item.unit}</td>
-            <td>${item.colour || '-'}</td>
-            <td><span class="badge ${stockStatus}">${item.quantity}</span></td>
-            <td>₹${price.toFixed(2)}</td>
-            <td>${gst}%</td>
-            <td><strong>₹${taxedPrice.toFixed(2)}</strong></td>
+            <td data-label="ID">${item.id}</td>
+            <td data-label="Name"><strong>${item.name}</strong></td>
+            <td data-label="Description">${item.description || '-'}</td>
+            <td data-label="HSN">${item.hsn || '-'}</td>
+            <td data-label="Size">${item.size}</td>
+            <td data-label="Unit">${item.unit}</td>
+            <td data-label="Colour">${item.colour || '-'}</td>
+            <td data-label="Stock"><span class="badge ${stockStatus}">${item.quantity}</span></td>
+            <td data-label="Price">₹${price.toFixed(2)}</td>
+            <td data-label="GST">${gst}%</td>
+            <td data-label="Taxed Price"><strong>₹${taxedPrice.toFixed(2)}</strong></td>
             ${actionsHtml}
         `;
         tbody.appendChild(row);
@@ -1290,14 +1299,14 @@ function renderPurchases() {
         }
 
         row.innerHTML = `
-            <td><strong>#${purchase.id}</strong></td>
-            <td>${date}</td>
-            <td>${supplier.name}</td>
-            <td>${purchase.invoiceNo || '-'}</td>
-            <td>₹${(purchase.subtotal || 0).toFixed(2)}</td>
-            <td>₹${(purchase.totalGST || 0).toFixed(2)}</td>
-            <td><strong>₹${(purchase.total || 0).toFixed(2)}</strong></td>
-            <td>${statusBadge}</td>
+            <td data-label="Purchase #"><strong>#${purchase.id}</strong></td>
+            <td data-label="Date">${date}</td>
+            <td data-label="Supplier Name">${supplier.name}</td>
+            <td data-label="Invoice No.">${purchase.invoiceNo || '-'}</td>
+            <td data-label="Subtotal (₹)">₹${(purchase.subtotal || 0).toFixed(2)}</td>
+            <td data-label="GST (₹)">₹${(purchase.totalGST || 0).toFixed(2)}</td>
+            <td data-label="Total (₹)"><strong>₹${(purchase.total || 0).toFixed(2)}</strong></td>
+            <td data-label="Status">${statusBadge}</td>
             <td>
                 <button class="action-btn" onclick="viewPurchaseDetails(${purchase.id})">View</button>
                 <button class="action-btn delete" onclick="deletePurchase(${purchase.id})">Delete</button>
@@ -1806,17 +1815,17 @@ function renderSupplierReports() {
         }
 
         row.innerHTML = `
-            <td onclick="downloadSupplierReportPDF('${data.supplier.name.replace(/'/g, "\\'")}')" style="cursor: pointer; color: var(--primary); text-decoration: underline;">
+            <td data-label="Supplier Name" onclick="downloadSupplierReportPDF('${data.supplier.name.replace(/'/g, "\\'")}')" style="cursor: pointer; color: var(--primary); text-decoration: underline;">
                 <strong>${data.supplier.name}</strong>
             </td>
-            <td>${data.supplier.phone || '-'}</td>
-            <td>${data.supplier.gst || '-'}</td>
-            <td>${data.totalPurchases}</td>
-            <td>₹${data.totalAmount.toFixed(2)}</td>
-            <td>₹${data.paidAmount.toFixed(2)}</td>
-            <td>₹${data.outstandingAmount.toFixed(2)}</td>
-            <td>${paymentStatus}</td>
-            <td>${data.lastPurchase}</td>
+            <td data-label="Phone">${data.supplier.phone || '-'}</td>
+            <td data-label="GST Number">${data.supplier.gst || '-'}</td>
+            <td data-label="Total Orders">${data.totalPurchases}</td>
+            <td data-label="Total Amount (₹)">₹${data.totalAmount.toFixed(2)}</td>
+            <td data-label="Paid (₹)">₹${data.paidAmount.toFixed(2)}</td>
+            <td data-label="Outstanding (₹)">₹${data.outstandingAmount.toFixed(2)}</td>
+            <td data-label="Status">${paymentStatus}</td>
+            <td data-label="Last Purchase">${data.lastPurchase}</td>
             <td>
                 <button class="action-btn" onclick="viewSupplierDetails('${data.supplier.name.replace(/'/g, "\\'")}')">View</button>
                 <button class="action-btn" onclick="editSupplier(${data.supplier.id})">Edit</button>
@@ -2310,17 +2319,17 @@ function renderSales() {
         `;
 
         row.innerHTML = `
-            <td><strong>#${bill.id}</strong></td>
-            <td>${date}<br><small>${time}</small></td>
-            <td>${customer.name}</td>
-            <td>${customer.phone || '-'}</td>
-            <td>${customer.gst || '-'}</td>
-            <td>${stateText}</td>
-            <td>${itemCount} item${itemCount > 1 ? 's' : ''}</td>
-            <td>₹${(bill.subtotal || 0).toFixed(2)}</td>
-            <td>₹${(bill.totalGST || 0).toFixed(2)}</td>
-            <td><strong>₹${(bill.total || 0).toFixed(2)}</strong></td>
-            <td>${paymentDropdown}</td>
+            <td data-label="Bill #"><strong>#${bill.id}</strong></td>
+            <td data-label="Date">${date}<br><small>${time}</small></td>
+            <td data-label="Customer Name">${customer.name}</td>
+            <td data-label="Phone">${customer.phone || '-'}</td>
+            <td data-label="GST Number">${customer.gst || '-'}</td>
+            <td data-label="State">${stateText}</td>
+            <td data-label="Items">${itemCount} item${itemCount > 1 ? 's' : ''}</td>
+            <td data-label="Subtotal (₹)">₹${(bill.subtotal || 0).toFixed(2)}</td>
+            <td data-label="GST (₹)">₹${(bill.totalGST || 0).toFixed(2)}</td>
+            <td data-label="Total (₹)"><strong>₹${(bill.total || 0).toFixed(2)}</strong></td>
+            <td data-label="Payment Status">${paymentDropdown}</td>
             <td class="actions-cell">
                 <button class="action-btn action-btn-sm btn-view" data-bill-id="${bill.id}" title="View Details">👁️</button>
                 <button class="action-btn action-btn-sm delete btn-delete" data-bill-id="${bill.id}" title="Delete">🗑️</button>
@@ -2535,20 +2544,20 @@ function showPartialPaymentCard(billId, bill) {
     card.id = 'partial-payment-card';
     card.style.cssText = `
 position: fixed;
-top: 50 %;
-left: 50 %;
-transform: translate(-50 %, -50 %);
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
 background: white;
 padding: 2rem;
-border - radius: 12px;
-box - shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-z - index: 10000;
-min - width: 400px;
-max - width: 90 %;
+border-radius: 12px;
+box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+z-index: 10000;
+min-width: 400px;
+max-width: 90%;
 `;
 
     card.innerHTML = `
-    < h3 style = "margin: 0 0 1.5rem 0; color: #667eea;" >💰 Partial Payment - Bill #${billId}</h3 >
+    <h3 style="margin: 0 0 1.5rem 0; color: #667eea;">💰 Partial Payment - Bill #${billId}</h3>
         
         <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
@@ -2614,7 +2623,7 @@ left: 0;
 right: 0;
 bottom: 0;
 background: rgba(0, 0, 0, 0.5);
-z - index: 9999;
+z-index: 9999;
 `;
     overlay.onclick = () => closePartialPaymentCard(billId);
 
@@ -2624,7 +2633,7 @@ z - index: 9999;
 
     // Focus on input
     setTimeout(() => {
-        document.getElementById(`partial - amount - input - ${billId} `).focus();
+        document.getElementById(`partial-amount-input-${billId}`).focus();
     }, 100);
 }
 
@@ -2640,9 +2649,9 @@ function updatePartialPaymentPreview(billId) {
         payments: []
     };
 
-    const input = document.getElementById(`partial - amount - input - ${billId} `);
-    const preview = document.getElementById(`payment - preview - ${billId} `);
-    const newRemainingSpan = document.getElementById(`new- remaining - ${billId} `);
+    const input = document.getElementById(`partial-amount-input-${billId}`);
+    const preview = document.getElementById(`payment-preview-${billId}`);
+    const newRemainingSpan = document.getElementById(`new-remaining-${billId}`);
 
     const amountReceived = parseFloat(input.value) || 0;
 
@@ -2878,7 +2887,7 @@ function viewBillDetailsModal(billId) {
         itemsHtml = '<tr><td colspan="9" style="text-align: center; padding: 1rem; color: #6c757d;">No items found</td></tr>';
     } else {
         itemsHtml = items.map((item, idx) => `
-    < tr >
+            <tr>
                 <td style="text-align: center;">${idx + 1}</td>
                 <td><strong>${item.name || 'N/A'}</strong></td>
                 <td>${item.size || ''} ${item.unit || ''}</td>
@@ -2888,8 +2897,8 @@ function viewBillDetailsModal(billId) {
                 <td style="text-align: center;">${parseFloat(item.gst) || 0}%</td>
                 <td style="text-align: right;">₹${(parseFloat(item.gstAmount) || 0).toFixed(2)}</td>
                 <td style="text-align: right;"><strong>₹${(parseFloat(item.total) || 0).toFixed(2)}</strong></td>
-            </tr >
-    `).join('');
+            </tr>
+        `).join('');
     }
 
     // Parse gstBreakdown if it's a string
@@ -3167,7 +3176,7 @@ function updatePaymentStatus(billId) {
 
     // Populate modal
     billIdElement.textContent = billId;
-    statusElement.innerHTML = `< span class="badge badge-${currentStatus === 'paid' ? 'success' : currentStatus === 'pending' ? 'danger' : 'warning'}" > ${statusLabels[currentStatus]}</span > `;
+    statusElement.innerHTML = `<span class="badge badge-${currentStatus === 'paid' ? 'success' : currentStatus === 'pending' ? 'danger' : 'warning'}">${statusLabels[currentStatus]}</span>`;
 
     console.log('Opening payment modal for bill:', billId);
 
@@ -3240,9 +3249,9 @@ async function selectPaymentStatus(newStatus) {
         }
 
         // Display amounts
-        document.getElementById('bill-total-amount').textContent = `₹${bill.paymentTracking.totalAmount.toFixed(2)} `;
-        document.getElementById('bill-already-paid').textContent = `₹${bill.paymentTracking.amountPaid.toFixed(2)} `;
-        document.getElementById('bill-remaining-pending').textContent = `₹${bill.paymentTracking.amountPending.toFixed(2)} `;
+        document.getElementById(`bill-total-amount`).textContent = `₹${bill.paymentTracking.totalAmount.toFixed(2)}`;
+        document.getElementById(`bill-already-paid`).textContent = `₹${bill.paymentTracking.amountPaid.toFixed(2)}`;
+        document.getElementById(`bill-remaining-pending`).textContent = `₹${bill.paymentTracking.amountPending.toFixed(2)}`;
         document.getElementById('partial-amount-input').value = '';
         document.getElementById('partial-amount-input').max = bill.paymentTracking.amountPending;
 

@@ -29,8 +29,11 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72x72.png">
     
     <title>Plastiwood - Inventory & Billing</title>
-    <!-- Version 3.1 - Debug Sidebar -->
-    <link rel="stylesheet" href="styles.css?v=3.1">
+    <!-- Version 3.2 - UI Enhancements -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=3.2">
 </head>
 <body>
     <!-- Sidebar Overlay -->
@@ -584,6 +587,34 @@
 
         </main>
     </div>
+
+    <!-- Floating Action Button (Mobile) -->
+    <button class="fab" onclick="switchView('billing')" title="New Bill">
+        <span>+</span>
+    </button>
+
+    <!-- Bottom Navigation (Mobile) -->
+    <nav class="bottom-nav">
+        <button class="bottom-nav-btn active" data-view="dashboard" onclick="switchView('dashboard')">
+            <span class="nav-icon">📊</span>
+            <span class="nav-text">Home</span>
+        </button>
+        <button class="bottom-nav-btn" data-view="inventory" onclick="switchView('inventory')">
+            <span class="nav-icon">📦</span>
+            <span class="nav-text">Stock</span>
+        </button>
+        <button class="bottom-nav-btn fab-placeholder">
+            <!-- Space for FAB -->
+        </button>
+        <button class="bottom-nav-btn" data-view="sales" onclick="switchView('sales')">
+            <span class="nav-icon">💰</span>
+            <span class="nav-text">Sales</span>
+        </button>
+        <button class="bottom-nav-btn" data-view="settings" onclick="switchView('settings')">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-text">More</span>
+        </button>
+    </nav>
 
     <!-- Bill History Modal -->
     <div id="bill-history-modal" class="modal">
