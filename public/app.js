@@ -4856,9 +4856,8 @@ function displayCurrentSettings() {
         if (bankingDetails.upiId) html += `<div class="setting-item"><strong>UPI ID</strong><span>${bankingDetails.upiId}</span></div>`;
         if (bankingDetails.signature) html += `<div class="setting-item" style="flex-direction: column; align-items: flex-start;"><strong>Authorized Signatory / Stamp</strong><img src="${bankingDetails.signature}" style="max-height: 80px; margin-top: 0.5rem; border: 1px solid var(--border); border-radius: 5px;"></div>`;
     }
-}
 
-container.innerHTML = html;
+    container.innerHTML = html;
 }
 
 // Load settings on page load
