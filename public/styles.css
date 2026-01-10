@@ -4267,35 +4267,83 @@ button:active {
    MOBILE-SPECIFIC BUG FIXES
    ======================================== */
 
-/* Fix #1: Bill Details Modal - Make items table scrollable and visible on mobile */
+/* Fix #1: Bill Details Modal - Transform table to card view on mobile for better visibility */
 @media (max-width: 768px) {
+
+    /* Hide the table and show card view instead */
     .modal-content table {
+        border: 0;
+    }
+
+    .modal-content table thead {
+        display: none;
+    }
+
+    .modal-content table tbody {
         display: block;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        white-space: nowrap;
     }
 
-    .modal-content table thead,
-    .modal-content table tbody,
-    .modal-content table tr {
-        display: table;
-        width: 100%;
-        table-layout: fixed;
+    .modal-content table tbody tr {
+        display: block;
+        background: var(--surface);
+        border: 1px solid var(--border-light);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow-sm);
     }
 
-    .modal-content table th,
-    .modal-content table td {
-        min-width: 80px;
-        padding: 0.5rem !important;
-        font-size: 0.85rem !important;
+    .modal-content table tbody tr td {
+        display: block;
+        text-align: left !important;
+        padding: 0.5rem 0 !important;
+        border: none;
+        position: relative;
+        padding-left: 50% !important;
+        min-height: 1.5rem;
     }
 
-    /* Ensure item names are visible */
-    .modal-content table td:nth-child(2) {
-        min-width: 120px;
-        white-space: normal;
-        word-wrap: break-word;
+    .modal-content table tbody tr td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        width: 45%;
+        padding-right: 10px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-align: left;
+        font-size: 0.85rem;
+    }
+
+    /* Make item name prominent */
+    .modal-content table tbody tr td:nth-child(2) {
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+        color: var(--text-primary) !important;
+        padding-left: 0 !important;
+        margin-bottom: 0.5rem;
+    }
+
+    .modal-content table tbody tr td:nth-child(2)::before {
+        display: none;
+    }
+
+    /* Serial number */
+    .modal-content table tbody tr td:first-child {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.25rem 0.5rem !important;
+        background: var(--primary);
+        color: white;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        min-height: auto;
+    }
+
+    .modal-content table tbody tr td:first-child::before {
+        content: '#';
     }
 }
 
