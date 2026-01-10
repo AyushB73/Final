@@ -1281,7 +1281,6 @@ function renderPurchases() {
             <td>${date}</td>
             <td>${supplier.name}</td>
             <td>${purchase.invoiceNo || '-'}</td>
-            <td>${itemCount} item${itemCount > 1 ? 's' : ''}</td>
             <td>₹${(purchase.subtotal || 0).toFixed(2)}</td>
             <td>₹${(purchase.totalGST || 0).toFixed(2)}</td>
             <td><strong>₹${(purchase.total || 0).toFixed(2)}</strong></td>
@@ -1605,6 +1604,7 @@ async function selectPurchasePaymentStatus(newStatus) {
 
     try {
         await APIService.updatePurchase(purchase.id, {
+            ...purchase,
             paymentStatus: newStatus,
             paymentTracking: purchase.paymentTracking
         });
@@ -1669,6 +1669,7 @@ async function confirmPartialPurchasePayment() {
 
     try {
         await APIService.updatePurchase(purchase.id, {
+            ...purchase,
             paymentStatus: purchase.paymentStatus,
             paymentTracking: purchase.paymentTracking
         });
