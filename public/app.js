@@ -3062,18 +3062,26 @@ function closeBillDetailsModal() {
 }
 
 async function deleteBill(billId) {
-    console.log('deleteBill called with billId:', billId);
-
     if (!confirm('Are you sure you want to delete this bill? This action cannot be undone.')) return;
+
+    // Store index for rollback
+    const originalBills = [...bills];
+
+    // Optimistic update
+    bills = bills.filter(b => b.id != billId);
+    renderSales();
+    updateSalesSummary();
 
     try {
         await APIService.deleteBill(billId);
-        bills = bills.filter(b => b.id != billId); // Use != for type coercion
-        renderSales();
-        alert('Bill deleted successfully!');
+        // Optional: Refresh data in background to ensure sync
+        loadBills();
     } catch (error) {
         console.error('Error deleting bill:', error);
-        alert('Failed to delete bill. Please try again.');
+        alert('Failed to delete bill. Restoring record.');
+        bills = originalBills;
+        renderSales();
+        updateSalesSummary();
     }
 }
 
