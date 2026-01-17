@@ -58,6 +58,128 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('✅ Initialization complete!');
 });
 
+// Inventory History Functions
+let allInventoryHistory = [];
+let filteredHistory = [];
+
+async function viewInventoryHistory(itemId) {
+    try {
+        const history = await APIService.getInventoryHistory(itemId);
+        allInventoryHistory = history;
+        filteredHistory = history;
+
+        // Populate item filter
+        const itemFilter = document.getElementById('history-item-filter');
+        const item = inventory.find(i => i.id === itemId);
+        itemFilter.innerHTML = item ? `<option value="${itemId}">${item.name}</option>` : '<option value="">All Items</option>';
+
+        renderInventoryHistory();
+        document.getElementById('inventory-history-modal').style.display = 'block';
+    } catch (error) {
+        console.error('Error loading inventory history:', error);
+        alert('Failed to load inventory history');
+    }
+}
+
+async function viewAllInventoryHistory() {
+    try {
+        const response = await APIService.getAllInventoryHistory();
+        allInventoryHistory = response.history || response;
+        filteredHistory = allInventoryHistory;
+
+        // Populate item filter with all items
+        const itemFilter = document.getElementById('history-item-filter');
+        itemFilter.innerHTML = '<option value="">All Items</option>' +
+            inventory.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
+
+        renderInventoryHistory();
+        document.getElementById('inventory-history-modal').style.display = 'block';
+    } catch (error) {
+        console.error('Error loading all inventory history:', error);
+        alert('Failed to load inventory history');
+    }
+}
+
+function renderInventoryHistory() {
+    const tbody = document.getElementById('inventory-history-tbody');
+
+    if (!filteredHistory || filteredHistory.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 2rem;">No history found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = filteredHistory.map(entry => {
+        const date = new Date(entry.changed_at).toLocaleString();
+        const changeTypeBadge = getChangeTypeBadge(entry.change_type);
+
+        return `
+            <tr>
+                <td>${date}</td>
+                <td>${entry.item_name || 'N/A'}</td>
+                <td>${changeTypeBadge}</td>
+                <td>${entry.field_name || '-'}</td>
+                <td>${entry.old_value || '-'}</td>
+                <td>${entry.new_value || '-'}</td>
+                <td>${entry.changed_by || 'System'}</td>
+                <td>${entry.notes || '-'}</td>
+                <td>
+                    <button class="btn btn-sm" onclick="editHistoryEntry(${entry.id})">📝 Note</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function getChangeTypeBadge(type) {
+    const badges = {
+        'created': '<span class="badge badge-success">Created</span>',
+        'updated': '<span class="badge badge-info">Updated</span>',
+        'stock_change': '<span class="badge badge-warning">Stock Change</span>',
+        'deleted': '<span class="badge badge-danger">Deleted</span>'
+    };
+    return badges[type] || type;
+}
+
+function filterInventoryHistory() {
+    const itemFilter = document.getElementById('history-item-filter').value;
+    const typeFilter = document.getElementById('history-type-filter').value;
+
+    filteredHistory = allInventoryHistory.filter(entry => {
+        const matchesItem = !itemFilter || entry.inventory_id == itemFilter;
+        const matchesType = !typeFilter || entry.change_type === typeFilter;
+        return matchesItem && matchesType;
+    });
+
+    renderInventoryHistory();
+}
+
+async function editHistoryEntry(historyId) {
+    const notes = prompt('Add notes to this change:');
+    if (notes !== null) {
+        try {
+            await APIService.updateInventoryHistory(historyId, { notes });
+            // Refresh history
+            const entry = filteredHistory.find(e => e.id === historyId);
+            if (entry) {
+                if (entry.inventory_id) {
+                    await viewInventoryHistory(entry.inventory_id);
+                } else {
+                    await viewAllInventoryHistory();
+                }
+            }
+        } catch (error) {
+            console.error('Error updating history entry:', error);
+            alert('Failed to update history entry');
+        }
+    }
+}
+
+function closeInventoryHistoryModal() {
+    document.getElementById('inventory-history-modal').style.display = 'none';
+    allInventoryHistory = [];
+    filteredHistory = [];
+}
+
 // Settings Management
 async function loadSettings() {
     try {
@@ -491,6 +613,7 @@ function renderInventory() {
         // Show actions only for owner
         const actionsHtml = userRole === 'owner' ? `
             <td>
+                <button class="action-btn" onclick="viewInventoryHistory(${item.id})">📜 History</button>
                 <button class="action-btn" onclick="showAddStockModal(${item.id})">+ Stock</button>
                 <button class="action-btn" onclick="showRemoveStockModal(${item.id})">- Stock</button>
                 <button class="action-btn" onclick="editItem(${item.id})">Edit</button>

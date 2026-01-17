@@ -219,6 +219,23 @@ async function createTables() {
       )
     `);
 
+    // Inventory history table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS inventory_history (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        inventory_id INT NOT NULL,
+        change_type ENUM('created', 'updated', 'stock_change', 'deleted') NOT NULL,
+        field_name VARCHAR(50),
+        old_value TEXT,
+        new_value TEXT,
+        changed_by VARCHAR(100),
+        changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        notes TEXT,
+        INDEX idx_inventory_id (inventory_id),
+        INDEX idx_changed_at (changed_at)
+      )
+    `);
+
     console.log('✅ Database tables created/verified');
   } catch (error) {
     console.error('❌ Error creating tables:', error);
@@ -232,6 +249,20 @@ async function createTables() {
 async function query(sql, params) {
   const [rows] = await pool.execute(sql, params);
   return rows;
+}
+
+// Log inventory changes for history tracking
+async function logInventoryChange(inventoryId, changeType, fieldName, oldValue, newValue, changedBy) {
+  try {
+    await query(
+      `INSERT INTO inventory_history (inventory_id, change_type, field_name, old_value, new_value, changed_by) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [inventoryId, changeType, fieldName, String(oldValue || ''), String(newValue || ''), changedBy || 'System']
+    );
+  } catch (error) {
+    console.error('Error logging inventory change:', error);
+    // Don't throw - logging shouldn't break the main operation
+  }
 }
 
 // API Routes
@@ -299,6 +330,9 @@ app.post('/api/inventory', async (req, res) => {
       updatedAt: new Date()
     };
 
+    // Log inventory creation
+    await logInventoryChange(item.id, 'created', 'all', null, JSON.stringify(item), 'Owner');
+
     // Emit real-time update to all connected clients
     io.emit('inventory:updated', { action: 'add', item });
 
@@ -353,7 +387,15 @@ app.put('/api/inventory/:id', async (req, res) => {
       ]
     );
 
-    const [item] = await query('SELECT * FROM inventory WHERE id=?', [id]);
+    // Log changes for each modified field
+    const fields = ['name', 'description', 'hsn', 'size', 'colour', 'unit', 'quantity', 'minStock', 'price', 'gst'];
+    for (const field of fields) {
+      if (currentItem[field] != updatedData[field]) {
+        await logInventoryChange(id, 'updated', field, currentItem[field], updatedData[field], 'Owner');
+      }
+    }
+
+    const item = { id, ...updatedData, updatedAt: new Date() };
 
     // Emit real-time update to all connected clients
     io.emit('inventory:updated', { action: 'update', item });
@@ -911,6 +953,73 @@ app.delete('/api/purchases/:id', async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get inventory history for specific item
+app.get('/api/inventory/:id/history', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const history = await query(
+      `SELECT h.*, i.name as item_name 
+       FROM inventory_history h
+       LEFT JOIN inventory i ON h.inventory_id = i.id
+       WHERE h.inventory_id = ?
+       ORDER BY h.changed_at DESC`,
+      [id]
+    );
+    res.json(history);
+  } catch (error) {
+    console.error('Error fetching inventory history:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all inventory history with pagination
+app.get('/api/inventory-history', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = (page - 1) * limit;
+
+    const history = await query(
+      `SELECT h.*, i.name as item_name 
+       FROM inventory_history h
+       LEFT JOIN inventory i ON h.inventory_id = i.id
+       ORDER BY h.changed_at DESC
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
+    );
+
+    const [countResult] = await query('SELECT COUNT(*) as total FROM inventory_history');
+
+    res.json({
+      history,
+      total: countResult.total,
+      page,
+      totalPages: Math.ceil(countResult.total / limit)
+    });
+  } catch (error) {
+    console.error('Error fetching all inventory history:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update inventory history entry (add notes)
+app.put('/api/inventory-history/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+
+    await query(
+      'UPDATE inventory_history SET notes = ? WHERE id = ?',
+      [notes, id]
+    );
+
+    res.json({ success: true, message: 'History entry updated' });
+  } catch (error) {
+    console.error('Error updating inventory history:', error);
     res.status(500).json({ error: error.message });
   }
 });

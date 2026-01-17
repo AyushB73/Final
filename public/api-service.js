@@ -14,13 +14,13 @@ class APIService {
                 },
                 ...options
             });
-            
+
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('API Error Response:', errorText);
                 throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
             }
-            
+
             return await response.json();
         } catch (error) {
             console.error('API Error:', error);
@@ -52,6 +52,22 @@ class APIService {
     static async deleteInventoryItem(id) {
         return await this.request(`/api/inventory/${id}`, {
             method: 'DELETE'
+        });
+    }
+
+    // Inventory History API
+    static async getInventoryHistory(itemId) {
+        return await this.request(`/api/inventory/${itemId}/history`);
+    }
+
+    static async getAllInventoryHistory(page = 1, limit = 50) {
+        return await this.request(`/api/inventory-history?page=${page}&limit=${limit}`);
+    }
+
+    static async updateInventoryHistory(historyId, data) {
+        return await this.request(`/api/inventory-history/${historyId}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
         });
     }
 

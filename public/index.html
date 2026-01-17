@@ -1119,6 +1119,48 @@
         </div>
     </div>
 
+    <!-- Inventory History Modal -->
+    <div id="inventory-history-modal" class="modal">
+        <div class="modal-content" style="max-width: 1200px;">
+            <div class="modal-header">
+                <h2>📜 Inventory Change History</h2>
+                <span class="close" onclick="closeInventoryHistoryModal()">×</span>
+            </div>
+            <div class="modal-search-bar" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                <select id="history-item-filter" onchange="filterInventoryHistory()" style="flex: 1;">
+                    <option value="">All Items</option>
+                </select>
+                <select id="history-type-filter" onchange="filterInventoryHistory()" style="flex: 1;">
+                    <option value="">All Changes</option>
+                    <option value="created">Created</option>
+                    <option value="updated">Updated</option>
+                    <option value="stock_change">Stock Changes</option>
+                    <option value="deleted">Deleted</option>
+                </select>
+            </div>
+            <div class="table-container" style="max-height: 60vh; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>Item</th>
+                            <th>Change Type</th>
+                            <th>Field</th>
+                            <th>Old Value</th>
+                            <th>New Value</th>
+                            <th>Changed By</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-history-tbody">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
