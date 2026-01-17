@@ -97,7 +97,7 @@ body {
 }
 
 .container {
-    max-width: 1400px;
+    max-width: 98%;
     margin: 0 auto;
     background: var(--bg-secondary);
     min-height: 100vh;
@@ -513,7 +513,7 @@ main {
 
 .search-bar input {
     width: 100%;
-    max-width: 500px;
+    max-width: 800px;
     padding: 0.875rem 1.25rem;
     border: 2px solid var(--border);
     border-radius: 12px;
@@ -946,7 +946,7 @@ tbody tr:hover {
     padding: 2rem;
     border-radius: 20px;
     width: 90%;
-    max-width: 500px;
+    max-width: 600px;
     box-shadow: var(--shadow-xl);
     animation: slideUp 0.3s ease;
     border: 1px solid var(--border);

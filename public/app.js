@@ -5,6 +5,7 @@ let currentBillItems = [];
 let customers = [];
 let purchases = [];
 let suppliers = [];
+let proformaInvoices = [];
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load all data from database
     await loadInventory();
     await loadBills();
+    await loadProformaInvoices();
     await loadCustomers();
     await loadPurchases();
     await loadSuppliers();
@@ -51,7 +53,7 @@ function setupNavigation() {
         btn.addEventListener('click', () => {
             const view = btn.dataset.view;
             switchView(view);
-            toggleMenu(); // Close menu after selection
+            // toggleMenu() logic is now handled inside switchView if checking sidebar.active
         });
     });
 }
@@ -65,7 +67,8 @@ function switchView(viewName) {
 
     // Update active classes for views
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById(`${viewName}-view`).classList.add('active');
+    const viewEl = document.getElementById(`${viewName}-view`);
+    if (viewEl) viewEl.classList.add('active');
 
     // Update active classes for ALL navigation buttons (Sidebar + Bottom Nav)
     document.querySelectorAll('.nav-btn, .bottom-nav-btn').forEach(b => b.classList.remove('active'));
@@ -82,10 +85,16 @@ function switchView(viewName) {
         renderDashboard();
     } else if (viewName === 'sales') {
         renderSales();
+    } else if (viewName === 'billing') {
+        // Auto-generate next invoice number when opening billing view
+        const nextInvoiceNo = generateNextInvoiceNumber();
+        document.getElementById('invoice-number').value = nextInvoiceNo;
     } else if (viewName === 'purchases') {
         renderPurchases();
     } else if (viewName === 'settings') {
         loadSettings();
+    } else if (viewName === 'proforma') {
+        renderProformaInvoices();
     }
 }
 
@@ -111,6 +120,112 @@ function toggleMenu() {
     console.log('Sidebar is now:', isActive ? 'OPEN' : 'CLOSED');
     console.log('Sidebar classes:', sidebar.className);
     console.log('Sidebar computed left:', window.getComputedStyle(sidebar).left);
+}
+
+// Proforma Management
+async function loadProformaInvoices() {
+    try {
+        const response = await fetch(`${API_URL}/api/proforma`);
+        if (!response.ok) throw new Error('Failed to fetch proforma invoices');
+        proformaInvoices = await response.json();
+        renderProformaInvoices();
+    } catch (error) {
+        console.error('Error loading proforma invoices:', error);
+    }
+}
+
+function renderProformaInvoices() {
+    const tbody = document.getElementById('proforma-tbody');
+    const totalCount = document.getElementById('proforma-total-count');
+
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    // Update count
+    if (totalCount) totalCount.textContent = proformaInvoices.length;
+
+    if (proformaInvoices.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No proforma invoices found. Click "Create Quote" to start.</td></tr>';
+        return;
+    }
+
+    proformaInvoices.slice().reverse().forEach(pf => {
+        const row = document.createElement('tr');
+        const date = new Date(pf.createdAt).toLocaleDateString('en-IN');
+
+        row.innerHTML = `
+            <td><strong>${pf.proformaNo || '#' + pf.id}</strong></td>
+            <td>${date}</td>
+            <td>${pf.customer.name}</td>
+            <td><strong>₹${(pf.total || 0).toFixed(2)}</strong></td>
+            <td>
+                <button class="action-btn" onclick="viewProformaDetails(${pf.id})" title="View Details">👁️</button>
+                <button class="action-btn delete" onclick="deleteProforma(${pf.id})" title="Delete">🗑️</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function filterProforma() {
+    const search = document.getElementById('search-proforma').value.toLowerCase();
+    const rows = document.querySelectorAll('#proforma-tbody tr');
+
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(search) ? '' : 'none';
+    });
+}
+
+async function deleteProforma(id) {
+    if (!confirm('Are you sure you want to delete this quote?')) return;
+
+    try {
+        const response = await fetch(`${API_URL}/api/proforma/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) throw new Error('Failed to delete');
+
+        await loadProformaInvoices();
+        alert('Quote deleted successfully');
+    } catch (error) {
+        console.error('Error deleting proforma:', error);
+        alert('Failed to delete quote');
+    }
+}
+
+function generateNextInvoiceNumber() {
+    if (bills.length === 0) return 'INV-1';
+
+    // Try to find the max number in existing invoice numbers
+    // Assuming format INV-{number} or just {number}
+    let maxNum = 0;
+
+    bills.forEach(bill => {
+        const invNo = bill.customInvoiceNo || '';
+        // Extract number from string
+        const matches = invNo.match(/(\d+)$/);
+        if (matches) {
+            const num = parseInt(matches[1]);
+            if (!isNaN(num) && num > maxNum) {
+                maxNum = num;
+            }
+        }
+    });
+
+    // If no custom numbers found, fallback to bills count + 1
+    if (maxNum === 0) return `INV-${bills.length + 1}`;
+
+    // Return next number with prefix if the last one had a prefix
+    const lastBillWithCustomNo = bills.find(b => (b.customInvoiceNo || '').match(/(\d+)$/));
+    if (lastBillWithCustomNo) {
+        const prefix = lastBillWithCustomNo.customInvoiceNo.replace(/(\d+)$/, '');
+        return `${prefix}${maxNum + 1}`;
+    }
+
+    return `INV-${maxNum + 1}`;
 }
 
 // Make functions available globally (moved to end of file after all functions are defined)
@@ -196,7 +311,7 @@ function renderInventory() {
         ` : '<td style="display: none;"></td>';
 
         row.innerHTML = `
-            <td data-label="ID">${item.id}</td>
+            <td data-label="S.No">${inventory.indexOf(item) + 1}</td>
             <td data-label="Name"><strong>${item.name}</strong></td>
             <td data-label="Description">${item.description || '-'}</td>
             <td data-label="HSN">${item.hsn || '-'}</td>
@@ -484,9 +599,17 @@ function editItem(id) {
 // Billing
 function updateProductSelect() {
     const select = document.getElementById('product-select');
-    select.innerHTML = '<option value="">Select Product</option>';
+    select.innerHTML = '<option value="">Select Product ...</option>';
 
-    inventory.forEach(item => {
+    if (inventory.length === 0) {
+        select.innerHTML = '<option value="">No products available</option>';
+        return;
+    }
+
+    // Sort alphabetically
+    const sortedInventory = [...inventory].sort((a, b) => a.name.localeCompare(b.name));
+
+    sortedInventory.forEach(item => {
         if (item.quantity > 0) {
             const option = document.createElement('option');
             const displayText = `${item.name} - ${item.size} ${item.unit}${item.colour ? ' (' + item.colour + ')' : ''} (Stock: ${item.quantity})`;
@@ -495,34 +618,51 @@ function updateProductSelect() {
             select.appendChild(option);
         }
     });
+
+    // Reset loop
+    select.onchange = () => {
+        const item = inventory.find(i => i.id == select.value);
+        if (item) {
+            document.getElementById('item-rate').value = item.price;
+            document.getElementById('item-quantity').placeholder = `${item.unit}`;
+            // Clear calculator fields
+            if (document.getElementById('item-len')) document.getElementById('item-len').value = '';
+            if (document.getElementById('item-wid')) document.getElementById('item-wid').value = '';
+            if (document.getElementById('item-pieces')) document.getElementById('item-pieces').value = '';
+            document.getElementById('item-quantity').value = '';
+        }
+    };
 }
 
-// Auto-fill rate when product is selected
+// Auto-fill rate when product is selected (Legacy Listener Cleanup)
 document.addEventListener('DOMContentLoaded', () => {
-    const productSelect = document.getElementById('product-select');
-    if (productSelect) {
-        productSelect.addEventListener('change', function () {
-            const productId = parseInt(this.value);
-            if (productId) {
-                const product = inventory.find(p => p.id === productId);
-                if (product) {
-                    const price = parseFloat(product.price) || 0;
-                    document.getElementById('item-rate').value = price.toFixed(2);
-                }
-            } else {
-                document.getElementById('item-rate').value = '';
-            }
-        });
-    }
+    // Existing listener might duplicate logic, so we rely on the onchange handler assigned in updateProductSelect
 });
+
+function calculateBillItemQty() {
+    const l = parseFloat(document.getElementById('item-len').value) || 0;
+    const w = parseFloat(document.getElementById('item-wid').value) || 0;
+    const pieces = parseFloat(document.getElementById('item-pieces').value) || 0;
+
+    if (l > 0 && w > 0 && pieces > 0) {
+        const totalQty = (l * w * pieces).toFixed(2);
+        document.getElementById('item-quantity').value = totalQty;
+    }
+}
 
 function addBillItem() {
     const productId = parseInt(document.getElementById('product-select').value);
-    const quantity = parseInt(document.getElementById('item-quantity').value);
+    const rawQuantity = document.getElementById('item-quantity').value;
+    const quantity = parseFloat(rawQuantity);
     const customRate = parseFloat(document.getElementById('item-rate').value);
 
-    if (!productId || !quantity || !customRate) {
-        alert('Please select a product, enter quantity, and enter rate');
+    // Dimensions
+    const length = parseFloat(document.getElementById('item-len').value) || null;
+    const width = parseFloat(document.getElementById('item-wid').value) || null;
+    const pieces = parseFloat(document.getElementById('item-pieces').value) || null;
+
+    if (!productId || isNaN(quantity) || quantity <= 0 || isNaN(customRate)) {
+        alert('Please select a product, enter valid quantity, and enter rate');
         return;
     }
 
@@ -530,30 +670,57 @@ function addBillItem() {
     if (!product) return;
 
     if (quantity > product.quantity) {
-        alert(`Only ${product.quantity} units available in stock`);
+        alert(`Only ${product.quantity} ${product.unit} available in stock`);
         return;
     }
 
-    const existingItem = currentBillItems.find(item => item.id === productId && item.price === customRate);
+    // Since we now support dimensions which might vary per line item despite same product ID,
+    // we should NOT merge items if dimensions differ.
+    // For simplicity, let's always add a new row if dimensions are used.
+
+    const existingItem = currentBillItems.find(item =>
+        item.id === productId &&
+        item.price === customRate &&
+        !length && !item.length // Only merge if no dimensions
+    );
+
     if (existingItem) {
         existingItem.quantity += quantity;
+        existingItem.total = (existingItem.quantity * customRate) + ((existingItem.quantity * customRate * existingItem.gst) / 100);
+        existingItem.gstAmount = (existingItem.quantity * customRate * existingItem.gst) / 100;
     } else {
+        const gstAmount = (customRate * quantity * product.gst) / 100;
+        const total = (customRate * quantity) + gstAmount;
+
         currentBillItems.push({
             id: productId,
             name: product.name,
             size: product.size,
             unit: product.unit,
+            // Store Dimensions
+            length: length,
+            width: width,
+            pieces: pieces,
+            // Standard fields
             price: customRate,
             gst: product.gst,
-            quantity: quantity
+            quantity: quantity,
+            gstAmount: gstAmount,
+            total: total
         });
     }
 
     renderBillItems();
+
+    // Reset inputs
     document.getElementById('product-select').value = '';
     document.getElementById('item-quantity').value = '';
     document.getElementById('item-rate').value = '';
+    document.getElementById('item-len').value = '';
+    document.getElementById('item-wid').value = '';
+    document.getElementById('item-pieces').value = '';
 }
+
 
 function renderBillItems() {
     const tbody = document.getElementById('bill-items-tbody');
@@ -575,13 +742,13 @@ function renderBillItems() {
         row.innerHTML = `
             <td>${index + 1}</td>
             <td>${item.name}</td>
-            <td>${item.size} ${item.unit}</td>
-            <td>${item.quantity}</td>
+            <td>${item.length && item.width ? `${item.length} x ${item.width}` : '-'}</td>
+            <td>${item.pieces || '-'}</td>
+            <td><strong>${item.quantity} ${item.unit}</strong></td>
             <td>₹${item.price.toFixed(2)}</td>
             <td>₹${amount.toFixed(2)}</td>
             <td>${item.gst}%</td>
-            <td>₹${gstAmount.toFixed(2)}</td>
-            <td>₹${itemTotal.toFixed(2)}</td>
+            <td><strong>₹${itemTotal.toFixed(2)}</strong></td>
             <td>
                 <button class="action-btn delete" onclick="removeBillItem(${index})">×</button>
             </td>
@@ -628,7 +795,8 @@ function removeBillItem(index) {
     renderBillItems();
 }
 
-async function generateBill() {
+async function generateBill(isProforma = false) {
+    const customId = document.getElementById('invoice-number').value;
     const customerName = document.getElementById('customer-name').value;
     const customerPhone = document.getElementById('customer-phone').value;
     const customerGst = document.getElementById('customer-gst').value;
@@ -713,7 +881,7 @@ async function generateBill() {
         // Continue even if customer save fails
     }
 
-    const bill = {
+    const billData = {
         customer: customerData,
         items: itemsWithGST,
         subtotal,
@@ -724,7 +892,38 @@ async function generateBill() {
         paymentTracking: paymentTracking
     };
 
-    console.log('Creating bill with data:', JSON.stringify(bill, null, 2));
+    if (isProforma) {
+        billData.proformaNo = customId ? `PF-${customId.replace('INV-', '')}` : `PF-${Date.now()}`;
+        // Proforma Specific Logic
+        try {
+            console.log('Sending proforma to API...');
+            const savedProforma = await fetch(`${API_URL}/api/proforma`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(billData)
+            }).then(res => res.json());
+
+            console.log('✅ Proforma saved successfully:', savedProforma);
+
+            await loadProformaInvoices();
+
+            // Generate PDF
+            generateBillPDF(savedProforma, 'PROFORMA INVOICE');
+
+            alert(`✅ Proforma Invoice generated successfully!\n\nPDF has been downloaded as Quote.`);
+
+            // Reset form
+            resetBillingForm();
+            switchView('proforma');
+        } catch (error) {
+            console.error('Error generating proforma:', error);
+            alert('Failed to generate proforma invoice.');
+        }
+        return;
+    }
+
+    // Regular Bill Logic
+    billData.customInvoiceNo = customId;
 
     try {
         // Update inventory quantities in database
@@ -743,7 +942,7 @@ async function generateBill() {
 
         // Save bill to database
         console.log('Sending bill to API...');
-        const savedBill = await APIService.addBill(bill);
+        const savedBill = await APIService.addBill(billData);
         console.log('✅ Bill saved successfully:', savedBill);
 
         // Reload data to get fresh bills list
@@ -759,7 +958,7 @@ async function generateBill() {
         console.log('Generating PDF for bill:', billForPDF);
 
         // Generate PDF with normalized bill
-        generateBillPDF(billForPDF);
+        generateBillPDF(billForPDF, 'TAX INVOICE');
 
         // Check for low stock after sale
         const lowStockWarnings = [];
@@ -779,15 +978,7 @@ async function generateBill() {
         alert(alertMessage);
 
         // Reset form
-        document.getElementById('customer-search').value = '';
-        document.getElementById('customer-name').value = '';
-        document.getElementById('customer-phone').value = '';
-        document.getElementById('customer-gst').value = '';
-        document.getElementById('customer-address').value = '';
-        document.getElementById('customer-state').value = '';
-        document.getElementById('customer-payment-status').value = '';
-        currentBillItems = [];
-        renderBillItems();
+        resetBillingForm();
 
         // Switch to sales view to show the new bill
         switchView('sales');
@@ -797,6 +988,19 @@ async function generateBill() {
         console.error('Stack trace:', error.stack);
         alert('Failed to generate bill. Please try again.\n\nError: ' + error.message);
     }
+}
+
+function resetBillingForm() {
+    document.getElementById('customer-search').value = '';
+    document.getElementById('customer-name').value = '';
+    document.getElementById('customer-phone').value = '';
+    document.getElementById('customer-gst').value = '';
+    document.getElementById('customer-address').value = '';
+    document.getElementById('customer-state').value = '';
+    document.getElementById('customer-payment-status').value = '';
+    currentBillItems = [];
+    renderBillItems();
+    generateNextInvoiceNumber();
 }
 
 // Bill IDs are now auto-generated by the database
@@ -1028,16 +1232,22 @@ function closePurchaseModal() {
     updatePurchaseProductSelects();
 }
 
-function updatePurchaseProductSelects() {
-    const selects = document.querySelectorAll('.purchase-product');
+function updatePurchaseProductSelects(specificSelect = null) {
+    const selects = specificSelect ? [specificSelect] : document.querySelectorAll('.purchase-product');
     selects.forEach(select => {
-        select.innerHTML = '<option value="">Select Product</option>';
-        inventory.forEach(item => {
-            const option = document.createElement('option');
-            option.value = item.id;
-            option.textContent = `${item.name} - ${item.size} ${item.unit}`;
-            select.appendChild(option);
-        });
+        // Only populate if empty (has no options or just default)
+        if (select.options.length <= 1) {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select Product</option>';
+            inventory.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = `${item.name} - ${item.size} ${item.unit}`;
+                option.dataset.description = `${item.description || ''} ${item.colour || ''}`.trim();
+                select.appendChild(option);
+            });
+            if (currentValue) select.value = currentValue;
+        }
     });
 }
 
@@ -1057,20 +1267,83 @@ function addPurchaseItemRow() {
     newRow.className = 'purchase-item-row';
     newRow.innerHTML = `
         <span class="item-sno" style="padding: 0.5rem; font-weight: bold; min-width: 30px; display: inline-flex; align-items: center;"></span>
-        <select class="purchase-product" required>
+        <select class="purchase-product" required onchange="updatePurchaseItemDetails(this)">
             <option value="">Select Product</option>
         </select>
+        <input type="text" class="purchase-desc" placeholder="Desc/Colour" readonly style="background: #f8fafc;">
         <input type="number" class="purchase-qty" placeholder="Quantity" min="1" required>
         <input type="number" class="purchase-rate" placeholder="Rate (₹)" step="0.01" min="0" required>
         <button type="button" class="btn btn-secondary" onclick="removePurchaseItemRow(this)">−</button>
     `;
     container.appendChild(newRow);
-    updatePurchaseProductSelects();
+    const newSelect = newRow.querySelector('.purchase-product');
+    updatePurchaseProductSelects(newSelect);
     updatePurchaseItemSNos();
+}
+
+function updatePurchaseItemDetails(selectElement) {
+    const row = selectElement.closest('.purchase-item-row');
+    const descInput = row.querySelector('.purchase-desc');
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+
+    if (selectedOption && selectedOption.value) {
+        descInput.value = selectedOption.dataset.description || '';
+        // Clear calculator inputs if product changed
+        if (row.querySelector('.purchase-len')) row.querySelector('.purchase-len').value = '';
+        if (row.querySelector('.purchase-wid')) row.querySelector('.purchase-wid').value = '';
+        if (row.querySelector('.purchase-pieces')) row.querySelector('.purchase-pieces').value = '';
+        row.querySelector('.purchase-qty').value = '';
+    } else {
+        descInput.value = '';
+    }
+}
+
+// Purchase Calculator Logic
+function calculatePurchaseItemQty(input) {
+    const row = input.closest('.purchase-item-row');
+    const l = parseFloat(row.querySelector('.purchase-len').value) || 0;
+    const w = parseFloat(row.querySelector('.purchase-wid').value) || 0;
+    const pieces = parseFloat(row.querySelector('.purchase-pieces').value) || 0;
+
+    if (l > 0 && w > 0 && pieces > 0) {
+        const totalQty = (l * w * pieces).toFixed(2);
+        row.querySelector('.purchase-qty').value = totalQty;
+    }
 }
 
 function removePurchaseItemRow(button) {
     button.parentElement.remove();
+    updatePurchaseItemSNos();
+}
+
+// Update Add Purchase Row Template
+function addPurchaseItemRow() {
+    const container = document.getElementById('purchase-items-container');
+    const newRow = document.createElement('div');
+    newRow.className = 'purchase-item-row';
+    newRow.innerHTML = `
+        <span class="item-sno" style="padding: 0.5rem; font-weight: bold; min-width: 30px; display: inline-flex; align-items: center;"></span>
+        <select class="purchase-product" required onchange="updatePurchaseItemDetails(this)">
+            <option value="">Select Product</option>
+        </select>
+        
+        <!-- Calculator Inputs -->
+        <div style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.03); padding: 2px; border-radius: 4px;">
+            <input type="number" class="purchase-len" placeholder="L(ft)" step="0.01" style="width: 50px;" oninput="calculatePurchaseItemQty(this)">
+            <span style="color:#aaa;">x</span>
+            <input type="number" class="purchase-wid" placeholder="W(ft)" step="0.01" style="width: 50px;" oninput="calculatePurchaseItemQty(this)">
+            <span style="color:#aaa;">x</span>
+            <input type="number" class="purchase-pieces" placeholder="Pcs" min="1" style="width: 50px;" oninput="calculatePurchaseItemQty(this)">
+        </div>
+
+        <input type="text" class="purchase-desc" placeholder="Desc/Col" readonly style="background: #f8fafc; max-width: 100px;">
+        <input type="number" class="purchase-qty" placeholder="Tot.Qty" min="0.01" step="0.01" required style="font-weight: bold;">
+        <input type="number" class="purchase-rate" placeholder="Rate (₹)" step="0.01" min="0" required>
+        <button type="button" class="btn btn-secondary" onclick="removePurchaseItemRow(this)">−</button>
+    `;
+    container.appendChild(newRow);
+    const newSelect = newRow.querySelector('.purchase-product');
+    updatePurchaseProductSelects(newSelect);
     updatePurchaseItemSNos();
 }
 
@@ -1099,8 +1372,13 @@ async function addPurchase(event) {
 
     itemRows.forEach(row => {
         const productId = parseInt(row.querySelector('.purchase-product').value);
-        const quantity = parseInt(row.querySelector('.purchase-qty').value);
+        const quantity = parseFloat(row.querySelector('.purchase-qty').value);
         const rate = parseFloat(row.querySelector('.purchase-rate').value);
+
+        // Dimensions
+        const len = parseFloat(row.querySelector('.purchase-len').value) || null;
+        const wid = parseFloat(row.querySelector('.purchase-wid').value) || null;
+        const pcs = parseFloat(row.querySelector('.purchase-pieces').value) || null;
 
         if (productId && quantity && rate) {
             const product = inventory.find(p => p.id === productId);
@@ -1120,7 +1398,9 @@ async function addPurchase(event) {
                     amount: amount,
                     gst: gst,
                     gstAmount: gstAmount,
-                    total: amount + gstAmount
+                    total: amount + gstAmount,
+                    description: product.description || '',
+                    colour: product.colour || ''
                 });
 
                 subtotal += amount;
@@ -1396,6 +1676,7 @@ function viewPurchaseDetails(purchaseId) {
         <tr>
             <td>${idx + 1}</td>
             <td>${item.name}</td>
+            <td>${item.description || item.colour || '-'}</td>
             <td>${item.size} ${item.unit}</td>
             <td>${item.quantity}</td>
             <td>₹${item.rate.toFixed(2)}</td>
@@ -1473,6 +1754,7 @@ function viewPurchaseDetails(purchaseId) {
                             <tr>
                                 <th>S.No</th>
                                 <th>Item Name</th>
+                                <th>Desc/Colour</th>
                                 <th>Size</th>
                                 <th>Qty</th>
                                 <th>Rate (₹)</th>
@@ -4390,26 +4672,23 @@ function updatePeriodInfo(period) {
 
 
 // PDF Generation Function
-function generateBillPDF(bill) {
-    console.log('generateBillPDF called with bill:', bill);
-
+function generateBillPDF(bill, title = 'TAX INVOICE') {
     // Validate bill object
-    if (!bill) {
-        alert('Error: Bill data is missing.');
-        return;
-    }
+    if (!bill) { alert('Error: Bill data is missing.'); return; }
 
-    // Ensure all numeric fields have defaults
+    console.log('Generating PDF:', title, bill);
+
+    // Defaults
     bill.subtotal = parseFloat(bill.subtotal) || 0;
     bill.totalGST = parseFloat(bill.totalGST) || 0;
     bill.total = parseFloat(bill.total) || 0;
-    bill.id = bill.id || 'N/A';
+    // Handle specific ID fields based on type
+    const displayId = bill.proformaNo || bill.customInvoiceNo || bill.invoiceNo || bill.id || 'N/A';
+
     bill.createdAt = bill.createdAt || new Date();
     bill.gstBreakdown = bill.gstBreakdown || {};
     bill.paymentStatus = bill.paymentStatus || 'paid';
     bill.customer = bill.customer || { name: 'Cash Customer' };
-
-    // Ensure all items have numeric fields
     bill.items = (bill.items || []).map(item => ({
         ...item,
         quantity: parseFloat(item.quantity) || 0,
@@ -4425,140 +4704,103 @@ function generateBillPDF(bill) {
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-
-    // Load saved company and banking details
-    const company = JSON.parse(localStorage.getItem('companyDetails') || '{}');
-    const banking = JSON.parse(localStorage.getItem('bankingDetails') || '{}');
+    const companyDetails = JSON.parse(localStorage.getItem('companyDetails') || '{}');
+    const bankingDetails = JSON.parse(localStorage.getItem('bankingDetails') || '{}');
 
     // Branding Colors
-    const primaryColor = [44, 62, 80]; // Dark Navy
-    const accentColor = [37, 99, 235]; // Blue
-    const darkColor = [0, 0, 0];
-    const grayColor = [100, 100, 100];
-    const lightGray = [245, 247, 250];
+    const primaryColor = [102, 126, 234]; // #667eea
+    const secondaryColor = [118, 75, 162]; // #764ba2
+    const accentColor = [245, 247, 250]; // Light Gray
+    const textColor = [45, 55, 72]; // Dark Gray
 
-    // 1. TOP BAR - TAX INVOICE
+    // 1. HEADER BACKGROUND
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, 0, 210, 40, 'F');
+
+    // 2. TITLE & ID
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont("helvetica", "bold");
+    doc.text(title, 105, 18, { align: "center" });
+
     doc.setFontSize(10);
-    doc.setTextColor(...grayColor);
-    doc.text('TAX INVOICE', 105, 10, { align: 'center' });
-    doc.text('ORIGINAL FOR RECIPIENT', 200, 10, { align: 'right' });
-    doc.setDrawColor(200, 200, 200);
-    doc.line(10, 12, 200, 12);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${title === 'PROFORMA INVOICE' ? 'Estimate' : 'Invoice'} #: ${displayId}`, 105, 28, { align: "center" });
 
-    // 2. HEADER SECTION (Logo & Seller Info)
-    let yPos = 20;
+    // 3. COMPANY INFO (Left)
+    let yPos = 50;
 
     // Logo
-    if (company.logo) {
+    if (companyDetails.logo) {
         try {
-            doc.addImage(company.logo, 'PNG', 12, yPos, 35, 35);
-        } catch (e) {
-            console.error('Logo add error:', e);
-        }
+            doc.addImage(companyDetails.logo, 'PNG', 12, 10, 25, 25);
+        } catch (e) { console.error('Logo error', e) }
     }
 
-    // Seller Details (Stacked on right if logo exists, or center if not)
-    const sellerX = company.logo ? 55 : 10;
-    doc.setFont(undefined, 'bold');
+    doc.setTextColor(...textColor);
     doc.setFontSize(14);
-    doc.setTextColor(...darkColor);
-    doc.text(company.name || "PLASTIWOOD", sellerX, yPos + 5);
+    doc.setFont("helvetica", "bold");
+    doc.text(companyDetails.name || "PLASTIWOOD", 14, yPos);
 
-    doc.setFont(undefined, 'normal');
     doc.setFontSize(9);
-    doc.setTextColor(...grayColor);
-    const sellerAddressLines = doc.splitTextToSize(company.address || "Add Address in Settings", 80);
-    doc.text(sellerAddressLines, sellerX, yPos + 10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    const sellerAddressLines = doc.splitTextToSize(companyDetails.address || "", 80);
+    doc.text(sellerAddressLines, 14, yPos + 6);
+    doc.text(`GSTIN: ${companyDetails.gst || 'N/A'}`, 14, yPos + 6 + (sellerAddressLines.length * 4));
 
-    let sellerContactY = yPos + 10 + (sellerAddressLines.length * 4);
-    doc.setTextColor(...darkColor);
-    doc.setFont(undefined, 'bold');
-    doc.text(`GSTIN: ${company.gst || 'N/A'}`, sellerX, sellerContactY);
-    doc.setFont(undefined, 'normal');
-    doc.setTextColor(...grayColor);
-    doc.text(`Mobile: ${company.phone || 'N/A'}`, sellerX, sellerContactY + 4);
-    doc.text(`Email: ${company.email || 'N/A'}`, sellerX, sellerContactY + 8);
+    // 4. CUSTOMER INFO (Right)
+    const rightColX = 120;
+    doc.setTextColor(...textColor);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Bill To:", rightColX, yPos);
 
-    // Invoice Meta (Box on top right)
-    const metaX = 140;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+
+    const customer = bill.customer || {};
+    doc.text(customer.name || "Walk-in Customer", rightColX, yPos + 6);
+    const custAddrLines = doc.splitTextToSize(customer.address || "", 80);
+    doc.text(custAddrLines, rightColX, yPos + 11);
+
+    const nextY = yPos + 11 + (custAddrLines.length * 4);
+    doc.text(`Phone: ${customer.phone || 'N/A'}`, rightColX, nextY);
+    if (customer.gst) doc.text(`GSTIN: ${customer.gst}`, rightColX, nextY + 4);
+
+    // 5. DATES & STATUS
+    yPos = Math.max(nextY + 10, yPos + 25);
     doc.setDrawColor(200, 200, 200);
-    doc.rect(metaX, yPos, 60, 30);
-    doc.line(metaX, yPos + 15, 200, yPos + 15);
-    doc.line(metaX + 30, yPos, metaX + 30, yPos + 30);
+    doc.line(14, yPos, 196, yPos);
 
-    doc.setFontSize(8);
-    doc.text('Invoice #:', metaX + 2, yPos + 5);
-    doc.setFont(undefined, 'bold');
-    doc.text(`${bill.id}`, metaX + 2, yPos + 10);
-
-    doc.setFont(undefined, 'normal');
-    doc.text('Invoice Date:', metaX + 32, yPos + 5);
-    doc.setFont(undefined, 'bold');
-    doc.text(new Date(bill.createdAt).toLocaleDateString('en-IN'), metaX + 32, yPos + 10);
-
-    doc.setFont(undefined, 'normal');
-    doc.text('Place of Supply:', metaX + 2, yPos + 20);
-    doc.setFont(undefined, 'bold');
-    doc.text(bill.customer.state === 'same' ? 'STATE' : 'OTHER STATE', metaX + 2, yPos + 25);
-
-    doc.setFont(undefined, 'normal');
-    doc.text('Due Date:', metaX + 32, yPos + 20);
-    doc.setFont(undefined, 'bold');
-    // Calculate due date as 30 days after bill creation
-    const dueDate = new Date(bill.createdAt);
-    dueDate.setDate(dueDate.getDate() + 30);
-    doc.text(dueDate.toLocaleDateString('en-IN'), metaX + 32, yPos + 25);
-
-    yPos = 55;
-    doc.line(10, yPos, 200, yPos);
-
-    // 3. ADDRESS SECTION (Bill/Ship To Shared Box)
-    yPos += 5;
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(...darkColor);
-    doc.text('Customer Details / Bill To:', 12, yPos);
-    doc.text('Shipping Address:', 105, yPos);
-
-    yPos += 5;
-    doc.setFont(undefined, 'normal');
-    doc.setTextColor(...grayColor);
+    yPos += 8;
     doc.setFontSize(10);
-    doc.setTextColor(...darkColor);
-    doc.text(bill.customer.name, 12, yPos);
-    doc.text(bill.customer.name, 105, yPos); // Assuming ship to same
+    doc.setTextColor(...textColor);
+    doc.text(`Date: ${new Date(bill.createdAt || Date.now()).toLocaleDateString('en-IN')}`, 14, yPos);
+    doc.text(`Place of Supply: ${customer.state === 'same' ? 'Intra-State (SGST+CGST)' : 'Inter-State (IGST)'}`, 196, yPos, { align: 'right' });
 
-    yPos += 4;
-    doc.setFontSize(9);
-    doc.setTextColor(...grayColor);
-    const custAddrLines = doc.splitTextToSize(bill.customer.address || "N/A", 80);
-    doc.text(custAddrLines, 12, yPos);
-    doc.text(custAddrLines, 105, yPos);
-
-    let addrBottomY = yPos + (custAddrLines.length * 4);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(...darkColor);
-    doc.text(`Ph: ${bill.customer.phone || 'N/A'}`, 12, addrBottomY);
-    if (bill.customer.gst) doc.text(`GST: ${bill.customer.gst}`, 12, addrBottomY + 4);
-
-    yPos = Math.max(addrBottomY + 8, yPos + 15);
-    doc.line(10, yPos, 200, yPos);
-
-    // 4. ITEMS TABLE
-    const tableHeaders = [['#', 'Item', 'HSN/SAC', 'Rate', 'Qty', 'Taxable Value', 'Tax Amount', 'Amount']];
+    // 6. ITEMS TABLE
+    yPos += 8;
+    const tableHeaders = [['#', 'Item Desciption', 'HSN', 'Qty', 'Rate', 'Tax', 'Amount']];
     const tableData = bill.items.map((item, index) => {
-        const taxable = item.amount;
-        const taxRate = item.gst;
-        const taxVal = item.gstAmount;
+        let desc = item.name;
+        if (item.length && item.width) {
+            desc += `\nType: ${item.size} ${item.unit}`;
+            desc += `\nDim: ${item.length}x${item.width} (${item.pieces}pcs)`;
+        } else if (item.size) {
+            desc += `\n(${item.size} ${item.unit})`;
+        }
+
         return [
             index + 1,
-            item.name + (item.size ? ` (${item.size})` : ''),
+            desc,
             inventory.find(i => i.id === item.id)?.hsn || '-',
-            item.price.toFixed(2),
-            item.quantity.toString(),
-            taxable.toFixed(2),
-            `${taxVal.toFixed(2)} (${taxRate}%)`,
-            item.total.toFixed(2)
+            // If dimensions are present, show quantity as Total Area, else standard quantity
+            `${item.quantity} ${item.unit}`,
+            `Rs. ${item.price.toFixed(2)}`,
+            `${item.gst}%`,
+            `Rs. ${item.total.toFixed(2)}`
         ];
     });
 
@@ -4567,167 +4809,130 @@ function generateBillPDF(bill) {
         head: tableHeaders,
         body: tableData,
         theme: 'grid',
-        headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', lineWidth: 0.1, halign: 'center' },
-        bodyStyles: { fontSize: 8, textColor: [50, 50, 50], lineWidth: 0.1 },
-        columnStyles: {
-            0: { halign: 'center', cellWidth: 8 },
-            1: { cellWidth: 50 },
-            4: { halign: 'center', cellWidth: 10 },
-            3: { halign: 'right' },
-            5: { halign: 'right' },
-            6: { halign: 'right' },
-            7: { halign: 'right' }
+        headStyles: {
+            fillColor: primaryColor,
+            textColor: 255,
+            fontStyle: 'bold',
+            halign: 'center'
         },
-        margin: { left: 10, right: 10 }
+        bodyStyles: {
+            fontSize: 9,
+            textColor: textColor,
+            valign: 'middle'
+        },
+        columnStyles: {
+            0: { halign: 'center', cellWidth: 10 },
+            1: { cellWidth: 70 },
+            3: { halign: 'center' },
+            4: { halign: 'right' },
+            5: { halign: 'center' },
+            6: { halign: 'right', fontStyle: 'bold' }
+        },
+        margin: { left: 14, right: 14 }
     });
 
-    yPos = doc.lastAutoTable.finalY;
+    yPos = doc.lastAutoTable.finalY + 5;
 
-    // 5. TOTALS ROW
-    doc.setDrawColor(200, 200, 200);
-    doc.setFillColor(250, 250, 250);
-    doc.rect(metaX, yPos, 60, 20, 'F');
+    // 7. SUMMARY SECTION
+    const summaryX = 120;
+    const valX = 196;
+
     doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
-    doc.text('Taxable Amount', metaX + 5, yPos + 6);
-    doc.text(`Rs. ${bill.subtotal.toFixed(2)}`, 200, yPos + 6, { align: 'right' });
+    doc.setTextColor(...textColor);
 
-    const taxType = bill.gstBreakdown.type === 'SGST+CGST' ? 'GST (SGST+CGST)' : 'IGST';
-    doc.text(taxType, metaX + 5, yPos + 12);
-    doc.text(`Rs. ${bill.totalGST.toFixed(2)}`, 200, yPos + 12, { align: 'right' });
+    doc.text('Taxable Amount:', summaryX, yPos + 5);
+    doc.text(`Rs. ${bill.subtotal.toFixed(2)}`, valX, yPos + 5, { align: 'right' });
 
+    doc.text('Total GST:', summaryX, yPos + 10);
+    doc.text(`Rs. ${bill.totalGST.toFixed(2)}`, valX, yPos + 10, { align: 'right' });
+
+    // Colorful Total Box
+    doc.setFillColor(...secondaryColor); // Purple
+    doc.rect(summaryX - 5, yPos + 15, 95, 12, 'F');
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(11);
-    doc.setFont(undefined, 'bold');
-    doc.line(metaX, yPos + 14, 200, yPos + 14);
-    doc.text('Total', metaX + 5, yPos + 18);
-    doc.text(`Rs. ${bill.total.toFixed(2)}`, 200, yPos + 18, { align: 'right' });
+    doc.setFont("helvetica", "bold");
+    doc.text('Grand Total:', summaryX, yPos + 23);
+    doc.text(`Rs. ${bill.total.toFixed(2)}`, valX, yPos + 23, { align: 'right' });
 
-    yPos += 22;
+    // Amount in words
+    doc.setTextColor(100, 100, 100);
     doc.setFontSize(8);
-    doc.setFont(undefined, 'normal');
-    doc.text(`Total amount (in words): INR ${numberToWords(bill.total)} Rupees Only.`, 12, yPos);
-    yPos += 5;
-    doc.line(10, yPos, 200, yPos);
+    doc.setFont("helvetica", "italic");
+    doc.text(`Amount in words: ${numberToWords(Math.round(bill.total))} Rupees Only`, 14, yPos + 35);
 
-    // 6. GST BREAKDOWN TABLE (Mini)
-    yPos += 5;
-    const gstHeaders = [['HSN/SAC', 'Taxable Value', bill.gstBreakdown.type === 'SGST+CGST' ? 'Central Tax (CGST)' : 'Integrated Tax (IGST)', bill.gstBreakdown.type === 'SGST+CGST' ? 'State Tax (SGST)' : '', 'Total Tax Amount']];
+    // 8. FOOTER & BANKING
+    let footerY = 250;
 
-    // Group items by HSN for the mini table
-    const hsnGroups = {};
-    bill.items.forEach(item => {
-        const hsn = inventory.find(i => i.id === item.id)?.hsn || 'N/A';
-        if (!hsnGroups[hsn]) hsnGroups[hsn] = { taxable: 0, tax: 0, rate: item.gst };
-        hsnGroups[hsn].taxable += item.amount;
-        hsnGroups[hsn].tax += item.gstAmount;
-    });
-
-    const gstData = Object.keys(hsnGroups).map(hsn => {
-        const g = hsnGroups[hsn];
-        if (bill.gstBreakdown.type === 'SGST+CGST') {
-            return [hsn, g.taxable.toFixed(2), `${(g.tax / 2).toFixed(2)} (${g.rate / 2}%)`, `${(g.tax / 2).toFixed(2)} (${g.rate / 2}%)`, g.tax.toFixed(2)];
-        } else {
-            return [hsn, g.taxable.toFixed(2), `${g.tax.toFixed(2)} (${g.rate}%)`, '', g.tax.toFixed(2)];
-        }
-    });
-
-    doc.autoTable({
-        startY: yPos,
-        head: gstHeaders,
-        body: gstData,
-        theme: 'grid',
-        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 7, halign: 'center' },
-        bodyStyles: { fontSize: 7, halign: 'center' },
-        margin: { left: 10, right: 10 }
-    });
-
-    yPos = doc.lastAutoTable.finalY + 2;
-    if (bill.paymentStatus === 'paid') {
-        doc.setTextColor(40, 167, 69); // Green
-        doc.setFont(undefined, 'bold');
-        doc.text('Amount Paid', 200, yPos + 2, { align: 'right' });
-    }
-
-    // 7. BANKING & QR SECTION
-    yPos += 8;
-    doc.setDrawColor(200, 200, 200);
-    doc.line(10, yPos, 200, yPos);
-    yPos += 5;
-
-    // Bank Details
-    doc.setTextColor(...darkColor);
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'bold');
-    doc.text('Bank Details:', 12, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.text(`Bank: ${banking.bankName || 'N/A'}`, 12, yPos + 5);
-    doc.text(`Account #: ${banking.accountNumber || 'N/A'}`, 12, yPos + 9);
-    doc.text(`IFSC: ${banking.ifsc || 'N/A'}`, 12, yPos + 13);
-    doc.text(`Branch: ${banking.branch || 'N/A'}`, 12, yPos + 17);
-
-    // QR Code (UPI)
-    if (banking.upiId) {
-        const qrSize = 25;
-        const qrX = 100;
-        // Using a free API for QR code generation - In a real app, you'd generate this or use a more stable lib
-        const payeeName = (company.name || 'PLASTIWOOD').replace(/[^a-zA-Z0-9\s]/g, '');
-        const upiId = (banking.upiId || '').trim();
-        const tr = `BILL${bill.id}${Date.now()}`;
-        const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&mc=0000&tr=${tr}&tn=${encodeURIComponent('Bill ' + bill.id)}&am=${bill.total.toFixed(2)}&cu=INR`;
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}`;
-
-        doc.text('Pay using UPI:', qrX, yPos - 1); // Moved up slightly
+    // Signature
+    if (bankingDetails.signature) {
         try {
-            doc.addImage(qrUrl, 'PNG', qrX, yPos + 1, qrSize, qrSize); // Moved up slightly
-            doc.setFontSize(7);
-            doc.text(`UPI ID: ${banking.upiId}`, qrX, yPos + qrSize + 4); // Tightened spacing
-            doc.setFontSize(9);
-        } catch (e) {
-            console.error('QR error:', e);
-        }
+            doc.addImage(bankingDetails.signature, 'PNG', 150, footerY - 25, 35, 15);
+        } catch (e) { }
     }
-
-    // Signature Area
-    const sigX = 150;
-    doc.setFont(undefined, 'normal');
+    doc.setTextColor(...textColor);
     doc.setFontSize(8);
-    doc.text(`For ${company.name || 'PLASTIWOOD'}`, sigX, yPos);
+    doc.setFont("helvetica", "bold");
+    doc.text('Authorized Signatory', 190, footerY - 5, { align: 'right' });
 
-    if (banking.signature) {
-        try {
-            doc.addImage(banking.signature, 'PNG', sigX, yPos + 2, 40, 20);
-        } catch (e) {
-            console.error('Signature add error:', e);
-        }
-    }
+    // Bank Details on Bottom Left
+    doc.setFontSize(8);
+    doc.text('Bank Details:', 14, footerY - 15);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Bank: ${bankingDetails.bankName || '-'}`, 14, footerY - 10);
+    doc.text(`A/c No: ${bankingDetails.accountNumber || '-'}`, 14, footerY - 6);
+    doc.text(`IFSC: ${bankingDetails.ifsc || '-'}`, 14, footerY - 2);
 
-    doc.text('Authorized Signatory', sigX + 5, yPos + 25);
-
-    // 8. T&C and FOOTER
-    yPos += 30;
-    doc.line(10, yPos, 200, yPos);
-    yPos += 5;
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Notes:', 12, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.text('Thank you for the Business', 12, yPos + 4);
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Terms and Conditions:', 105, yPos);
-    doc.setFont(undefined, 'normal');
-    const termsRows = doc.splitTextToSize(company.terms || "1. Subject to local Jurisdiction.\n2. Goods once sold not returnable.", 90);
-    doc.text(termsRows, 105, yPos + 4);
-
-    // Final Footer
-    const pageHeight = doc.internal.pageSize.height;
+    // Terms
     doc.setFontSize(7);
-    doc.setTextColor(...grayColor);
-    doc.text('This is a digitally signed document.', 105, pageHeight - 10, { align: 'center' });
+    doc.setTextColor(150, 150, 150);
+    doc.text(companyDetails.terms || "Subject to local jurisdiction.", 105, 285, { align: 'center' });
 
-    // Save PDF
-    const fileName = `Invoice_${bill.id}_${bill.customer.name.replace(/\s+/g, '_')}.pdf`;
-    doc.save(fileName);
+    // Save
+    doc.save(`${title.replace(/ /g, '_')}_${displayId}.pdf`);
+}
+
+function viewProformaDetails(id) {
+    const pf = proformaInvoices.find(p => p.id === id);
+    if (!pf) return;
+
+    // Reuse viewBillDetailsModal logic but adapted
+    // Or just create a simpler modal view
+    // For now, let's reuse the logic by constructing a bill-like object
+
+    const billLike = {
+        ...pf,
+        paymentStatus: 'Estimate',
+        customInvoiceNo: pf.proformaNo
+    };
+
+    // We can use the existing modal, but we need to change the buttons
+    // So better to have a dedicated simple view or hijack the modal content
+
+    viewBillDetailsModal(id);
+    // Wait, viewBillDetailsModal searches in `bills` array!
+    // We need to temporarily push to bills or modify viewBillDetailsModal?
+    // Modifying viewBillDetailsModal is risky.
+    // Let's create a specific view logic here.
+
+    const content = `
+        <div style="padding: 2rem;">
+            <h2 style="color: var(--primary);">📑 Quote #${pf.proformaNo || pf.id}</h2>
+            <p><strong>Customer:</strong> ${pf.customer.name}</p>
+            <p><strong>Amount:</strong> ₹${pf.total.toFixed(2)}</p>
+            
+            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                <button class="btn btn-primary" onclick="generateBillPDF(proformaInvoices.find(p => p.id === ${id}), 'PROFORMA INVOICE')">
+                    📄 Download Quote PDF
+                </button>
+                <button class="btn btn-secondary" onclick="closeBillDetailsModal()">Close</button>
+            </div>
+        </div>
+    `;
+
+    // Reuse the bill-details-modal container
+    document.getElementById('bill-details-content').innerHTML = content;
+    document.getElementById('bill-details-modal').classList.add('active');
 }
 
 // Helper function to convert number to words (Indian numbering system)

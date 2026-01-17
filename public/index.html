@@ -66,6 +66,10 @@
                 <span class="nav-icon">🧾</span>
                 <span class="nav-text">Billing</span>
             </button>
+            <button class="nav-btn" data-view="proforma" id="proforma-nav-sidebar">
+                <span class="nav-icon">📑</span>
+                <span class="nav-text">Proforma</span>
+            </button>
             <button class="nav-btn" data-view="settings" id="settings-nav-sidebar">
                 <span class="nav-icon">⚙️</span>
                 <span class="nav-text">Settings</span>
@@ -293,7 +297,7 @@
                     <table id="inventory-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th>S.No</th>
                                 <th>Name</th>
                                 <th>Description</th>
                                 <th>HSN/SAC</th>
@@ -436,6 +440,47 @@
 
             </div>
 
+                </div>
+            </div>
+
+            <!-- Proforma Invoices View -->
+            <div id="proforma-view" class="view">
+                <div class="view-header">
+                    <h1>Proforma Invoices</h1>
+                    <button class="btn btn-primary" onclick="switchView('billing')">
+                        <span>+</span> Create Quote
+                    </button>
+                </div>
+                
+                <div class="search-bar">
+                    <input type="text" id="search-proforma" placeholder="Search Proforma Invoices..." onkeyup="filterProforma()">
+                </div>
+
+                <div class="table-container">
+                    <table id="proforma-table">
+                        <thead>
+                            <tr>
+                                <th>PF No</th>
+                                <th>Date</th>
+                                <th>Customer Name</th>
+                                <th>Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="proforma-tbody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="sales-summary-cards">
+                    <div class="summary-card">
+                        <h3>Total Quotes</h3>
+                        <p id="proforma-total-count">0</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Billing View -->
             <div id="billing-view" class="view">
                 <div class="view-header">
@@ -448,6 +493,7 @@
                         <h3>Customer Information</h3>
                         <input type="text" id="customer-search" placeholder="Search by Name or Phone..." list="customer-list">
                         <datalist id="customer-list"></datalist>
+                        <input type="text" id="invoice-number" placeholder="Invoice Number (Auto-generated)" style="font-weight: bold; color: var(--primary);">
                         <input type="text" id="customer-name" placeholder="Customer Name *" required>
                         <input type="text" id="customer-phone" placeholder="Phone Number">
                         <input type="text" id="customer-gst" placeholder="GST Number (Optional)">
@@ -467,27 +513,37 @@
 
                     <div class="bill-items">
                         <h3>Bill Items</h3>
-                        <div class="add-item-row">
-                            <select id="product-select">
+                        <div class="add-item-row" style="flex-wrap: wrap; gap: 0.5rem;">
+                            <select id="product-select" style="flex: 2; min-width: 200px;">
                                 <option value="">Select Product</option>
                             </select>
-                            <input type="number" id="item-quantity" placeholder="Qty" min="1">
-                            <input type="number" id="item-rate" placeholder="Rate (₹)" step="0.01" min="0">
+                            
+                            <!-- Calculator Inputs -->
+                            <div style="display: flex; gap: 0.5rem; flex: 1.5; align-items: center; background: rgba(0,0,0,0.03); padding: 5px; border-radius: 5px;">
+                                <input type="number" id="item-len" placeholder="L(ft)" step="0.01" style="width: 60px;" oninput="calculateBillItemQty()">
+                                <span style="color:#aaa;">x</span>
+                                <input type="number" id="item-wid" placeholder="W(ft)" step="0.01" style="width: 60px;" oninput="calculateBillItemQty()">
+                                <span style="color:#aaa;">x</span>
+                                <input type="number" id="item-pieces" placeholder="Pcs" min="1" style="width: 60px;" oninput="calculateBillItemQty()">
+                            </div>
+
+                            <input type="number" id="item-quantity" placeholder="Tot.Qty" min="0.01" step="0.01" style="flex: 0.8; font-weight: bold;">
+                            <input type="number" id="item-rate" placeholder="Rate (₹)" step="0.01" min="0" style="flex: 0.8;">
                             <button class="btn btn-primary" onclick="addBillItem()">Add</button>
                         </div>
 
                         <table class="bill-table">
                             <thead>
                                 <tr>
-                                    <th>S.No</th>
+                                    <th>#</th>
                                     <th>Item Name</th>
-                                    <th>Size</th>
-                                    <th>Qty</th>
-                                    <th>Rate (₹)</th>
-                                    <th>Amount (₹)</th>
+                                    <th>Dim (LxW)</th>
+                                    <th>Pcs</th>
+                                    <th>Total Qty</th>
+                                    <th>Rate</th>
+                                    <th>Amt</th>
                                     <th>GST %</th>
-                                    <th>GST (₹)</th>
-                                    <th>Total (₹)</th>
+                                    <th>Total</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -518,7 +574,14 @@
                             </div>
                         </div>
 
-                        <button class="btn btn-primary btn-large" onclick="generateBill()">Generate Bill</button>
+                        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                            <button class="btn btn-secondary btn-large" onclick="generateBill(true)" style="flex: 1; background: var(--warning); border-color: var(--warning);">
+                                <span style="margin-right: 0.5rem;">📄</span> Save as Quote
+                            </button>
+                            <button class="btn btn-primary btn-large" onclick="generateBill(false)" style="flex: 1;">
+                                <span style="margin-right: 0.5rem;">✅</span> Generate Bill
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -781,10 +844,21 @@
                     <div id="purchase-items-container">
                         <div class="purchase-item-row">
                             <span class="item-sno" style="padding: 0.5rem; font-weight: bold; min-width: 30px; display: inline-flex; align-items: center;">1.</span>
-                            <select class="purchase-product" required>
+                            <select class="purchase-product" required onchange="updatePurchaseItemDetails(this)">
                                 <option value="">Select Product</option>
                             </select>
-                            <input type="number" class="purchase-qty" placeholder="Quantity" min="1" required>
+                            
+                            <!-- Calculator Inputs -->
+                            <div style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.03); padding: 2px; border-radius: 4px;">
+                                <input type="number" class="purchase-len" placeholder="L(ft)" step="0.01" style="width: 50px;" oninput="calculatePurchaseItemQty(this)">
+                                <span style="color:#aaa;">x</span>
+                                <input type="number" class="purchase-wid" placeholder="W(ft)" step="0.01" style="width: 50px;" oninput="calculatePurchaseItemQty(this)">
+                                <span style="color:#aaa;">x</span>
+                                <input type="number" class="purchase-pieces" placeholder="Pcs" min="1" style="width: 50px;" oninput="calculatePurchaseItemQty(this)">
+                            </div>
+
+                            <input type="text" class="purchase-desc" placeholder="Desc/Col" readonly style="background: #f8fafc; max-width: 100px;">
+                            <input type="number" class="purchase-qty" placeholder="Tot.Qty" min="0.01" step="0.01" required style="font-weight: bold;">
                             <input type="number" class="purchase-rate" placeholder="Rate (₹)" step="0.01" min="0" required>
                             <button type="button" class="btn btn-primary" onclick="addPurchaseItemRow()">+</button>
                         </div>

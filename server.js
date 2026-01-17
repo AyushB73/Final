@@ -108,6 +108,7 @@ async function createTables() {
     await connection.query(`
       CREATE TABLE IF NOT EXISTS bills (
         id INT PRIMARY KEY AUTO_INCREMENT,
+        customInvoiceNo VARCHAR(100),
         customerName VARCHAR(255),
         customerPhone VARCHAR(50),
         customerGst VARCHAR(50),
@@ -144,6 +145,25 @@ async function createTables() {
       )
     `);
 
+    // Proforma Invoices table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS proforma_invoices (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        proformaNo VARCHAR(100),
+        customerName VARCHAR(255),
+        customerPhone VARCHAR(50),
+        customerGst VARCHAR(50),
+        customerAddress TEXT,
+        customerState VARCHAR(50),
+        items JSON,
+        subtotal DECIMAL(10, 2),
+        gstBreakdown JSON,
+        totalGST DECIMAL(10, 2),
+        total DECIMAL(10, 2),
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Upgrade Tables: Add billImage if not exists
     try {
       await connection.query('ALTER TABLE purchases ADD COLUMN billImage LONGTEXT');
@@ -151,6 +171,16 @@ async function createTables() {
     } catch (err) {
       if (err.code !== 'ER_DUP_FIELDNAME') {
         console.log('ℹ️ billImage column already exists or error:', err.message);
+      }
+    }
+
+    // Upgrade Tables: Add customInvoiceNo if not exists
+    try {
+      await connection.query('ALTER TABLE bills ADD COLUMN customInvoiceNo VARCHAR(100)');
+      console.log('✅ Added customInvoiceNo column to bills table');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ customInvoiceNo column already exists or error:', err.message);
       }
     }
 
@@ -361,6 +391,7 @@ app.get('/api/bills', async (req, res) => {
         // Create clean bill object without spreading old fields
         return {
           id: bill.id,
+          customInvoiceNo: bill.customInvoiceNo,
           createdAt: bill.createdAt,
           items: items,
           gstBreakdown: gstBreakdown,
@@ -410,9 +441,10 @@ app.get('/api/bills', async (req, res) => {
 
 app.post('/api/bills', async (req, res) => {
   try {
-    const { customer, items, subtotal, gstBreakdown, totalGST, total, paymentStatus, paymentTracking } = req.body;
+    const { customer, items, subtotal, gstBreakdown, totalGST, total, paymentStatus, paymentTracking, customInvoiceNo } = req.body;
 
     console.log('POST /api/bills - Received data:');
+    console.log('Custom Invoice No:', customInvoiceNo);
     console.log('Customer:', customer);
     console.log('Items:', items);
     console.log('Items count:', items?.length || 0);
@@ -430,10 +462,11 @@ app.post('/api/bills', async (req, res) => {
     console.log('Items JSON to save:', itemsJson);
 
     const result = await query(
-      `INSERT INTO bills (customerName, customerPhone, customerGst, customerAddress, customerState, 
+      `INSERT INTO bills (customInvoiceNo, customerName, customerPhone, customerGst, customerAddress, customerState, 
        items, subtotal, gstBreakdown, totalGST, total, paymentStatus, paymentTracking) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        customInvoiceNo || null,
         customerName,
         customerPhone,
         customerGst,
@@ -453,6 +486,7 @@ app.post('/api/bills', async (req, res) => {
 
     const bill = {
       id: result.insertId,
+      customInvoiceNo,
       customer, items, subtotal, gstBreakdown, totalGST, total, paymentStatus, paymentTracking,
       createdAt: new Date()
     };
@@ -526,6 +560,85 @@ app.put('/api/bills/:id', async (req, res) => {
 app.delete('/api/bills/:id', async (req, res) => {
   try {
     await query('DELETE FROM bills WHERE id=?', [parseInt(req.params.id)]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Proforma Routes
+app.get('/api/proforma', async (req, res) => {
+  try {
+    const invoices = await query('SELECT * FROM proforma_invoices ORDER BY id DESC');
+
+    const parsedInvoices = invoices.map(inv => {
+      try {
+        const items = typeof inv.items === 'string' ? JSON.parse(inv.items || '[]') : (inv.items || []);
+        const gstBreakdown = typeof inv.gstBreakdown === 'string' ? JSON.parse(inv.gstBreakdown || '{}') : (inv.gstBreakdown || {});
+
+        return {
+          id: inv.id,
+          proformaNo: inv.proformaNo,
+          createdAt: inv.createdAt,
+          items: items,
+          gstBreakdown: gstBreakdown,
+          subtotal: parseFloat(inv.subtotal) || 0,
+          totalGST: parseFloat(inv.totalGST) || 0,
+          total: parseFloat(inv.total) || 0,
+          customer: {
+            name: inv.customerName,
+            phone: inv.customerPhone,
+            gst: inv.customerGst,
+            address: inv.customerAddress,
+            state: inv.customerState
+          }
+        };
+      } catch (e) {
+        return inv;
+      }
+    });
+
+    res.json(parsedInvoices);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/proforma', async (req, res) => {
+  try {
+    const { customer, items, subtotal, gstBreakdown, totalGST, total, proformaNo } = req.body;
+
+    const itemsJson = JSON.stringify(items || []);
+    const gstJson = JSON.stringify(gstBreakdown || {});
+
+    const result = await query(
+      `INSERT INTO proforma_invoices (proformaNo, customerName, customerPhone, customerGst, customerAddress, customerState, 
+       items, subtotal, gstBreakdown, totalGST, total) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        proformaNo || null,
+        customer?.name || null,
+        customer?.phone || null,
+        customer?.gst || null,
+        customer?.address || null,
+        customer?.state || null,
+        itemsJson,
+        subtotal || 0,
+        gstJson,
+        totalGST || 0,
+        total || 0
+      ]
+    );
+
+    res.json({ id: result.insertId, ...req.body });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/proforma/:id', async (req, res) => {
+  try {
+    await query('DELETE FROM proforma_invoices WHERE id=?', [parseInt(req.params.id)]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
