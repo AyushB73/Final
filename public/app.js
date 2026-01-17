@@ -64,8 +64,10 @@ async function loadSettings() {
 }
 
 function populateSettingsForms() {
-    if (document.getElementById('company-name')) {
-        document.getElementById('company-name').value = companyDetails.name || '';
+    // Company details - only populate if elements exist
+    const companyName = document.getElementById('company-name');
+    if (companyName) {
+        companyName.value = companyDetails.name || '';
         document.getElementById('company-address').value = companyDetails.address || '';
         document.getElementById('company-phone').value = companyDetails.phone || '';
         document.getElementById('company-email').value = companyDetails.email || '';
@@ -74,8 +76,10 @@ function populateSettingsForms() {
         document.getElementById('company-terms').value = companyDetails.terms || '';
     }
 
-    if (document.getElementById('bank-name')) {
-        document.getElementById('bank-name').value = bankingDetails.bankName || '';
+    // Banking details - only populate if elements exist
+    const bankName = document.getElementById('bank-name');
+    if (bankName) {
+        bankName.value = bankingDetails.bankName || '';
         document.getElementById('account-name').value = bankingDetails.accountName || '';
         document.getElementById('account-number').value = bankingDetails.accountNumber || '';
         document.getElementById('bank-ifsc').value = bankingDetails.ifsc || '';
