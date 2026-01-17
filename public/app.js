@@ -32,7 +32,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadBills(),
         loadPurchases(),
         loadProformaInvoices(),
-        loadSettings() // Add this
+        loadCustomers(),
+        loadSuppliers(),
+        loadSettings()
     ]);
 
     renderDashboard();
@@ -229,6 +231,34 @@ async function loadProformaInvoices() {
         renderProformaInvoices();
     } catch (error) {
         console.error('Error loading proforma invoices:', error);
+    }
+}
+
+async function loadCustomers() {
+    try {
+        customers = await APIService.getCustomers();
+        console.log(`✅ Loaded ${customers.length} customers`);
+        // Update customer datalist if function exists
+        if (typeof updateCustomerDatalist === 'function') {
+            updateCustomerDatalist();
+        }
+    } catch (error) {
+        console.error('Error loading customers:', error);
+        customers = [];
+    }
+}
+
+async function loadSuppliers() {
+    try {
+        suppliers = await APIService.getSuppliers();
+        console.log(`✅ Loaded ${suppliers.length} suppliers`);
+        // Update supplier datalist if function exists
+        if (typeof updateSupplierDatalist === 'function') {
+            updateSupplierDatalist();
+        }
+    } catch (error) {
+        console.error('Error loading suppliers:', error);
+        suppliers = [];
     }
 }
 
