@@ -47,8 +47,11 @@ async function loadSettings() {
         const companyRes = await fetch(`${API_URL}/api/settings/company`);
         const bankingRes = await fetch(`${API_URL}/api/settings/banking`);
 
-        companyDetails = await companyRes.json() || {};
-        bankingDetails = await bankingRes.json() || {};
+        const companyData = await companyRes.json();
+        const bankingData = await bankingRes.json();
+
+        companyDetails = (companyData && Object.keys(companyData).length > 0) ? companyData : JSON.parse(localStorage.getItem('companyDetails') || '{}');
+        bankingDetails = (bankingData && Object.keys(bankingData).length > 0) ? bankingData : JSON.parse(localStorage.getItem('bankingDetails') || '{}');
 
         // Populate Forms if in Settings View (checked inside the render logic mostly, or just try to fill if elements exist)
         populateSettingsForms();
@@ -107,32 +110,7 @@ async function saveCompanyDetails(event) {
     }
 }
 
-async function saveBankingDetails(event) {
-    event.preventDefault();
-    if (!checkOwnerPermission()) return;
 
-    const data = {
-        bankName: document.getElementById('bank-name').value,
-        accountName: document.getElementById('account-name').value,
-        accountNumber: document.getElementById('account-number').value,
-        ifsc: document.getElementById('bank-ifsc').value,
-        branch: document.getElementById('bank-branch').value,
-        upiId: document.getElementById('upi-id').value,
-        signature: bankingDetails.signature
-    };
-
-    const sigInput = document.getElementById('auth-signature');
-    if (sigInput.files && sigInput.files[0]) {
-        const reader = new FileReader();
-        reader.onload = async function (e) {
-            data.signature = e.target.result;
-            await saveSettingsToAPI('banking', data);
-        };
-        reader.readAsDataURL(sigInput.files[0]);
-    } else {
-        await saveSettingsToAPI('banking', data);
-    }
-}
 
 async function saveSettingsToAPI(type, data) {
     try {
@@ -153,6 +131,33 @@ async function saveSettingsToAPI(type, data) {
 }
 
 
+
+
+async function saveSettingsToAPI(type, data) {
+    try {
+        const response = await fetch(`${API_URL}/api/settings/${type}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) throw new Error('Failed to save settings');
+
+        if (type === 'company') {
+            companyDetails = { ...companyDetails, ...data };
+            localStorage.setItem('companyDetails', JSON.stringify(companyDetails));
+        } else if (type === 'banking') {
+            bankingDetails = { ...bankingDetails, ...data };
+            localStorage.setItem('bankingDetails', JSON.stringify(bankingDetails));
+        }
+
+        displayCurrentSettings();
+        alert(`✅ ${type.charAt(0).toUpperCase() + type.slice(1)} details saved successfully!`);
+    } catch (error) {
+        console.error(`Error saving ${type} details:`, error);
+        alert(`Failed to save ${type} details. Please try again.`);
+    }
+}
 
 // Navigation
 function setupNavigation() {
@@ -5284,9 +5289,7 @@ async function saveBankingDetails(event) {
         signature: signatureBase64
     };
 
-    localStorage.setItem('bankingDetails', JSON.stringify(bankingDetails));
-    displayCurrentSettings();
-    alert('✅ Banking details saved successfully!');
+    await saveSettingsToAPI('banking', bankingDetails);
 }
 
 // Display current settings
