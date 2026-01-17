@@ -164,6 +164,16 @@ async function createTables() {
       )
     `);
 
+    // Settings table (Company & Banking)
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        details_type VARCHAR(50) UNIQUE, -- 'company' or 'banking'
+        data JSON,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+
     // Upgrade Tables: Add billImage if not exists
     try {
       await connection.query('ALTER TABLE purchases ADD COLUMN billImage LONGTEXT');
@@ -435,6 +445,45 @@ app.get('/api/bills', async (req, res) => {
     res.json(parsedBills);
   } catch (error) {
     console.error('❌ Error fetching bills:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- Settings Routes ---
+app.get('/api/settings/:type', async (req, res) => {
+  try {
+    const { type } = req.params;
+    const [rows] = await pool.query('SELECT data FROM settings WHERE details_type = ?', [type]);
+    if (rows.length > 0) {
+      res.json(rows[0].data);
+    } else {
+      res.json({}); // Return empty object if not found
+    }
+  } catch (error) {
+    console.error(`Error fetching ${req.params.type} settings:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/settings', async (req, res) => {
+  try {
+    const { type, data } = req.body;
+    if (!type || !data) throw new Error('Type and Data are required');
+
+    console.log(`Saving ${type} settings...`);
+
+    // Check if exists
+    const [existing] = await pool.query('SELECT id FROM settings WHERE details_type = ?', [type]);
+
+    if (existing.length > 0) {
+      await pool.query('UPDATE settings SET data = ? WHERE details_type = ?', [JSON.stringify(data), type]);
+    } else {
+      await pool.query('INSERT INTO settings (details_type, data) VALUES (?, ?)', [type, JSON.stringify(data)]);
+    }
+
+    res.json({ success: true, message: 'Settings saved successfully' });
+  } catch (error) {
+    console.error('Error saving settings:', error);
     res.status(500).json({ error: error.message });
   }
 });

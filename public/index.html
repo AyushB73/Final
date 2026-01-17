@@ -440,8 +440,7 @@
 
             </div>
 
-                </div>
-            </div>
+
 
             <!-- Proforma Invoices View -->
             <div id="proforma-view" class="view">
@@ -830,6 +829,9 @@
                             <option value="pending">⏳ Pending</option>
                             <option value="partial">💰 Partial</option>
                         </select>
+                        <div id="purchase-partial-amount-container" style="display: none; margin-top: 10px;">
+                            <input type="number" id="purchase-paid-amount" placeholder="Paid Amount (₹) *" min="0" step="0.01">
+                        </div>
                     </div>
                 </div>
                 
@@ -1114,6 +1116,7 @@
     <script src="realtime-sync.js?v=1.0"></script>
     <script src="auth.js?v=3.1"></script>
     <script src="app.js?v=3.3"></script>
+    <script src="pdf_generator.js?v=1.0"></script>
     
     <!-- PWA Installation Script -->
     <script>

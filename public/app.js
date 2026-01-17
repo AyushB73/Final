@@ -6,6 +6,8 @@ let customers = [];
 let purchases = [];
 let suppliers = [];
 let proformaInvoices = [];
+var companyDetails = {};
+var bankingDetails = {};
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
@@ -19,33 +21,138 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Apply role-based restrictions
     applyRoleRestrictions(currentUser.role);
 
-    // Initialize database with sample data if needed
-    try {
-        await APIService.initializeDatabase();
-    } catch (error) {
-        console.error('Database initialization error:', error);
-    }
-
-    // Load all data from database
-    await loadInventory();
-    await loadBills();
-    await loadProformaInvoices();
-    await loadCustomers();
-    await loadPurchases();
-    await loadSuppliers();
+    // Initial setup
     setupNavigation();
+    setupOutsideClicks();
 
-    // Initialize sales view if bills exist
-    if (bills.length > 0) {
-        renderSales();
+    // Load data
+    await Promise.all([
+        loadInventory(),
+        loadBills(),
+        loadPurchases(),
+        loadProformaInvoices(),
+        loadSettings() // Add this
+    ]);
+
+    renderDashboard();
+    renderProformaInvoices();
+
+    // Setup input listeners for auto-calc
+    setupBillingCalculators();
+});
+
+// Settings Management
+async function loadSettings() {
+    try {
+        const companyRes = await fetch(`${API_URL}/api/settings/company`);
+        const bankingRes = await fetch(`${API_URL}/api/settings/banking`);
+
+        companyDetails = await companyRes.json() || {};
+        bankingDetails = await bankingRes.json() || {};
+
+        // Populate Forms if in Settings View (checked inside the render logic mostly, or just try to fill if elements exist)
+        populateSettingsForms();
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
+function populateSettingsForms() {
+    if (document.getElementById('company-name')) {
+        document.getElementById('company-name').value = companyDetails.name || '';
+        document.getElementById('company-address').value = companyDetails.address || '';
+        document.getElementById('company-phone').value = companyDetails.phone || '';
+        document.getElementById('company-email').value = companyDetails.email || '';
+        document.getElementById('company-gst').value = companyDetails.gst || '';
+        document.getElementById('company-pan').value = companyDetails.pan || '';
+        document.getElementById('company-terms').value = companyDetails.terms || '';
     }
 
-    // Setup customer search
-    setupCustomerSearch();
+    if (document.getElementById('bank-name')) {
+        document.getElementById('bank-name').value = bankingDetails.bankName || '';
+        document.getElementById('account-name').value = bankingDetails.accountName || '';
+        document.getElementById('account-number').value = bankingDetails.accountNumber || '';
+        document.getElementById('bank-ifsc').value = bankingDetails.ifsc || '';
+        document.getElementById('bank-branch').value = bankingDetails.branch || '';
+        document.getElementById('upi-id').value = bankingDetails.upiId || '';
+    }
+}
 
-    // Setup mobile-friendly table scrolling
-    setupMobileTableScroll();
-});
+async function saveCompanyDetails(event) {
+    event.preventDefault();
+    if (!checkOwnerPermission()) return;
+
+    const data = {
+        name: document.getElementById('company-name').value,
+        address: document.getElementById('company-address').value,
+        phone: document.getElementById('company-phone').value,
+        email: document.getElementById('company-email').value,
+        gst: document.getElementById('company-gst').value,
+        pan: document.getElementById('company-pan').value,
+        terms: document.getElementById('company-terms').value,
+        // Preserve logo if not changed (handled via separate upload logic usually, but here likely base64)
+        logo: companyDetails.logo
+    };
+
+    const logoInput = document.getElementById('company-logo');
+    if (logoInput.files && logoInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = async function (e) {
+            data.logo = e.target.result;
+            await saveSettingsToAPI('company', data);
+        };
+        reader.readAsDataURL(logoInput.files[0]);
+    } else {
+        await saveSettingsToAPI('company', data);
+    }
+}
+
+async function saveBankingDetails(event) {
+    event.preventDefault();
+    if (!checkOwnerPermission()) return;
+
+    const data = {
+        bankName: document.getElementById('bank-name').value,
+        accountName: document.getElementById('account-name').value,
+        accountNumber: document.getElementById('account-number').value,
+        ifsc: document.getElementById('bank-ifsc').value,
+        branch: document.getElementById('bank-branch').value,
+        upiId: document.getElementById('upi-id').value,
+        signature: bankingDetails.signature
+    };
+
+    const sigInput = document.getElementById('auth-signature');
+    if (sigInput.files && sigInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = async function (e) {
+            data.signature = e.target.result;
+            await saveSettingsToAPI('banking', data);
+        };
+        reader.readAsDataURL(sigInput.files[0]);
+    } else {
+        await saveSettingsToAPI('banking', data);
+    }
+}
+
+async function saveSettingsToAPI(type, data) {
+    try {
+        const response = await fetch(`${API_URL}/api/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type, data })
+        });
+
+        if (!response.ok) throw new Error('Failed to save');
+
+        alert(`${type === 'company' ? 'Company' : 'Banking'} details saved successfully!`);
+        await loadSettings(); // Reload to update global vars
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        alert('Failed to save settings.');
+    }
+}
+
+
 
 // Navigation
 function setupNavigation() {
@@ -1219,16 +1326,12 @@ function closePurchaseModal() {
     document.getElementById('add-purchase-modal').classList.remove('active');
     document.getElementById('add-purchase-form').reset();
     // Reset to single item row
-    document.getElementById('purchase-items-container').innerHTML = `
-        <div class="purchase-item-row">
-            <select class="purchase-product" required>
-                <option value="">Select Product</option>
-            </select>
-            <input type="number" class="purchase-qty" placeholder="Quantity" min="1" required>
-            <input type="number" class="purchase-rate" placeholder="Rate (₹)" step="0.01" min="0" required>
-            <button type="button" class="btn btn-primary" onclick="addPurchaseItemRow()">+</button>
-        </div>
-    `;
+    // Reset to single item row
+    const container = document.getElementById('purchase-items-container');
+    container.innerHTML = ''; // key check
+    addPurchaseItemRow(); // Helper to add the first proper row
+    // Reset Partial Input Visibility
+    document.getElementById('purchase-partial-amount-container').style.display = 'none';
     updatePurchaseProductSelects();
 }
 
@@ -1322,30 +1425,61 @@ function addPurchaseItemRow() {
     const newRow = document.createElement('div');
     newRow.className = 'purchase-item-row';
     newRow.innerHTML = `
-        <span class="item-sno" style="padding: 0.5rem; font-weight: bold; min-width: 30px; display: inline-flex; align-items: center;"></span>
-        <select class="purchase-product" required onchange="updatePurchaseItemDetails(this)">
-            <option value="">Select Product</option>
-        </select>
+        <span class="item-sno" style="padding: 0.5rem; font-weight: bold; min-width: 25px;"></span>
+        <div style="flex: 2; min-width: 180px;">
+            <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Product</label>
+            <select class="purchase-product" style="width:100%" required onchange="updatePurchaseItemDetails(this)">
+                <option value="">Select Product</option>
+            </select>
+        </div>
         
-        <!-- Calculator Inputs -->
-        <div style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.03); padding: 2px; border-radius: 4px;">
-            <input type="number" class="purchase-len" placeholder="L(ft)" step="0.01" style="width: 50px;" oninput="calculatePurchaseItemQty(this)">
-            <span style="color:#aaa;">x</span>
-            <input type="number" class="purchase-wid" placeholder="W(ft)" step="0.01" style="width: 50px;" oninput="calculatePurchaseItemQty(this)">
-            <span style="color:#aaa;">x</span>
-            <input type="number" class="purchase-pieces" placeholder="Pcs" min="1" style="width: 50px;" oninput="calculatePurchaseItemQty(this)">
+        <div style="flex: 1.5; min-width: 150px; background: rgba(0,0,0,0.02); padding: 4px; border-radius: 4px;">
+            <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Dimensions (L x W x Pcs)</label>
+            <div style="display: flex; gap: 4px; align-items: center;">
+                <input type="number" class="purchase-len" placeholder="L(ft)" step="0.01" style="width: 100%;" oninput="calculatePurchaseItemQty(this)">
+                <input type="number" class="purchase-wid" placeholder="W(ft)" step="0.01" style="width: 100%;" oninput="calculatePurchaseItemQty(this)">
+                <input type="number" class="purchase-pieces" placeholder="Pcs" min="1" style="width: 100%;" oninput="calculatePurchaseItemQty(this)">
+            </div>
         </div>
 
-        <input type="text" class="purchase-desc" placeholder="Desc/Col" readonly style="background: #f8fafc; max-width: 100px;">
-        <input type="number" class="purchase-qty" placeholder="Tot.Qty" min="0.01" step="0.01" required style="font-weight: bold;">
-        <input type="number" class="purchase-rate" placeholder="Rate (₹)" step="0.01" min="0" required>
-        <button type="button" class="btn btn-secondary" onclick="removePurchaseItemRow(this)">−</button>
+        <div style="flex: 1;">
+             <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Desc/Color</label>
+             <input type="text" class="purchase-desc" placeholder="Desc" readonly style="background: #f8fafc; width: 100%;">
+        </div>
+        <div style="flex: 0.8;">
+             <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Tot. Qty</label>
+             <input type="number" class="purchase-qty" placeholder="0.00" min="0.01" step="0.01" required style="font-weight: bold; width: 100%;">
+        </div>
+        <div style="flex: 0.8;">
+             <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Rate (₹)</label>
+             <input type="number" class="purchase-rate" placeholder="0.00" step="0.01" min="0" required style="width: 100%;">
+        </div>
+        
+        <button type="button" class="btn btn-secondary" onclick="removePurchaseItemRow(this)" style="margin-top: auto; height: 38px;">×</button>
     `;
     container.appendChild(newRow);
     const newSelect = newRow.querySelector('.purchase-product');
     updatePurchaseProductSelects(newSelect);
     updatePurchaseItemSNos();
 }
+
+// Setup Purchase Modal Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const statusSelect = document.getElementById('purchase-payment-status');
+    const partialContainer = document.getElementById('purchase-partial-amount-container');
+    if (statusSelect && partialContainer) {
+        statusSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'partial') {
+                partialContainer.style.display = 'block';
+                document.getElementById('purchase-paid-amount').setAttribute('required', 'true');
+            } else {
+                partialContainer.style.display = 'none';
+                document.getElementById('purchase-paid-amount').removeAttribute('required');
+                document.getElementById('purchase-paid-amount').value = '';
+            }
+        });
+    }
+});
 
 async function addPurchase(event) {
     event.preventDefault();
@@ -1464,6 +1598,43 @@ async function addPurchase(event) {
             }
         }
 
+        // Handle Partial Payment Logic
+        const paidAmountInput = document.getElementById('purchase-paid-amount');
+        const trackingData = {
+            paidAmount: 0,
+            dueAmount: total,
+            status: paymentStatus,
+            history: []
+        };
+
+        if (paymentStatus === 'partial') {
+            const paidAmount = parseFloat(paidAmountInput.value) || 0;
+            if (paidAmount <= 0) {
+                alert('Please enter a valid paid amount for partial payment.');
+                return;
+            }
+            if (paidAmount >= total) {
+                alert('Paid amount cannot be greater than or equal to total amount for partial payment. Use "Paid" status instead.');
+                return;
+            }
+            trackingData.paidAmount = paidAmount;
+            trackingData.dueAmount = total - paidAmount;
+            trackingData.history.push({
+                date: new Date().toISOString(),
+                amount: paidAmount,
+                type: 'initial_partial'
+            });
+        } else if (paymentStatus === 'paid') {
+            trackingData.paidAmount = total;
+            trackingData.dueAmount = 0;
+            trackingData.history.push({
+                date: new Date().toISOString(),
+                amount: total,
+                type: 'full_payment'
+            });
+        }
+        // else pending: paid=0, due=total, history=[]
+
         const purchaseData = {
             supplier: {
                 name: supplierName,
@@ -1477,7 +1648,7 @@ async function addPurchase(event) {
             totalGST: totalGST,
             total: total,
             paymentStatus: paymentStatus || 'pending',
-            paymentTracking: null,  // Explicitly set to null
+            paymentTracking: trackingData,
             billImage: billImage
         };
 
@@ -4381,20 +4552,26 @@ function renderDashboard() {
     const inventoryValue = inventory.reduce((sum, item) => sum + (item.quantity * (parseFloat(item.price) || 0)), 0);
 
     // Calculate actual pending payments using payment tracking
+    // Calculate Pending Payments (From Purchases - Money Out)
     let pendingPayments = 0;
-    filteredBills.forEach(bill => {
-        if (bill.paymentStatus === 'pending') {
-            pendingPayments += parseFloat(bill.total) || 0;
-        } else if (bill.paymentStatus === 'partial' && bill.paymentTracking) {
-            pendingPayments += parseFloat(bill.paymentTracking.amountPending) || 0;
+    filteredPurchases.forEach(p => {
+        const total = parseFloat(p.total) || 0;
+        if (p.paymentStatus === 'pending') {
+            pendingPayments += total;
+        } else if (p.paymentStatus === 'partial') {
+            const due = p.paymentTracking && p.paymentTracking.dueAmount
+                ? parseFloat(p.paymentTracking.dueAmount)
+                : 0;
+            // Fallback if paymentTracking missing but status partial (shouldn't happen with new logic, but safe to assume total if broken)
+            pendingPayments += due;
         }
     });
 
     // Update metric cards
-    document.getElementById('dash-total-revenue').textContent = `₹${totalRevenue.toFixed(2)}`;
-    document.getElementById('dash-aov').textContent = `₹${averageOrderValue.toFixed(2)}`;
-    document.getElementById('dash-inventory-value').textContent = `₹${inventoryValue.toFixed(2)}`;
-    document.getElementById('dash-pending-payments').textContent = `₹${pendingPayments.toFixed(2)}`;
+    if (document.getElementById('dash-total-revenue')) document.getElementById('dash-total-revenue').textContent = `₹${totalRevenue.toFixed(2)}`;
+    if (document.getElementById('dash-aov')) document.getElementById('dash-aov').textContent = `₹${averageOrderValue.toFixed(2)}`;
+    if (document.getElementById('dash-inventory-value')) document.getElementById('dash-inventory-value').textContent = `₹${inventoryValue.toFixed(2)}`;
+    if (document.getElementById('dash-pending-payments')) document.getElementById('dash-pending-payments').textContent = `₹${pendingPayments.toFixed(2)}`;
 
     // Sales Overview
     const totalBills = filteredBills.length;
@@ -4402,20 +4579,20 @@ function renderDashboard() {
     const pendingBills = filteredBills.filter(b => b.paymentStatus === 'pending' || b.paymentStatus === 'partial').length;
     const collectionRate = totalBills > 0 ? ((paidBills / totalBills) * 100).toFixed(1) : 0;
 
-    document.getElementById('dash-total-bills').textContent = totalBills;
-    document.getElementById('dash-paid-bills').textContent = paidBills;
-    document.getElementById('dash-pending-bills').textContent = pendingBills;
-    document.getElementById('dash-collection-rate').textContent = `${collectionRate}%`;
-    document.getElementById('dash-collection-bar').style.width = `${collectionRate}%`;
+    if (document.getElementById('dash-total-bills')) document.getElementById('dash-total-bills').textContent = totalBills;
+    if (document.getElementById('dash-paid-bills')) document.getElementById('dash-paid-bills').textContent = paidBills;
+    if (document.getElementById('dash-pending-bills')) document.getElementById('dash-pending-bills').textContent = pendingBills;
+    if (document.getElementById('dash-collection-rate')) document.getElementById('dash-collection-rate').textContent = `${collectionRate}%`;
+    if (document.getElementById('dash-collection-bar')) document.getElementById('dash-collection-bar').style.width = `${collectionRate}%`;
 
     // Inventory Status
     const totalProducts = inventory.length;
     const lowStock = inventory.filter(item => item.quantity > 0 && item.quantity < 5).length;
     const outOfStock = inventory.filter(item => item.quantity === 0).length;
 
-    document.getElementById('dash-total-products').textContent = totalProducts;
-    document.getElementById('dash-low-stock').textContent = lowStock;
-    document.getElementById('dash-out-stock').textContent = outOfStock;
+    if (document.getElementById('dash-total-products')) document.getElementById('dash-total-products').textContent = totalProducts;
+    if (document.getElementById('dash-low-stock')) document.getElementById('dash-low-stock').textContent = lowStock;
+    if (document.getElementById('dash-out-stock')) document.getElementById('dash-out-stock').textContent = outOfStock;
 
     // Inventory Alerts
     renderInventoryAlerts();
@@ -4426,10 +4603,10 @@ function renderDashboard() {
     const paidPurchases = filteredPurchases.filter(p => p.paymentStatus === 'paid').reduce((sum, p) => sum + p.total, 0);
     const supplierPaymentRate = totalPurchases > 0 ? ((paidPurchases / totalPurchases) * 100).toFixed(1) : 0;
 
-    document.getElementById('dash-total-purchases').textContent = `₹${totalPurchases.toFixed(2)}`;
-    document.getElementById('dash-purchase-count').textContent = purchaseCount;
-    document.getElementById('dash-supplier-count').textContent = supplierCount;
-    document.getElementById('dash-supplier-payment-rate').textContent = `${supplierPaymentRate}%`;
+    if (document.getElementById('dash-total-purchases')) document.getElementById('dash-total-purchases').textContent = `₹${totalPurchases.toFixed(2)}`;
+    if (document.getElementById('dash-purchase-count')) document.getElementById('dash-purchase-count').textContent = purchaseCount;
+    if (document.getElementById('dash-supplier-count')) document.getElementById('dash-supplier-count').textContent = supplierCount;
+    if (document.getElementById('dash-supplier-payment-rate')) document.getElementById('dash-supplier-payment-rate').textContent = `${supplierPaymentRate}%`;
     document.getElementById('dash-supplier-payment-bar').style.width = `${supplierPaymentRate}%`;
 
     // Customer Insights
@@ -4672,7 +4849,7 @@ function updatePeriodInfo(period) {
 
 
 // PDF Generation Function
-function generateBillPDF(bill, title = 'TAX INVOICE') {
+function generateBillPDF_DEPRECATED(bill, title = 'TAX INVOICE') {
     // Validate bill object
     if (!bill) { alert('Error: Bill data is missing.'); return; }
 
@@ -4704,8 +4881,9 @@ function generateBillPDF(bill, title = 'TAX INVOICE') {
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    const companyDetails = JSON.parse(localStorage.getItem('companyDetails') || '{}');
-    const bankingDetails = JSON.parse(localStorage.getItem('bankingDetails') || '{}');
+    // Use global companyDetails and bankingDetails directly
+    // const companyDetails = JSON.parse(localStorage.getItem('companyDetails') || '{}');
+    // const bankingDetails = JSON.parse(localStorage.getItem('bankingDetails') || '{}');
 
     // Branding Colors
     const primaryColor = [102, 126, 234]; // #667eea
@@ -4854,6 +5032,52 @@ function generateBillPDF(bill, title = 'TAX INVOICE') {
     doc.setFont("helvetica", "bold");
     doc.text('Grand Total:', summaryX, yPos + 23);
     doc.text(`Rs. ${bill.total.toFixed(2)}`, valX, yPos + 23, { align: 'right' });
+
+    // --- Previous Outstanding Logic ---
+    let previousOutstanding = 0;
+    try {
+        if (customer.phone) {
+            previousOutstanding = bills.filter(b => {
+                const bDisplayId = b.proformaNo || b.customInvoiceNo || b.invoiceNo || b.id || 'N/A';
+                return b.customerPhone === customer.phone &&
+                    bDisplayId != displayId && // Exclude current bill
+                    (b.paymentStatus === 'pending' || b.paymentStatus === 'partial');
+            }).reduce((sum, b) => {
+                if (b.paymentStatus === 'pending') return sum + (parseFloat(b.total) || 0);
+                if (b.paymentStatus === 'partial') {
+                    // Check paymentTracking, fallback to logic if missing
+                    const tracking = typeof b.paymentTracking === 'string' ? JSON.parse(b.paymentTracking) : b.paymentTracking;
+                    return sum + (tracking && tracking.dueAmount ? parseFloat(tracking.dueAmount) : (parseFloat(b.total) || 0));
+                }
+                return sum;
+            }, 0);
+        }
+    } catch (err) { console.error('Error calc outstanding', err); }
+
+    if (previousOutstanding > 0) {
+        // Shift Y down for extra rows
+        yPos += 12;
+
+        // Previous Balance Row
+        doc.setTextColor(231, 76, 60); // Red color for debt
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text('Previous Balance:', summaryX, yPos + 20);
+        doc.text(`Rs. ${previousOutstanding.toFixed(2)}`, valX, yPos + 20, { align: 'right' });
+
+        // Net Payable Row (Total + Previous)
+        const netPayable = bill.total + previousOutstanding;
+
+        doc.setFillColor(50, 50, 50); // Dark grey background
+        doc.rect(summaryX - 5, yPos + 25, 95, 12, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(11);
+        doc.text('Net Payable:', summaryX, yPos + 33);
+        doc.text(`Rs. ${netPayable.toFixed(2)}`, valX, yPos + 33, { align: 'right' });
+
+        // Adjust for Amount in words position
+        yPos += 25;
+    }
 
     // Amount in words
     doc.setTextColor(100, 100, 100);
@@ -5032,98 +5256,21 @@ function downloadBillPDF(billId) {
     }
 }
 
-// Settings Management
-let companyDetails = {};
-let bankingDetails = {};
 
-// Load settings from localStorage
-function loadSettings() {
-    const savedCompany = localStorage.getItem('companyDetails');
-    const savedBanking = localStorage.getItem('bankingDetails');
 
-    if (savedCompany) {
-        companyDetails = JSON.parse(savedCompany);
-        populateCompanyForm();
-    }
-
-    if (savedBanking) {
-        bankingDetails = JSON.parse(savedBanking);
-        populateBankingForm();
-    }
-
-    displayCurrentSettings();
-}
-
-// Populate company form with saved data
-function populateCompanyForm() {
-    document.getElementById('company-name').value = companyDetails.name || '';
-    document.getElementById('company-address').value = companyDetails.address || '';
-    document.getElementById('company-phone').value = companyDetails.phone || '';
-    document.getElementById('company-email').value = companyDetails.email || '';
-    document.getElementById('company-gst').value = companyDetails.gst || '';
-    document.getElementById('company-pan').value = companyDetails.pan || '';
-    document.getElementById('company-website').value = companyDetails.website || '';
-    document.getElementById('company-terms').value = companyDetails.terms || '';
-}
-
-// Populate banking form with saved data
-function populateBankingForm() {
-    document.getElementById('bank-name').value = bankingDetails.bankName || '';
-    document.getElementById('bank-account-name').value = bankingDetails.accountName || '';
-    document.getElementById('bank-account-number').value = bankingDetails.accountNumber || '';
-    document.getElementById('bank-ifsc').value = bankingDetails.ifsc || '';
-    document.getElementById('bank-branch').value = bankingDetails.branch || '';
-    document.getElementById('upi-id').value = bankingDetails.upiId || '';
-}
-
-// Save company details
-async function saveCompanyDetails(event) {
-    event.preventDefault();
-
-    if (!checkOwnerPermission()) return;
-
-    const logoFile = document.getElementById('company-logo').files[0];
-    let logoBase64 = companyDetails.logo || null;
-
-    if (logoFile) {
-        logoBase64 = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.readAsDataURL(logoFile);
-        });
-    }
-
-    companyDetails = {
-        name: document.getElementById('company-name').value,
-        address: document.getElementById('company-address').value,
-        phone: document.getElementById('company-phone').value,
-        email: document.getElementById('company-email').value,
-        gst: document.getElementById('company-gst').value,
-        pan: document.getElementById('company-pan').value,
-        website: document.getElementById('company-website').value,
-        terms: document.getElementById('company-terms').value,
-        logo: logoBase64
-    };
-
-    localStorage.setItem('companyDetails', JSON.stringify(companyDetails));
-    displayCurrentSettings();
-    alert('✅ Company details saved successfully!');
-}
-
-// Save banking details
+// Save Banking Details
 async function saveBankingDetails(event) {
     event.preventDefault();
-
     if (!checkOwnerPermission()) return;
 
-    const signatureFile = document.getElementById('company-signature').files[0];
-    let signatureBase64 = bankingDetails.signature || null;
+    let signatureBase64 = bankingDetails.signature;
+    const sigInput = document.getElementById('company-signature');
 
-    if (signatureFile) {
+    if (sigInput && sigInput.files && sigInput.files[0]) {
         signatureBase64 = await new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target.result);
-            reader.readAsDataURL(signatureFile);
+            reader.readAsDataURL(sigInput.files[0]);
         });
     }
 
