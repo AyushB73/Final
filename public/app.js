@@ -113,23 +113,8 @@ async function saveCompanyDetails(event) {
 
 
 
-async function saveSettingsToAPI(type, data) {
-    try {
-        const response = await fetch(`${API_URL}/api/settings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type, data })
-        });
+// Duplicate saveSettingsToAPI function removed
 
-        if (!response.ok) throw new Error('Failed to save');
-
-        alert(`${type === 'company' ? 'Company' : 'Banking'} details saved successfully!`);
-        await loadSettings(); // Reload to update global vars
-    } catch (error) {
-        console.error('Error saving settings:', error);
-        alert('Failed to save settings.');
-    }
-}
 
 
 
@@ -375,25 +360,48 @@ function checkOwnerPermission() {
 // Database initialization is now handled by the backend
 
 // Inventory Management
-async function loadInventory() {
+// Inventory Management
+async function loadInventory(retryCount = 0) {
+    const tbody = document.getElementById('inventory-tbody');
+
+    // Show loading state on first try
+    if (retryCount === 0 && tbody) {
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 2rem;">Loading inventory... please wait.</td></tr>';
+    }
+
     try {
         inventory = await APIService.getInventory();
         renderInventory();
         updateProductSelect();
     } catch (error) {
-        console.error('Error loading inventory:', error);
-        console.error('Full error details:', error.message, error.stack);
+        console.error(`Error loading inventory (Attempt ${retryCount + 1}):`, error);
 
-        // Show more helpful error message
-        const errorMsg = error.message.includes('Failed to fetch')
-            ? 'Cannot connect to server. Please check if the backend is running.'
-            : `Failed to load inventory: ${error.message}`;
+        if (retryCount < 2) {
+            // Retry logic (0, 1 -> 2 retries total 3 attempts)
+            setTimeout(() => loadInventory(retryCount + 1), 1500);
+        } else {
+            console.error('Final failure loading inventory:', error);
+            const errorMsg = error.message.includes('Failed to fetch')
+                ? 'Cannot connect to server.'
+                : `Error: ${error.message}`;
 
-        alert(errorMsg + '\n\nPlease check the browser console for more details.');
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="12" style="text-align: center; padding: 2rem; color: #dc2626;">
+                            <p>${errorMsg}</p>
+                            <button class="btn btn-primary" onclick="loadInventory()" style="margin-top: 1rem;">
+                                ↻ Retry Loading
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
 
-        // Initialize with empty inventory to prevent app crash
-        inventory = [];
-        renderInventory();
+            // Do NOT overwrite inventory with [] yet, so we don't lose data if it was just a glitch
+            // unless it was truly empty before?
+            if (!inventory) inventory = [];
+        }
     }
 }
 
@@ -1212,26 +1220,44 @@ function fillCustomerDetails(customer) {
 // This duplicate function is removed - using the async version above
 
 // Purchase Management
-async function loadPurchases() {
+async function loadPurchases(retryCount = 0) {
+    const tbody = document.getElementById('purchases-tbody');
+
+    // Show loading state on first try
+    if (retryCount === 0 && tbody) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 2rem;">Loading purchases... please wait.</td></tr>';
+    }
+
     try {
         purchases = await APIService.getPurchases();
         console.log(`✅ Loaded ${purchases.length} purchases`);
-        console.log('Purchases data:', purchases);
-
-        // Log each purchase structure
-        purchases.forEach(purchase => {
-            console.log(`Purchase #${purchase.id}:`, {
-                id: purchase.id,
-                hasSupplier: !!purchase.supplier,
-                hasItems: !!purchase.items,
-                itemsCount: purchase.items?.length || 0,
-                supplier: purchase.supplier,
-                items: purchase.items
-            });
-        });
+        renderPurchases();
     } catch (error) {
-        console.error('Error loading purchases:', error);
-        purchases = [];
+        console.error(`Error loading purchases (Attempt ${retryCount + 1}):`, error);
+
+        if (retryCount < 2) {
+            setTimeout(() => loadPurchases(retryCount + 1), 1500);
+        } else {
+            console.error('Final failure loading purchases:', error);
+            const errorMsg = error.message.includes('Failed to fetch')
+                ? 'Cannot connect to server.'
+                : `Error: ${error.message}`;
+
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="10" style="text-align: center; padding: 2rem; color: #dc2626;">
+                            <p>${errorMsg}</p>
+                            <button class="btn btn-primary" onclick="loadPurchases()" style="margin-top: 1rem;">
+                                ↻ Retry Loading
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+            // Fallback to empty if failed
+            if (!purchases) purchases = [];
+        }
     }
 }
 
@@ -2629,26 +2655,44 @@ async function deleteSupplier(supplierId, supplierName) {
 // Bill IDs are now auto-generated by the database
 
 // Reports
-async function loadBills() {
+async function loadBills(retryCount = 0) {
+    const tbody = document.getElementById('sales-tbody');
+
+    // Show loading state on first try
+    if (retryCount === 0 && tbody) {
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 2rem;">Loading sales records... please wait.</td></tr>';
+    }
+
     try {
         bills = await APIService.getBills();
         console.log(`✅ Loaded ${bills.length} bills`);
-        console.log('Bills data:', bills);
-
-        // Log each bill's structure
-        bills.forEach(bill => {
-            console.log(`Bill #${bill.id}: `, {
-                id: bill.id,
-                hasCustomer: !!bill.customer,
-                hasItems: !!bill.items,
-                itemsCount: bill.items?.length || 0,
-                customer: bill.customer,
-                items: bill.items
-            });
-        });
+        renderSales();
     } catch (error) {
-        console.error('Error loading bills:', error);
-        bills = [];
+        console.error(`Error loading bills (Attempt ${retryCount + 1}):`, error);
+
+        if (retryCount < 2) {
+            setTimeout(() => loadBills(retryCount + 1), 1500);
+        } else {
+            console.error('Final failure loading bills:', error);
+            const errorMsg = error.message.includes('Failed to fetch')
+                ? 'Cannot connect to server.'
+                : `Error: ${error.message}`;
+
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="12" style="text-align: center; padding: 2rem; color: #dc2626;">
+                            <p>${errorMsg}</p>
+                            <button class="btn btn-primary" onclick="loadBills()" style="margin-top: 1rem;">
+                                ↻ Retry Loading
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+            // Fallback to empty if failed
+            if (!bills) bills = [];
+        }
     }
 }
 
