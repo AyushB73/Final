@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initial setup
     setupNavigation();
-    setupOutsideClicks();
 
     console.log('📡 Starting data load...');
     // Load data
