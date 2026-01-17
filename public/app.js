@@ -114,7 +114,6 @@ async function saveCompanyDetails(event) {
         gst: document.getElementById('company-gst').value,
         pan: document.getElementById('company-pan').value,
         terms: document.getElementById('company-terms').value,
-        // Preserve logo if not changed (handled via separate upload logic usually, but here likely base64)
         logo: companyDetails.logo
     };
 
@@ -131,20 +130,40 @@ async function saveCompanyDetails(event) {
     }
 }
 
+async function saveBankingDetails(event) {
+    event.preventDefault();
+    if (!checkOwnerPermission()) return;
 
+    const data = {
+        bankName: document.getElementById('bank-name').value,
+        accountName: document.getElementById('account-name').value,
+        accountNumber: document.getElementById('account-number').value,
+        ifsc: document.getElementById('bank-ifsc').value,
+        branch: document.getElementById('bank-branch').value,
+        upiId: document.getElementById('upi-id').value
+    };
+
+    const signatureInput = document.getElementById('company-signature');
+    if (signatureInput && signatureInput.files && signatureInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = async function (e) {
+            data.signature = e.target.result;
+            await saveSettingsToAPI('banking', data);
+        };
+        reader.readAsDataURL(signatureInput.files[0]);
+    } else {
+        await saveSettingsToAPI('banking', data);
+    }
+}
 
 // Duplicate saveSettingsToAPI function removed
 
-
-
-
-
 async function saveSettingsToAPI(type, data) {
     try {
-        const response = await fetch(`${API_URL}/api/settings/${type}`, {
+        const response = await fetch(`${API_URL}/api/settings`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify({ type, data })
         });
 
         if (!response.ok) throw new Error('Failed to save settings');
@@ -4646,18 +4665,28 @@ function renderDashboard() {
 
     const inventoryValue = inventory.reduce((sum, item) => sum + (item.quantity * (parseFloat(item.price) || 0)), 0);
 
-    // Calculate actual pending payments using payment tracking
     // Calculate Pending Payments (From Purchases - Money Out)
     let pendingPayments = 0;
     filteredPurchases.forEach(p => {
         const total = parseFloat(p.total) || 0;
-        if (p.paymentStatus === 'pending') {
+        const paymentStatus = p.paymentStatus || 'pending';
+
+        if (paymentStatus === 'pending') {
             pendingPayments += total;
-        } else if (p.paymentStatus === 'partial') {
-            const due = p.paymentTracking && p.paymentTracking.dueAmount
-                ? parseFloat(p.paymentTracking.dueAmount)
-                : 0;
-            // Fallback if paymentTracking missing but status partial (shouldn't happen with new logic, but safe to assume total if broken)
+        } else if (paymentStatus === 'partial') {
+            // Parse paymentTracking if it's a string
+            let tracking = p.paymentTracking;
+            if (typeof tracking === 'string') {
+                try {
+                    tracking = JSON.parse(tracking);
+                } catch (e) {
+                    tracking = {};
+                }
+            }
+
+            const due = tracking && tracking.dueAmount
+                ? parseFloat(tracking.dueAmount)
+                : total; // Fallback to total if dueAmount missing
             pendingPayments += due;
         }
     });
