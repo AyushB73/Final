@@ -12,9 +12,15 @@ var bankingDetails = {};
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 DOMContentLoaded - Starting initialization...');
+
     // Check authentication
     const currentUser = requireAuth();
-    if (!currentUser) return;
+    if (!currentUser) {
+        console.log('❌ No user authenticated, stopping initialization');
+        return;
+    }
+    console.log('✅ User authenticated:', currentUser.name, currentUser.role);
 
     // Display user info
     document.getElementById('user-name').textContent = currentUser.name;
@@ -26,22 +32,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupNavigation();
     setupOutsideClicks();
 
+    console.log('📡 Starting data load...');
     // Load data
-    await Promise.all([
-        loadInventory(),
-        loadBills(),
-        loadPurchases(),
-        loadProformaInvoices(),
-        loadCustomers(),
-        loadSuppliers(),
-        loadSettings()
-    ]);
+    try {
+        await Promise.all([
+            loadInventory(),
+            loadBills(),
+            loadPurchases(),
+            loadProformaInvoices(),
+            loadCustomers(),
+            loadSuppliers(),
+            loadSettings()
+        ]);
+        console.log('✅ All data loaded successfully');
+    } catch (error) {
+        console.error('❌ Error during data load:', error);
+    }
 
+    console.log('🎨 Rendering dashboard and proforma...');
     renderDashboard();
     renderProformaInvoices();
 
     // Setup input listeners for auto-calc
     setupBillingCalculators();
+
+    console.log('✅ Initialization complete!');
 });
 
 // Settings Management
