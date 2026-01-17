@@ -1378,7 +1378,10 @@ function updatePurchaseProductSelects(specificSelect = null) {
                 const option = document.createElement('option');
                 option.value = item.id;
                 option.textContent = `${item.name} - ${item.size} ${item.unit}`;
-                option.dataset.description = `${item.description || ''} ${item.colour || ''}`.trim();
+                option.textContent = `${item.name} - ${item.size} ${item.unit}`;
+                option.dataset.description = item.description || '';
+                option.dataset.colour = item.colour || '';
+                option.dataset.unit = item.unit || 'pcs';
                 select.appendChild(option);
             });
             if (currentValue) select.value = currentValue;
@@ -1403,11 +1406,35 @@ function updatePurchaseItemDetails(selectElement) {
     const descInput = row.querySelector('.purchase-desc');
     const selectedOption = selectElement.options[selectElement.selectedIndex];
 
+    // Get fields
+    const colourInput = row.querySelector('.purchase-colour');
+    const unitInput = row.querySelector('.purchase-unit');
+
     if (selectedOption && selectedOption.value) {
+        // Parse dataset description or use explicit dataset attributes if available
+        // Note: We're currently storing "desc + colour" in dataset.description
+        // Better approach: Let's extract colour from the description text if possible
+        // OR rely on what we set in updatePurchaseProductSelects: dataset.description = `${item.description} ${item.colour}`
+
+        // However, to do this cleaner, we should ideally put them in dataset 
+        // Let's check updatePurchaseProductSelects again. It sets dataset.description.
+
+        // For now, let's just clear them or set defaults. 
+        // Ideally we want to pull from the item object directly, but we only have the option.
+        // Let's assume the user enters them manually for now OR we parse from dataset if we improved `updatePurchaseProductSelects`.
+
+        // Actually, let's update `updatePurchaseProductSelects` first to store these in dataset.
+        // See the next replacement chunk for that.
+
         descInput.value = selectedOption.dataset.description || '';
+        if (colourInput) colourInput.value = selectedOption.dataset.colour || '';
+        if (unitInput) unitInput.value = selectedOption.dataset.unit || '';
+
         row.querySelector('.purchase-qty').value = '';
     } else {
         descInput.value = '';
+        if (colourInput) colourInput.value = '';
+        if (unitInput) unitInput.value = '';
     }
 }
 
@@ -1425,18 +1452,30 @@ function addPurchaseItemRow() {
     newRow.className = 'purchase-item-row';
     newRow.innerHTML = `
         <span class="item-sno" style="padding: 0.5rem; font-weight: bold; min-width: 25px;"></span>
-        <div style="flex: 3; min-width: 180px;">
+        <div style="flex: 3; min-width: 150px;">
             <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Product</label>
             <select class="purchase-product" style="width:100%" required onchange="updatePurchaseItemDetails(this)">
                 <option value="">Select Product</option>
             </select>
+            <input type="text" class="purchase-desc" placeholder="Description" style="width: 100%; margin-top: 4px; font-size: 0.85rem; display: none;"> 
+            <!-- Keeping hidden desc for backward compatibility if needed, but not showing it -->
         </div>
         
-        <div style="flex: 1;">
+        <div style="flex: 1; min-width: 80px;">
+             <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Colour</label>
+             <input type="text" class="purchase-colour" placeholder="Colour" style="width: 100%;">
+        </div>
+
+        <div style="flex: 1; min-width: 60px;">
+             <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Unit</label>
+             <input type="text" class="purchase-unit" placeholder="Unit" style="width: 100%;">
+        </div>
+
+        <div style="flex: 1; min-width: 80px;">
              <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Quantity</label>
              <input type="number" class="purchase-qty" placeholder="0.00" min="0.01" step="0.01" required style="font-weight: bold; width: 100%;">
         </div>
-        <div style="flex: 1;">
+        <div style="flex: 1; min-width: 80px;">
              <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Rate (₹)</label>
              <input type="number" class="purchase-rate" placeholder="0.00" step="0.01" min="0" required style="width: 100%;">
         </div>
@@ -1495,7 +1534,12 @@ async function addPurchase(event) {
         const quantity = parseFloat(row.querySelector('.purchase-qty').value);
         const rate = parseFloat(row.querySelector('.purchase-rate').value);
 
+        // Capture new fields with fallback to product defaults or empty string
+        const colourInput = row.querySelector('.purchase-colour');
+        const unitInput = row.querySelector('.purchase-unit');
 
+        const colour = colourInput ? colourInput.value.trim() : '';
+        const unit = unitInput ? unitInput.value.trim() : '';
 
         if (productId && quantity && rate) {
             const product = inventory.find(p => p.id === productId);
@@ -1509,7 +1553,7 @@ async function addPurchase(event) {
                     id: productId,
                     name: product.name || 'Unknown',
                     size: product.size || '',
-                    unit: product.unit || 'pcs',
+                    unit: unit || product.unit || 'pcs', // prioritize input, fallback to product default
                     quantity: quantity,
                     rate: rate,
                     amount: amount,
@@ -1517,7 +1561,7 @@ async function addPurchase(event) {
                     gstAmount: gstAmount,
                     total: amount + gstAmount,
                     description: product.description || '',
-                    colour: product.colour || ''
+                    colour: colour || product.colour || '' // prioritize input, fallback to product default
                 });
 
                 subtotal += amount;
@@ -1830,8 +1874,9 @@ function viewPurchaseDetails(purchaseId) {
         <tr>
             <td>${idx + 1}</td>
             <td>${item.name}</td>
-            <td>${item.description || item.colour || '-'}</td>
-            <td>${item.size} ${item.unit}</td>
+            <td>${item.colour || '-'}</td>
+            <td>${item.size || '-'}</td>
+            <td>${item.unit || item.unit || '-'}</td>
             <td>${item.quantity}</td>
             <td>₹${item.rate.toFixed(2)}</td>
             <td>₹${item.amount.toFixed(2)}</td>
@@ -1908,8 +1953,9 @@ function viewPurchaseDetails(purchaseId) {
                             <tr>
                                 <th>S.No</th>
                                 <th>Item Name</th>
-                                <th>Desc/Colour</th>
+                                <th>Colour</th>
                                 <th>Size</th>
+                                <th>Unit</th>
                                 <th>Qty</th>
                                 <th>Rate (₹)</th>
                                 <th>Amount (₹)</th>

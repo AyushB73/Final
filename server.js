@@ -481,6 +481,9 @@ app.post('/api/settings', async (req, res) => {
       await pool.query('INSERT INTO settings (details_type, data) VALUES (?, ?)', [type, JSON.stringify(data)]);
     }
 
+    // Emit real-time update
+    io.emit('settings:updated', { type, data });
+
     res.json({ success: true, message: 'Settings saved successfully' });
   } catch (error) {
     console.error('Error saving settings:', error);
@@ -599,6 +602,9 @@ app.put('/api/bills/:id', async (req, res) => {
       }
     };
 
+    // Emit real-time update
+    io.emit('bill:updated', { bill: parsedBill });
+
     res.json(parsedBill);
   } catch (error) {
     console.error('Error updating bill:', error);
@@ -608,7 +614,12 @@ app.put('/api/bills/:id', async (req, res) => {
 
 app.delete('/api/bills/:id', async (req, res) => {
   try {
-    await query('DELETE FROM bills WHERE id=?', [parseInt(req.params.id)]);
+    const id = parseInt(req.params.id);
+    await query('DELETE FROM bills WHERE id=?', [id]);
+
+    // Emit real-time update
+    io.emit('bill:deleted', { billId: id });
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -679,7 +690,12 @@ app.post('/api/proforma', async (req, res) => {
       ]
     );
 
-    res.json({ id: result.insertId, ...req.body });
+    const proforma = { id: result.insertId, ...req.body };
+
+    // Emit real-time update
+    io.emit('proforma:created', { proforma });
+
+    res.json(proforma);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -687,7 +703,12 @@ app.post('/api/proforma', async (req, res) => {
 
 app.delete('/api/proforma/:id', async (req, res) => {
   try {
-    await query('DELETE FROM proforma_invoices WHERE id=?', [parseInt(req.params.id)]);
+    const id = parseInt(req.params.id);
+    await query('DELETE FROM proforma_invoices WHERE id=?', [id]);
+
+    // Emit real-time update
+    io.emit('proforma:deleted', { proformaId: id });
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -821,6 +842,14 @@ app.post('/api/purchases', async (req, res) => {
     };
 
     console.log('✅ Purchase added successfully:', purchase.id);
+
+    // Emit real-time update
+    io.emit('purchase:created', { purchase });
+
+    // Also emit inventory update since stock changed
+    const updatedInventory = await query('SELECT * FROM inventory ORDER BY id ASC');
+    io.emit('inventory:refresh', { inventory: updatedInventory });
+
     res.json(purchase);
   } catch (error) {
     console.error('❌ Error adding purchase:', error.message);
@@ -861,6 +890,10 @@ app.put('/api/purchases/:id', async (req, res) => {
     );
 
     const [purchase] = await query('SELECT * FROM purchases WHERE id=?', [id]);
+
+    // Emit real-time update
+    io.emit('purchase:updated', { purchase });
+
     res.json(purchase);
   } catch (error) {
     console.error('❌ Error updating purchase:', error.message);
@@ -870,7 +903,12 @@ app.put('/api/purchases/:id', async (req, res) => {
 
 app.delete('/api/purchases/:id', async (req, res) => {
   try {
-    await query('DELETE FROM purchases WHERE id=?', [parseInt(req.params.id)]);
+    const id = parseInt(req.params.id);
+    await query('DELETE FROM purchases WHERE id=?', [id]);
+
+    // Emit real-time update
+    io.emit('purchase:deleted', { purchaseId: id });
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -902,6 +940,9 @@ app.post('/api/customers', async (req, res) => {
       createdAt: new Date()
     };
 
+    // Emit real-time update
+    io.emit('customer:created', { customer });
+
     res.json(customer);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -919,6 +960,10 @@ app.put('/api/customers/:id', async (req, res) => {
     );
 
     const [customer] = await query('SELECT * FROM customers WHERE id=?', [id]);
+
+    // Emit real-time update
+    io.emit('customer:updated', { customer });
+
     res.json(customer);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -929,6 +974,10 @@ app.delete('/api/customers/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await query('DELETE FROM customers WHERE id=?', [id]);
+
+    // Emit real-time update
+    io.emit('customer:deleted', { customerId: id });
+
     res.json({ success: true, message: 'Customer deleted successfully' });
   } catch (error) {
     console.error('❌ Error deleting customer:', error.message);
@@ -961,6 +1010,9 @@ app.post('/api/suppliers', async (req, res) => {
       createdAt: new Date()
     };
 
+    // Emit real-time update
+    io.emit('supplier:created', { supplier });
+
     res.json(supplier);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -978,6 +1030,10 @@ app.put('/api/suppliers/:id', async (req, res) => {
     );
 
     const [supplier] = await query('SELECT * FROM suppliers WHERE id=?', [id]);
+
+    // Emit real-time update
+    io.emit('supplier:updated', { supplier });
+
     res.json(supplier);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -988,6 +1044,10 @@ app.delete('/api/suppliers/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await query('DELETE FROM suppliers WHERE id=?', [id]);
+
+    // Emit real-time update
+    io.emit('supplier:deleted', { supplierId: id });
+
     res.json({ success: true, message: 'Supplier deleted successfully' });
   } catch (error) {
     console.error('❌ Error deleting supplier:', error.message);

@@ -35,7 +35,7 @@ class RealtimeSync {
             console.log('✅ Connected to real-time server');
             this.updateConnectionStatus('connected');
             this.showNotification('Connected', 'Real-time updates enabled', 'success');
-            
+
             // Register user with server
             const currentUser = getCurrentUser();
             if (currentUser) {
@@ -78,13 +78,89 @@ class RealtimeSync {
             console.log('💰 New bill created:', data);
             this.handleBillCreated(data);
         });
+
+        // Purchase events
+        this.socket.on('purchase:created', (data) => {
+            console.log('🛒 New purchase created:', data);
+            this.handlePurchaseCreated(data);
+        });
+
+        this.socket.on('purchase:updated', (data) => {
+            console.log('🛒 Purchase updated:', data);
+            this.handlePurchaseUpdated(data);
+        });
+
+        this.socket.on('purchase:deleted', (data) => {
+            console.log('🛒 Purchase deleted:', data);
+            this.handlePurchaseDeleted(data);
+        });
+
+        // Bill update/delete events
+        this.socket.on('bill:updated', (data) => {
+            console.log('💰 Bill updated:', data);
+            this.handleBillUpdated(data);
+        });
+
+        this.socket.on('bill:deleted', (data) => {
+            console.log('💰 Bill deleted:', data);
+            this.handleBillDeleted(data);
+        });
+
+        // Customer events
+        this.socket.on('customer:created', (data) => {
+            console.log('👤 Customer created:', data);
+            this.handleCustomerCreated(data);
+        });
+
+        this.socket.on('customer:updated', (data) => {
+            console.log('👤 Customer updated:', data);
+            this.handleCustomerUpdated(data);
+        });
+
+        this.socket.on('customer:deleted', (data) => {
+            console.log('👤 Customer deleted:', data);
+            this.handleCustomerDeleted(data);
+        });
+
+        // Supplier events
+        this.socket.on('supplier:created', (data) => {
+            console.log('🏭 Supplier created:', data);
+            this.handleSupplierCreated(data);
+        });
+
+        this.socket.on('supplier:updated', (data) => {
+            console.log('🏭 Supplier updated:', data);
+            this.handleSupplierUpdated(data);
+        });
+
+        this.socket.on('supplier:deleted', (data) => {
+            console.log('🏭 Supplier deleted:', data);
+            this.handleSupplierDeleted(data);
+        });
+
+        // Proforma events
+        this.socket.on('proforma:created', (data) => {
+            console.log('📑 Proforma created:', data);
+            this.handleProformaCreated(data);
+        });
+
+        this.socket.on('proforma:deleted', (data) => {
+            console.log('📑 Proforma deleted:', data);
+            this.handleProformaDeleted(data);
+        });
+
+        // Settings events
+        this.socket.on('settings:updated', (data) => {
+            console.log('⚙️ Settings updated:', data);
+            this.handleSettingsUpdated(data);
+        });
     }
 
     // Handle inventory updates (add, edit, delete, stock change)
     handleInventoryUpdate(data) {
         const { action, item, itemId } = data;
         const currentUser = getCurrentUser();
-        
+
         switch (action) {
             case 'add':
                 // Add new item to inventory array
@@ -93,7 +169,7 @@ class RealtimeSync {
                     this.showNotification('New Product Added', `${item.name} added to inventory`, 'info');
                 }
                 break;
-                
+
             case 'update':
                 // Update existing item
                 const index = inventory.findIndex(i => i.id === item.id);
@@ -102,7 +178,7 @@ class RealtimeSync {
                     this.showNotification('Product Updated', `${item.name} has been updated`, 'info');
                 }
                 break;
-                
+
             case 'delete':
                 // Remove item from inventory
                 const deleteIndex = inventory.findIndex(i => i.id === itemId);
@@ -113,7 +189,7 @@ class RealtimeSync {
                 }
                 break;
         }
-        
+
         // Refresh UI
         if (typeof renderInventory === 'function') {
             renderInventory();
@@ -127,7 +203,7 @@ class RealtimeSync {
     handleInventoryRefresh(data) {
         if (data.inventory) {
             inventory = data.inventory;
-            
+
             // Refresh UI
             if (typeof renderInventory === 'function') {
                 renderInventory();
@@ -135,7 +211,7 @@ class RealtimeSync {
             if (typeof updateProductSelect === 'function') {
                 updateProductSelect();
             }
-            
+
             const currentUser = getCurrentUser();
             if (currentUser && currentUser.role === 'owner') {
                 this.showNotification('Stock Updated', 'Inventory updated after sale', 'info');
@@ -144,29 +220,183 @@ class RealtimeSync {
     }
 
     // Handle new bill creation (for owner to see staff sales)
+    // Handle new bill creation (for owner to see staff sales)
     handleBillCreated(data) {
         const currentUser = getCurrentUser();
-        
+
         if (data.bill) {
             // Add bill to bills array if not already present
-            if (!bills.find(b => b.id === data.bill.id)) {
+            // bills is a global variable from app.js
+            if (typeof bills !== 'undefined' && !bills.find(b => b.id === data.bill.id)) {
                 bills.unshift(data.bill);
-                
+
                 // Show notification to owner
                 if (currentUser && currentUser.role === 'owner') {
                     this.showNotification(
-                        'New Sale!', 
+                        'New Sale!',
                         `Bill #${data.bill.id} - ₹${data.bill.total.toFixed(2)} by ${data.bill.customer.name}`,
                         'success'
                     );
                 }
-                
+
                 // Refresh sales view if active
                 if (typeof renderSales === 'function') {
                     renderSales();
                 }
             }
         }
+    }
+
+    handlePurchaseCreated(data) {
+        if (!data.purchase) return;
+
+        // Add to purchases array if not exists
+        if (typeof purchases !== 'undefined' && !purchases.find(p => p.id === data.purchase.id)) {
+            purchases.unshift(data.purchase);
+            if (typeof renderPurchases === 'function') {
+                renderPurchases();
+            }
+            this.showNotification('New Purchase', `Purchase #${data.purchase.id} added`, 'success');
+        }
+    }
+
+    handlePurchaseUpdated(data) {
+        if (!data.purchase || typeof purchases === 'undefined') return;
+
+        const index = purchases.findIndex(p => p.id === data.purchase.id);
+        if (index !== -1) {
+            purchases[index] = data.purchase;
+            if (typeof renderPurchases === 'function') {
+                renderPurchases();
+            }
+            this.showNotification('Purchase Updated', `Purchase #${data.purchase.id} updated`, 'info');
+        }
+    }
+
+    handlePurchaseDeleted(data) {
+        if (!data.purchaseId || typeof purchases === 'undefined') return;
+
+        const index = purchases.findIndex(p => p.id === data.purchaseId);
+        if (index !== -1) {
+            purchases.splice(index, 1);
+            if (typeof renderPurchases === 'function') {
+                renderPurchases();
+            }
+            this.showNotification('Purchase Deleted', `Purchase #${data.purchaseId} removed`, 'warning');
+        }
+    }
+
+    handleBillUpdated(data) {
+        if (!data.bill || typeof bills === 'undefined') return;
+        const index = bills.findIndex(b => b.id === data.bill.id);
+        if (index !== -1) {
+            bills[index] = data.bill;
+            if (typeof renderSales === 'function') renderSales();
+            this.showNotification('Bill Updated', `Bill #${data.bill.id} updated`, 'info');
+        }
+    }
+
+    handleBillDeleted(data) {
+        if (!data.billId || typeof bills === 'undefined') return;
+        const index = bills.findIndex(b => b.id === data.billId);
+        if (index !== -1) {
+            bills.splice(index, 1);
+            if (typeof renderSales === 'function') renderSales();
+            this.showNotification('Bill Deleted', `Bill #${data.billId} removed`, 'warning');
+        }
+    }
+
+    handleCustomerCreated(data) {
+        if (!data.customer || typeof customers === 'undefined') return;
+        if (!customers.find(c => c.id === data.customer.id)) {
+            customers.push(data.customer);
+            if (typeof updateCustomerDatalist === 'function') updateCustomerDatalist();
+            this.showNotification('Customer Added', `${data.customer.name} added`, 'success');
+        }
+    }
+
+    handleCustomerUpdated(data) {
+        if (!data.customer || typeof customers === 'undefined') return;
+        const index = customers.findIndex(c => c.id === data.customer.id);
+        if (index !== -1) {
+            customers[index] = data.customer;
+            if (typeof updateCustomerDatalist === 'function') updateCustomerDatalist();
+            this.showNotification('Customer Updated', `${data.customer.name} updated`, 'info');
+        }
+    }
+
+    handleCustomerDeleted(data) {
+        if (!data.customerId || typeof customers === 'undefined') return;
+        const index = customers.findIndex(c => c.id === data.customerId);
+        if (index !== -1) {
+            const customerName = customers[index].name;
+            customers.splice(index, 1);
+            if (typeof updateCustomerDatalist === 'function') updateCustomerDatalist();
+            this.showNotification('Customer Deleted', `${customerName} removed`, 'warning');
+        }
+    }
+
+    handleSupplierCreated(data) {
+        if (!data.supplier || typeof suppliers === 'undefined') return;
+        if (!suppliers.find(s => s.id === data.supplier.id)) {
+            suppliers.push(data.supplier);
+            if (typeof updateSupplierDatalist === 'function') updateSupplierDatalist();
+            this.showNotification('Supplier Added', `${data.supplier.name} added`, 'success');
+        }
+    }
+
+    handleSupplierUpdated(data) {
+        if (!data.supplier || typeof suppliers === 'undefined') return;
+        const index = suppliers.findIndex(s => s.id === data.supplier.id);
+        if (index !== -1) {
+            suppliers[index] = data.supplier;
+            if (typeof updateSupplierDatalist === 'function') updateSupplierDatalist();
+            this.showNotification('Supplier Updated', `${data.supplier.name} updated`, 'info');
+        }
+    }
+
+    handleSupplierDeleted(data) {
+        if (!data.supplierId || typeof suppliers === 'undefined') return;
+        const index = suppliers.findIndex(s => s.id === data.supplierId);
+        if (index !== -1) {
+            const supplierName = suppliers[index].name;
+            suppliers.splice(index, 1);
+            if (typeof updateSupplierDatalist === 'function') updateSupplierDatalist();
+            this.showNotification('Supplier Deleted', `${supplierName} removed`, 'warning');
+        }
+    }
+
+    handleProformaCreated(data) {
+        if (!data.proforma || typeof proformaInvoices === 'undefined') return;
+        if (!proformaInvoices.find(p => p.id === data.proforma.id)) {
+            proformaInvoices.unshift(data.proforma);
+            if (typeof renderProformaInvoices === 'function') renderProformaInvoices();
+            this.showNotification('Proforma Created', `Proforma #${data.proforma.id} created`, 'success');
+        }
+    }
+
+    handleProformaDeleted(data) {
+        if (!data.proformaId || typeof proformaInvoices === 'undefined') return;
+        const index = proformaInvoices.findIndex(p => p.id === data.proformaId);
+        if (index !== -1) {
+            proformaInvoices.splice(index, 1);
+            if (typeof renderProformaInvoices === 'function') renderProformaInvoices();
+            this.showNotification('Proforma Deleted', `Proforma #${data.proformaId} removed`, 'warning');
+        }
+    }
+
+    handleSettingsUpdated(data) {
+        if (!data.type || !data.data) return;
+        if (data.type === 'company' && typeof companyDetails !== 'undefined') {
+            Object.assign(companyDetails, data.data);
+            localStorage.setItem('companyDetails', JSON.stringify(companyDetails));
+            this.showNotification('Settings Updated', 'Company details updated', 'info');
+        } else if (data.type === 'banking' && typeof bankingDetails !== 'undefined') {
+            Object.assign(bankingDetails, data.data);
+            localStorage.setItem('bankingDetails', JSON.stringify(bankingDetails));
+            this.showNotification('Settings Updated', 'Banking details updated', 'info');
+        }
+        if (typeof displayCurrentSettings === 'function') displayCurrentSettings();
     }
 
     // Show toast notification
@@ -180,7 +410,7 @@ class RealtimeSync {
                 <p>${message}</p>
             </div>
         `;
-        
+
         // Add styles if not already present
         if (!document.getElementById('realtime-notification-styles')) {
             const style = document.createElement('style');
@@ -245,9 +475,9 @@ class RealtimeSync {
             `;
             document.head.appendChild(style);
         }
-        
+
         document.body.appendChild(notification);
-        
+
         // Auto remove after 4 seconds
         setTimeout(() => {
             notification.style.animation = 'slideOut 0.3s ease-out';
@@ -275,11 +505,11 @@ class RealtimeSync {
     updateConnectionStatus(status) {
         const statusElement = document.getElementById('connection-status');
         const statusText = statusElement?.querySelector('.status-text');
-        
+
         if (!statusElement || !statusText) return;
-        
+
         statusElement.className = 'connection-status';
-        
+
         switch (status) {
             case 'connected':
                 statusElement.classList.add('connected');
@@ -306,7 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         realtimeSync = new RealtimeSync();
         realtimeSync.init();
-        
+
         // Make it globally available
         window.realtimeSync = realtimeSync;
     }, 500);
