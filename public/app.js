@@ -1,4 +1,5 @@
 ﻿// State management with MySQL Database via API
+const API_URL = 'https://windowersplastiwood.up.railway.app';
 let inventory = [];
 let bills = [];
 let currentBillItems = [];
@@ -1369,25 +1370,7 @@ function updatePurchaseItemSNos() {
     });
 }
 
-function addPurchaseItemRow() {
-    const container = document.getElementById('purchase-items-container');
-    const newRow = document.createElement('div');
-    newRow.className = 'purchase-item-row';
-    newRow.innerHTML = `
-        <span class="item-sno" style="padding: 0.5rem; font-weight: bold; min-width: 30px; display: inline-flex; align-items: center;"></span>
-        <select class="purchase-product" required onchange="updatePurchaseItemDetails(this)">
-            <option value="">Select Product</option>
-        </select>
-        <input type="text" class="purchase-desc" placeholder="Desc/Colour" readonly style="background: #f8fafc;">
-        <input type="number" class="purchase-qty" placeholder="Quantity" min="1" required>
-        <input type="number" class="purchase-rate" placeholder="Rate (₹)" step="0.01" min="0" required>
-        <button type="button" class="btn btn-secondary" onclick="removePurchaseItemRow(this)">−</button>
-    `;
-    container.appendChild(newRow);
-    const newSelect = newRow.querySelector('.purchase-product');
-    updatePurchaseProductSelects(newSelect);
-    updatePurchaseItemSNos();
-}
+
 
 function updatePurchaseItemDetails(selectElement) {
     const row = selectElement.closest('.purchase-item-row');
@@ -1396,66 +1379,38 @@ function updatePurchaseItemDetails(selectElement) {
 
     if (selectedOption && selectedOption.value) {
         descInput.value = selectedOption.dataset.description || '';
-        // Clear calculator inputs if product changed
-        if (row.querySelector('.purchase-len')) row.querySelector('.purchase-len').value = '';
-        if (row.querySelector('.purchase-wid')) row.querySelector('.purchase-wid').value = '';
-        if (row.querySelector('.purchase-pieces')) row.querySelector('.purchase-pieces').value = '';
         row.querySelector('.purchase-qty').value = '';
     } else {
         descInput.value = '';
     }
 }
 
-// Purchase Calculator Logic
-function calculatePurchaseItemQty(input) {
-    const row = input.closest('.purchase-item-row');
-    const l = parseFloat(row.querySelector('.purchase-len').value) || 0;
-    const w = parseFloat(row.querySelector('.purchase-wid').value) || 0;
-    const pieces = parseFloat(row.querySelector('.purchase-pieces').value) || 0;
 
-    if (l > 0 && w > 0 && pieces > 0) {
-        const totalQty = (l * w * pieces).toFixed(2);
-        row.querySelector('.purchase-qty').value = totalQty;
-    }
-}
 
 function removePurchaseItemRow(button) {
     button.parentElement.remove();
     updatePurchaseItemSNos();
 }
 
-// Update Add Purchase Row Template
+// Update Add Purchase Row Template - Simplified
 function addPurchaseItemRow() {
     const container = document.getElementById('purchase-items-container');
     const newRow = document.createElement('div');
     newRow.className = 'purchase-item-row';
     newRow.innerHTML = `
         <span class="item-sno" style="padding: 0.5rem; font-weight: bold; min-width: 25px;"></span>
-        <div style="flex: 2; min-width: 180px;">
+        <div style="flex: 3; min-width: 180px;">
             <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Product</label>
             <select class="purchase-product" style="width:100%" required onchange="updatePurchaseItemDetails(this)">
                 <option value="">Select Product</option>
             </select>
         </div>
         
-        <div style="flex: 1.5; min-width: 150px; background: rgba(0,0,0,0.02); padding: 4px; border-radius: 4px;">
-            <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Dimensions (L x W x Pcs)</label>
-            <div style="display: flex; gap: 4px; align-items: center;">
-                <input type="number" class="purchase-len" placeholder="L(ft)" step="0.01" style="width: 100%;" oninput="calculatePurchaseItemQty(this)">
-                <input type="number" class="purchase-wid" placeholder="W(ft)" step="0.01" style="width: 100%;" oninput="calculatePurchaseItemQty(this)">
-                <input type="number" class="purchase-pieces" placeholder="Pcs" min="1" style="width: 100%;" oninput="calculatePurchaseItemQty(this)">
-            </div>
-        </div>
-
         <div style="flex: 1;">
-             <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Desc/Color</label>
-             <input type="text" class="purchase-desc" placeholder="Desc" readonly style="background: #f8fafc; width: 100%;">
-        </div>
-        <div style="flex: 0.8;">
-             <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Tot. Qty</label>
+             <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Quantity</label>
              <input type="number" class="purchase-qty" placeholder="0.00" min="0.01" step="0.01" required style="font-weight: bold; width: 100%;">
         </div>
-        <div style="flex: 0.8;">
+        <div style="flex: 1;">
              <label style="font-size:0.75rem; color:#666; display:block; margin-bottom:2px;">Rate (₹)</label>
              <input type="number" class="purchase-rate" placeholder="0.00" step="0.01" min="0" required style="width: 100%;">
         </div>
@@ -1514,10 +1469,7 @@ async function addPurchase(event) {
         const quantity = parseFloat(row.querySelector('.purchase-qty').value);
         const rate = parseFloat(row.querySelector('.purchase-rate').value);
 
-        // Dimensions
-        const len = parseFloat(row.querySelector('.purchase-len').value) || null;
-        const wid = parseFloat(row.querySelector('.purchase-wid').value) || null;
-        const pcs = parseFloat(row.querySelector('.purchase-pieces').value) || null;
+
 
         if (productId && quantity && rate) {
             const product = inventory.find(p => p.id === productId);
@@ -4428,15 +4380,15 @@ async function downloadCustomerReportPDF(customerName) {
 
     // Summary
     doc.setFont("helvetica", "bold");
-    doc.text(`Total Orders: `, 120, 60);
-    doc.text(`Total Business: `, 120, 66);
-    doc.text(`Outstanding: `, 120, 72);
+    doc.text(`Total Orders: `, 90, 60);
+    doc.text(`Total Business: `, 90, 66);
+    doc.text(`Outstanding: `, 90, 72);
     doc.setFont("helvetica", "normal");
-    doc.text(`${customerBills.length} `, 160, 60);
-    doc.text(`Rs.${totalAmount.toFixed(2)} `, 160, 66);
+    doc.text(`${customerBills.length} `, 130, 60);
+    doc.text(`Rs.${totalAmount.toFixed(2)} `, 130, 66);
     if (outstandingAmount > 0) doc.setTextColor(231, 76, 60);
     else doc.setTextColor(39, 174, 96);
-    doc.text(`Rs.${outstandingAmount.toFixed(2)} `, 160, 72);
+    doc.text(`Rs.${outstandingAmount.toFixed(2)} `, 130, 72);
     doc.setTextColor(44, 62, 80);
 
     // Dynamic QR for Outstanding Balance
