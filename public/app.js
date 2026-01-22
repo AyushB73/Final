@@ -1501,7 +1501,10 @@ function updateCustomerDatalist() {
     datalist.innerHTML = '';
     customers.forEach(customer => {
         const option = document.createElement('option');
-        option.value = `${customer.name} - ${customer.phone || 'No Phone'}`;
+        // Use customer name as value for easier matching
+        option.value = customer.name;
+        // Store phone in label for display
+        option.label = `${customer.name} ${customer.phone ? '(' + customer.phone + ')' : ''}`;
         option.dataset.customerId = customer.id;
         datalist.appendChild(option);
     });
@@ -1511,25 +1514,40 @@ function setupCustomerSearch() {
     const searchInput = document.getElementById('customer-search');
     if (!searchInput) return;
 
+    // Handle selection from datalist
     searchInput.addEventListener('input', function () {
-        const searchValue = this.value.toLowerCase();
+        const searchValue = this.value.trim();
 
-        // Find customer by name or phone
-        const customer = customers.find(c =>
-            c.name.toLowerCase().includes(searchValue) ||
-            (c.phone && c.phone.includes(searchValue))
+        if (!searchValue) return;
+
+        // Try exact match first (for datalist selection)
+        let customer = customers.find(c =>
+            c.name === searchValue ||
+            (c.phone && c.phone === searchValue)
         );
+
+        // If no exact match, try partial match
+        if (!customer) {
+            customer = customers.find(c =>
+                c.name.toLowerCase().includes(searchValue.toLowerCase()) ||
+                (c.phone && c.phone.includes(searchValue))
+            );
+        }
 
         if (customer) {
             fillCustomerDetails(customer);
         }
     });
 
-    searchInput.addEventListener('change', function () {
-        const searchValue = this.value;
+    // Handle when user leaves the field
+    searchInput.addEventListener('blur', function () {
+        const searchValue = this.value.trim();
+
+        if (!searchValue) return;
+
         const customer = customers.find(c =>
-            searchValue.includes(c.name) ||
-            (c.phone && searchValue.includes(c.phone))
+            c.name === searchValue ||
+            (c.phone && c.phone === searchValue)
         );
 
         if (customer) {

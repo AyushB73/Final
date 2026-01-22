@@ -199,7 +199,8 @@ function generateBillPDF(bill, title = 'TAX INVOICE') {
             textColor: 255,
             fontStyle: 'bold',
             fontSize: 9,
-            cellPadding: 4
+            cellPadding: 4,
+            halign: 'center'  // Center align all header text
         },
         bodyStyles: {
             textColor: textColor,
