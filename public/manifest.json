@@ -1,7 +1,7 @@
 {
-  "name": "Plastiwood Inventory Management",
-  "short_name": "Plastiwood",
-  "description": "Inventory and Billing Management System for Plastiwood Company",
+  "name": "Windowers Plastiwood",
+  "short_name": "Windowers",
+  "description": "Inventory and Billing Management System for Windowers Plastiwood Company",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#667eea",
@@ -71,28 +71,47 @@
       "form_factor": "narrow"
     }
   ],
-  "categories": ["business", "productivity", "finance"],
+  "categories": [
+    "business",
+    "productivity",
+    "finance"
+  ],
   "shortcuts": [
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "View business dashboard",
       "url": "/?view=dashboard",
-      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
     },
     {
       "name": "New Bill",
       "short_name": "Bill",
       "description": "Generate new bill",
       "url": "/?view=billing",
-      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
     },
     {
       "name": "Inventory",
       "short_name": "Inventory",
       "description": "View inventory",
       "url": "/?view=inventory",
-      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
     }
   ]
 }

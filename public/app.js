@@ -55,6 +55,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Setup input listeners for auto-calc
     setupBillingCalculators();
 
+    // Set default bill date to today
+    const billDateInput = document.getElementById('bill-date');
+    if (billDateInput) {
+        const today = new Date().toISOString().split('T')[0];
+        billDateInput.value = today;
+    }
+
+    // Setup GST validation for customer GST fields
+    const customerGSTInput = document.getElementById('customer-gst');
+    if (customerGSTInput) {
+        customerGSTInput.addEventListener('blur', function () {
+            addGSTValidationFeedback(this);
+        });
+        customerGSTInput.addEventListener('input', function () {
+            // Remove feedback on input to avoid clutter
+            const feedback = this.parentElement.querySelector('.gst-validation-feedback');
+            if (feedback) feedback.remove();
+            this.style.borderColor = '';
+        });
+    }
+
+    // Setup GST validation for company GST field in settings
+    const companyGSTInput = document.getElementById('company-gst');
+    if (companyGSTInput) {
+        companyGSTInput.addEventListener('blur', function () {
+            addGSTValidationFeedback(this);
+        });
+        companyGSTInput.addEventListener('input', function () {
+            const feedback = this.parentElement.querySelector('.gst-validation-feedback');
+            if (feedback) feedback.remove();
+            this.style.borderColor = '';
+        });
+    }
+
+    // Setup GST validation for new customer modal
+    const newCustomerGSTInput = document.getElementById('new-customer-gst');
+    if (newCustomerGSTInput) {
+        newCustomerGSTInput.addEventListener('blur', function () {
+            addGSTValidationFeedback(this);
+        });
+        newCustomerGSTInput.addEventListener('input', function () {
+            const feedback = this.parentElement.querySelector('.gst-validation-feedback');
+            if (feedback) feedback.remove();
+            this.style.borderColor = '';
+        });
+    }
+
     console.log('✅ Initialization complete!');
 });
 
@@ -515,7 +562,91 @@ function generateNextInvoiceNumber() {
     return `INV-${maxNum + 1}`;
 }
 
-// Make functions available globally (moved to end of file after all functions are defined)
+// GST Number Validation
+function validateGSTNumber(gstNumber) {
+    if (!gstNumber) return { valid: false, message: '' };
+
+    // Remove spaces and convert to uppercase
+    gstNumber = gstNumber.trim().toUpperCase();
+
+    // GST format: 22AAAAA0000A1Z5
+    // 2 digits (state code) + 10 chars (PAN) + 1 digit (entity) + 1 letter (Z) + 1 alphanumeric (checksum)
+    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+    if (!gstRegex.test(gstNumber)) {
+        return {
+            valid: false,
+            message: 'Invalid GST format. Expected: 22AAAAA0000A1Z5'
+        };
+    }
+
+    // Validate state code (01-37 are valid Indian state codes)
+    const stateCode = parseInt(gstNumber.substring(0, 2));
+    if (stateCode < 1 || stateCode > 37) {
+        return {
+            valid: false,
+            message: 'Invalid state code in GST number'
+        };
+    }
+
+    // Validate PAN format within GST (positions 2-11)
+    const panPart = gstNumber.substring(2, 12);
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    if (!panRegex.test(panPart)) {
+        return {
+            valid: false,
+            message: 'Invalid PAN format in GST number'
+        };
+    }
+
+    return {
+        valid: true,
+        message: 'Valid GST number'
+    };
+}
+
+// Add visual feedback for GST validation
+function addGSTValidationFeedback(inputElement) {
+    if (!inputElement) return;
+
+    // Remove existing feedback
+    const existingFeedback = inputElement.parentElement.querySelector('.gst-validation-feedback');
+    if (existingFeedback) existingFeedback.remove();
+
+    const gstValue = inputElement.value.trim();
+    if (!gstValue) return;
+
+    const validation = validateGSTNumber(gstValue);
+
+    // Create feedback element
+    const feedback = document.createElement('div');
+    feedback.className = 'gst-validation-feedback';
+    feedback.style.cssText = `
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    `;
+
+    if (validation.valid) {
+        feedback.style.cssText += 'color: #16a34a; background: #dcfce7;';
+        feedback.innerHTML = '✓ Valid GST number';
+        inputElement.style.borderColor = '#16a34a';
+    } else {
+        feedback.style.cssText += 'color: #dc2626; background: #fee2e2;';
+        feedback.innerHTML = `✗ ${validation.message}`;
+        inputElement.style.borderColor = '#dc2626';
+    }
+
+    inputElement.parentElement.insertBefore(feedback, inputElement.nextSibling);
+}
+
+// Make functions globally available
+window.validateGSTNumber = validateGSTNumber;
+window.addGSTValidationFeedback = addGSTValidationFeedback;
 
 // Role-based access control
 function applyRoleRestrictions(role) {
@@ -697,14 +828,14 @@ async function addStock(event) {
     event.preventDefault();
 
     const itemId = parseInt(document.getElementById('stock-item-id').value);
-    const quantityToAdd = parseInt(document.getElementById('stock-quantity').value);
+    const quantityToAdd = parseFloat(document.getElementById('stock-quantity').value);
 
     const item = inventory.find(i => i.id === itemId);
     if (!item) return;
 
     try {
         // Update quantity
-        item.quantity += quantityToAdd;
+        item.quantity = parseFloat(item.quantity) + quantityToAdd;
 
         // Save to database
         await APIService.updateInventoryItem(itemId, item);
@@ -747,21 +878,22 @@ async function removeStockSubmit(event) {
     event.preventDefault();
 
     const itemId = parseInt(document.getElementById('remove-stock-item-id').value);
-    const quantityToRemove = parseInt(document.getElementById('remove-stock-quantity').value);
+    const quantityToRemove = parseFloat(document.getElementById('remove-stock-quantity').value);
     const reason = document.getElementById('remove-stock-reason').value;
 
     const item = inventory.find(i => i.id === itemId);
     if (!item) return;
 
-    if (quantityToRemove > item.quantity) {
-        alert(`Cannot remove ${quantityToRemove} units. Only ${item.quantity} units available in stock.`);
+    const currentQuantity = parseFloat(item.quantity);
+    if (quantityToRemove > currentQuantity) {
+        alert(`Cannot remove ${quantityToRemove} units. Only ${currentQuantity} units available in stock.`);
         return;
     }
 
     try {
         // Update quantity
-        const oldQuantity = item.quantity;
-        item.quantity -= quantityToRemove;
+        const oldQuantity = currentQuantity;
+        item.quantity = currentQuantity - quantityToRemove;
 
         // Save to database
         await APIService.updateInventoryItem(itemId, { quantity: item.quantity });
@@ -1108,6 +1240,7 @@ function removeBillItem(index) {
 
 async function generateBill(isProforma = false) {
     const customId = document.getElementById('invoice-number').value;
+    const billDate = document.getElementById('bill-date').value;
     const customerName = document.getElementById('customer-name').value;
     const customerPhone = document.getElementById('customer-phone').value;
     const customerGst = document.getElementById('customer-gst').value;
@@ -1200,7 +1333,8 @@ async function generateBill(isProforma = false) {
         totalGST,
         total,
         paymentStatus: paymentStatus,
-        paymentTracking: paymentTracking
+        paymentTracking: paymentTracking,
+        createdAt: billDate ? new Date(billDate).toISOString() : new Date().toISOString()
     };
 
     if (isProforma) {
@@ -1309,6 +1443,11 @@ function resetBillingForm() {
     document.getElementById('customer-address').value = '';
     document.getElementById('customer-state').value = '';
     document.getElementById('customer-payment-status').value = '';
+
+    // Set bill date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('bill-date').value = today;
+
     currentBillItems = [];
     renderBillItems();
     generateNextInvoiceNumber();
@@ -4241,6 +4380,76 @@ function closeCustomerReportsModal() {
     document.getElementById('customer-reports-modal').classList.remove('active');
 }
 
+// Add New Customer
+function showAddCustomerModal() {
+    if (!checkOwnerPermission()) return;
+
+    // Clear form
+    document.getElementById('add-customer-form').reset();
+
+    // Show modal
+    document.getElementById('add-customer-modal').classList.add('active');
+}
+
+function closeAddCustomerModal() {
+    document.getElementById('add-customer-modal').classList.remove('active');
+}
+
+async function addNewCustomer(event) {
+    event.preventDefault();
+
+    if (!checkOwnerPermission()) return;
+
+    const customerData = {
+        name: document.getElementById('new-customer-name').value.trim(),
+        phone: document.getElementById('new-customer-phone').value.trim(),
+        gst: document.getElementById('new-customer-gst').value.trim(),
+        address: document.getElementById('new-customer-address').value.trim(),
+        state: document.getElementById('new-customer-state').value
+    };
+
+    // Validation
+    if (!customerData.name) {
+        alert('Please enter customer name');
+        return;
+    }
+
+    if (!customerData.phone) {
+        alert('Please enter phone number');
+        return;
+    }
+
+    if (!customerData.state) {
+        alert('Please select state');
+        return;
+    }
+
+    try {
+        // Save to database via API
+        const result = await APIService.addCustomer(customerData);
+
+        // Add to local array
+        customers.push(result);
+
+        // Close modal
+        closeAddCustomerModal();
+
+        // Show success message
+        alert(`✅ Customer "${customerData.name}" added successfully!`);
+
+        // Refresh customer reports if open
+        const reportsModal = document.getElementById('customer-reports-modal');
+        if (reportsModal && reportsModal.classList.contains('active')) {
+            renderCustomerReports();
+        }
+
+    } catch (error) {
+        console.error('Error adding customer:', error);
+        alert('Failed to add customer. Please try again.');
+    }
+}
+
+
 // Edit Customer
 function editCustomer(customerId) {
     const customer = customers.find(c => c.id === customerId);
@@ -5760,6 +5969,9 @@ window.closeSupplierDetailsModal = closeSupplierDetailsModal;
 window.deleteSupplier = deleteSupplier;
 window.showCustomerReports = showCustomerReports;
 window.closeCustomerReportsModal = closeCustomerReportsModal;
+window.showAddCustomerModal = showAddCustomerModal;
+window.closeAddCustomerModal = closeAddCustomerModal;
+window.addNewCustomer = addNewCustomer;
 window.filterCustomers = filterCustomers;
 window.viewCustomerDetails = viewCustomerDetails;
 window.closeCustomerDetailsModal = closeCustomerDetailsModal;

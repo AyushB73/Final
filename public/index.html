@@ -385,6 +385,9 @@
                         <button class="btn btn-secondary" onclick="showCustomerReports()">
                             📊 Customer Reports
                         </button>
+                        <button class="btn btn-secondary" id="add-customer-btn" onclick="showAddCustomerModal()">
+                            <span>+</span> Add Customer
+                        </button>
                         <button class="btn btn-primary" onclick="switchView('billing')">
                             <span>+</span> New Sale
                         </button>
@@ -493,6 +496,7 @@
                         <input type="text" id="customer-search" placeholder="Search by Name or Phone..." list="customer-list">
                         <datalist id="customer-list"></datalist>
                         <input type="text" id="invoice-number" placeholder="Invoice Number (Auto-generated)" style="font-weight: bold; color: var(--primary);">
+                        <input type="date" id="bill-date" style="font-weight: 500;">
                         <input type="text" id="customer-name" placeholder="Customer Name *" required>
                         <input type="text" id="customer-phone" placeholder="Phone Number">
                         <input type="text" id="customer-gst" placeholder="GST Number (Optional)">
@@ -776,7 +780,7 @@
                     <p><strong>Product:</strong> <span id="stock-item-name"></span></p>
                     <p><strong>Current Stock:</strong> <span id="stock-item-current"></span></p>
                 </div>
-                <input type="number" id="stock-quantity" placeholder="Quantity to Add *" min="1" required>
+                <input type="number" id="stock-quantity" placeholder="Quantity to Add *" min="0.01" step="0.01" required>
                 <button type="submit" class="btn btn-primary">Add Stock</button>
             </form>
         </div>
@@ -795,7 +799,7 @@
                     <p><strong>Product:</strong> <span id="remove-stock-item-name"></span></p>
                     <p><strong>Current Stock:</strong> <span id="remove-stock-item-current"></span></p>
                 </div>
-                <input type="number" id="remove-stock-quantity" placeholder="Quantity to Remove *" min="1" required>
+                <input type="number" id="remove-stock-quantity" placeholder="Quantity to Remove *" min="0.01" step="0.01" required>
                 <input type="text" id="remove-stock-reason" placeholder="Reason (e.g., Damaged, Expired, Returned) *" required>
                 <button type="submit" class="btn btn-primary">Remove Stock</button>
             </form>
@@ -1158,6 +1162,28 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <!-- Add Customer Modal -->
+    <div id="add-customer-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>👤 Add New Customer</h2>
+                <span class="close" onclick="closeAddCustomerModal()">&times;</span>
+            </div>
+            <form id="add-customer-form" onsubmit="addNewCustomer(event)">
+                <input type="text" id="new-customer-name" placeholder="Customer Name *" required>
+                <input type="text" id="new-customer-phone" placeholder="Phone Number *" required>
+                <input type="text" id="new-customer-gst" placeholder="GST Number (Optional)">
+                <textarea id="new-customer-address" placeholder="Address" rows="3"></textarea>
+                <select id="new-customer-state" required>
+                    <option value="">Select State *</option>
+                    <option value="same">Same State (SGST + CGST)</option>
+                    <option value="other">Other State (IGST)</option>
+                </select>
+                <button type="submit" class="btn btn-primary">💾 Save Customer</button>
+            </form>
         </div>
     </div>
 

@@ -328,6 +328,43 @@ function generateBillPDF(bill, title = 'TAX INVOICE') {
     // Grand Total
     drawTotalRow("Grand Total:", `Rs. ${bill.total.toFixed(2)}`, true, true);
 
+    // Partial Payment Details
+    if (bill.paymentStatus === 'partial' && bill.paymentTracking) {
+        ry += 3;
+
+        // Parse payment tracking data
+        const paymentTracking = typeof bill.paymentTracking === 'string'
+            ? JSON.parse(bill.paymentTracking)
+            : bill.paymentTracking;
+
+        const amountPaid = parseFloat(paymentTracking.amountPaid) || 0;
+        const dueAmount = parseFloat(paymentTracking.dueAmount) || (bill.total - amountPaid);
+
+        // Divider
+        doc.setDrawColor(...borderColor);
+        doc.line(rightColX, ry, pageWidth - margin, ry);
+        ry += 5;
+
+        // Amount Paid (Green highlight)
+        doc.setFillColor(220, 252, 231); // Light green
+        doc.rect(rightColX - 2, ry - 4, rightColWidth + 4, 7, 'F');
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(22, 163, 74); // Green text
+        doc.text("Amount Paid:", rightColX, ry);
+        doc.text(`Rs. ${amountPaid.toFixed(2)}`, rightValX, ry, { align: 'right' });
+        ry += 7;
+
+        // Balance Due (Orange/Yellow highlight)
+        doc.setFillColor(254, 243, 199); // Light yellow/orange
+        doc.rect(rightColX - 2, ry - 4, rightColWidth + 4, 7, 'F');
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(234, 88, 12); // Orange text
+        doc.text("Balance Due:", rightColX, ry);
+        doc.text(`Rs. ${dueAmount.toFixed(2)}`, rightValX, ry, { align: 'right' });
+        ry += 7;
+    }
+
     // Outstanding Logic (Preserved)
     let previousOutstanding = 0;
     if (!title.toUpperCase().includes('PROFORMA')) {
