@@ -256,6 +256,7 @@ function populateSettingsForms() {
         document.getElementById('company-email').value = companyDetails.email || '';
         document.getElementById('company-gst').value = companyDetails.gst || '';
         document.getElementById('company-pan').value = companyDetails.pan || '';
+        document.getElementById('company-website').value = companyDetails.website || '';
         document.getElementById('company-terms').value = companyDetails.terms || '';
     }
 
@@ -263,8 +264,8 @@ function populateSettingsForms() {
     const bankName = document.getElementById('bank-name');
     if (bankName) {
         bankName.value = bankingDetails.bankName || '';
-        document.getElementById('account-name').value = bankingDetails.accountName || '';
-        document.getElementById('account-number').value = bankingDetails.accountNumber || '';
+        document.getElementById('bank-account-name').value = bankingDetails.accountName || '';
+        document.getElementById('bank-account-number').value = bankingDetails.accountNumber || '';
         document.getElementById('bank-ifsc').value = bankingDetails.ifsc || '';
         document.getElementById('bank-branch').value = bankingDetails.branch || '';
         document.getElementById('upi-id').value = bankingDetails.upiId || '';
@@ -282,6 +283,7 @@ async function saveCompanyDetails(event) {
         email: document.getElementById('company-email').value,
         gst: document.getElementById('company-gst').value,
         pan: document.getElementById('company-pan').value,
+        website: document.getElementById('company-website').value,
         terms: document.getElementById('company-terms').value,
         logo: companyDetails.logo
     };
@@ -305,8 +307,8 @@ async function saveBankingDetails(event) {
 
     const data = {
         bankName: document.getElementById('bank-name').value,
-        accountName: document.getElementById('account-name').value,
-        accountNumber: document.getElementById('account-number').value,
+        accountName: document.getElementById('bank-account-name').value,
+        accountNumber: document.getElementById('bank-account-number').value,
         ifsc: document.getElementById('bank-ifsc').value,
         branch: document.getElementById('bank-branch').value,
         upiId: document.getElementById('upi-id').value
