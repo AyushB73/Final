@@ -1,7 +1,7 @@
 // API Service for Backend Communication
 // This replaces localStorage with real database calls
 
-const API_BASE_URL = 'https://windowersplastiwood.up.railway.app';
+const API_BASE_URL = '';
 
 class APIService {
     // Generic API call handler

@@ -1,5 +1,5 @@
 ﻿// State management with MySQL Database via API
-const API_URL = 'https://windowersplastiwood.up.railway.app';
+const API_URL = '';
 let inventory = [];
 let bills = [];
 let currentBillItems = [];
