@@ -6017,3 +6017,135 @@ function setupMobileTableScroll() {
         }, { once: true });
     });
 }
+
+// --- Billing Functions ---
+
+function setupBillingCalculators() {
+    console.log('🔌 Setting up billing calculators');
+
+    // Product Select Handler
+    const productSelect = document.getElementById('product-select');
+    if (productSelect) {
+        productSelect.addEventListener('change', function () {
+            const selectedOption = this.options[this.selectedIndex];
+            if (!selectedOption.value) return;
+
+            const price = selectedOption.dataset.price;
+            // Auto-fill rate
+            document.getElementById('item-rate').value = price || 0;
+
+            // Reset quantity fields
+            document.getElementById('item-len').value = '';
+            document.getElementById('item-wid').value = '';
+            document.getElementById('item-pieces').value = '';
+            document.getElementById('item-quantity').value = '';
+
+            calculateBillItemQty();
+        });
+    }
+
+    // Input Handlers for Auto-calculation
+    ['item-len', 'item-wid', 'item-pieces'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', calculateBillItemQty);
+        }
+    });
+}
+
+function calculateBillItemQty() {
+    const len = parseFloat(document.getElementById('item-len').value) || 0;
+    const wid = parseFloat(document.getElementById('item-wid').value) || 0;
+    const pieces = parseFloat(document.getElementById('item-pieces').value) || 0;
+
+    let totalQty = 0;
+
+    if (len > 0 && wid > 0) {
+        // Area calculation
+        totalQty = len * wid * (pieces || 1);
+    } else if (pieces > 0) {
+        // Direct piece count
+        totalQty = pieces;
+    }
+
+    if (totalQty > 0) {
+        document.getElementById('item-quantity').value = totalQty.toFixed(2);
+    }
+}
+
+function addBillItem() {
+    const productSelect = document.getElementById('product-select');
+    const itemId = productSelect.value;
+
+    if (!itemId) {
+        alert('Please select a product');
+        return;
+    }
+
+    const item = inventory.find(i => i.id == itemId);
+    if (!item) return;
+
+    const quantity = parseFloat(document.getElementById('item-quantity').value);
+    const rate = parseFloat(document.getElementById('item-rate').value);
+
+    if (!quantity || quantity <= 0) {
+        alert('Please enter a valid quantity');
+        return;
+    }
+
+    if (rate < 0) {
+        alert('Please enter a valid rate');
+        return;
+    }
+
+    const dims = {
+        len: document.getElementById('item-len').value,
+        wid: document.getElementById('item-wid').value,
+        pcs: document.getElementById('item-pieces').value
+    };
+
+    // Calculate item totals
+    const amount = quantity * rate;
+    const gstPercent = parseFloat(item.gst) || 0;
+    const gstAmount = amount * (gstPercent / 100);
+    const total = amount + gstAmount;
+
+    // Add to bill items array
+    const billItem = {
+        itemId: item.id,
+        name: item.name,
+        description: item.description,
+        hsn: item.hsn,
+        unit: item.unit,
+        dims: dims,
+        quantity: quantity,
+        rate: rate,
+        amount: amount,
+        gstPercent: gstPercent,
+        gstAmount: gstAmount,
+        total: total
+    };
+
+    currentBillItems.push(billItem);
+
+    // Check if renderBillItems exists, otherwise we need to add it or fail gracefully?
+    // It's likely defined elsewhere or we should have checked.
+    if (typeof renderBillItems === 'function') {
+        renderBillItems();
+    } else {
+        console.error('renderBillItems is not defined!');
+    }
+
+    // Reset fields
+    productSelect.value = '';
+    document.getElementById('item-len').value = '';
+    document.getElementById('item-wid').value = '';
+    document.getElementById('item-pieces').value = '';
+    document.getElementById('item-quantity').value = '';
+    document.getElementById('item-rate').value = '';
+}
+
+// Make globally available
+window.setupBillingCalculators = setupBillingCalculators;
+window.calculateBillItemQty = calculateBillItemQty;
+window.addBillItem = addBillItem;
