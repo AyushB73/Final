@@ -44,6 +44,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadSettings()
         ]);
         console.log('✅ All data loaded successfully');
+
+        // Setup customer search listeners
+        setupCustomerSearch();
     } catch (error) {
         console.error('❌ Error during data load:', error);
     }
@@ -1552,8 +1555,12 @@ function setupCustomerSearch() {
 
         if (customer) {
             fillCustomerDetails(customer);
-            // Update the search input to just the name for cleaner look (optional, might be confusing if it keeps changing)
-            // this.value = customer.name; 
+            // Update the search input to just the name for cleaner look
+            // We set a flag to ignore the next input event to prevent recursion/looping if needed, 
+            // but since we are narrowing down, it should be fine.
+            if (this.value !== customer.name) {
+                this.value = customer.name;
+            }
         }
     };
 
@@ -1579,6 +1586,14 @@ function fillCustomerDetails(customer) {
             // If state is invalid/missing, reset to empty so user sees they need to select
             stateInput.value = '';
         }
+        // Trigger change event so that tax calculations (sgst/cgst/igst) update immediately
+        stateInput.dispatchEvent(new Event('change'));
+    }
+
+    // Default payment status to pending if not set (for convenience)
+    const paymentStatusVal = document.getElementById('customer-payment-status');
+    if (paymentStatusVal && paymentStatusVal.value === '') {
+        paymentStatusVal.value = 'pending';
     }
 }
 
