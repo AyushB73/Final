@@ -1511,11 +1511,11 @@ function updateCustomerDatalist() {
     datalist.innerHTML = '';
     customers.forEach(customer => {
         const option = document.createElement('option');
-        // Use customer name as value for easier matching
-        option.value = customer.name;
-        // Store phone in label for display
-        option.label = `${customer.name} ${customer.phone ? '(' + customer.phone + ')' : ''}`;
-        option.dataset.customerId = customer.id;
+        // Use consistent unique format: "Name | Phone"
+        // This ensures distinct entries for customers with same name
+        const phone = customer.phone ? customer.phone : 'No Phone';
+        option.value = `${customer.name} | ${phone}`;
+        option.label = customer.name; // Display name in label might be unsupported in some browsers, but worth keeping
         datalist.appendChild(option);
     });
 }
@@ -1525,53 +1525,61 @@ function setupCustomerSearch() {
     if (!searchInput) return;
 
     // Handle selection from datalist
-    searchInput.addEventListener('input', function () {
+    // Handle selection from datalist and direct input
+    const handleInput = function () {
         const searchValue = this.value.trim();
-
         if (!searchValue) return;
 
-        // Try exact match first (for datalist selection)
-        let customer = customers.find(c =>
-            c.name === searchValue ||
-            (c.phone && c.phone === searchValue)
-        );
+        // 1. Try exact match against the unique "Name | Phone" format (Datalist selection)
+        let customer = customers.find(c => {
+            const phone = c.phone ? c.phone : 'No Phone';
+            const uniqueKey = `${c.name} | ${phone}`;
+            return uniqueKey === searchValue;
+        });
 
-        // If no exact match, try partial match
+        // 2. If no exact match (user typing freely), try to find by Name OR Phone
         if (!customer) {
-            customer = customers.find(c =>
-                c.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-                (c.phone && c.phone.includes(searchValue))
+            // Only autofill if there's a SINGLE distinct match to avoid wrong assumptions
+            const matches = customers.filter(c =>
+                c.name.toLowerCase() === searchValue.toLowerCase() ||
+                (c.phone && c.phone === searchValue)
             );
+
+            if (matches.length === 1) {
+                customer = matches[0];
+            }
         }
 
         if (customer) {
             fillCustomerDetails(customer);
+            // Update the search input to just the name for cleaner look (optional, might be confusing if it keeps changing)
+            // this.value = customer.name; 
         }
-    });
+    };
 
-    // Handle when user leaves the field
-    searchInput.addEventListener('blur', function () {
-        const searchValue = this.value.trim();
-
-        if (!searchValue) return;
-
-        const customer = customers.find(c =>
-            c.name === searchValue ||
-            (c.phone && c.phone === searchValue)
-        );
-
-        if (customer) {
-            fillCustomerDetails(customer);
-        }
-    });
+    searchInput.addEventListener('input', handleInput);
+    searchInput.addEventListener('change', handleInput); // 'change' handles datalist selection more reliably in some browsers
 }
 
 function fillCustomerDetails(customer) {
-    document.getElementById('customer-name').value = customer.name;
+    console.log('Filling details for:', customer);
+    document.getElementById('customer-name').value = customer.name || '';
     document.getElementById('customer-phone').value = customer.phone || '';
     document.getElementById('customer-gst').value = customer.gst || '';
     document.getElementById('customer-address').value = customer.address || '';
-    document.getElementById('customer-state').value = customer.state || '';
+
+    // Safety check for state
+    const stateInput = document.getElementById('customer-state');
+    if (stateInput) {
+        // Only set if value matches one of the options ('same' or 'other')
+        // OR if needed, we could add logic to map real names to 'same'/'other' if we knew the company state
+        if (customer.state === 'same' || customer.state === 'other') {
+            stateInput.value = customer.state;
+        } else {
+            // If state is invalid/missing, reset to empty so user sees they need to select
+            stateInput.value = '';
+        }
+    }
 }
 
 // This duplicate function is removed - using the async version above
