@@ -47,7 +47,7 @@ async function initializeDatabase() {
       throw new Error('Missing required database environment variables. Please check Railway environment variables.');
     }
 
-    pool = mysql.createPool({
+    const poolConfig = {
       host: dbHost,
       user: dbUser,
       password: dbPassword,
@@ -59,7 +59,17 @@ async function initializeDatabase() {
       enableKeepAlive: true,
       keepAliveInitialDelay: 0,
       connectTimeout: 10000 // 10 seconds timeout
-    });
+    };
+
+    // Fix for "Public Key Retrieval is not allowed" error
+    // Requires an SSL connection for modern MySQL servers (like Railway)
+    if (dbHost && dbHost !== 'localhost' && dbHost !== '127.0.0.1') {
+      poolConfig.ssl = {
+        rejectUnauthorized: false
+      };
+    }
+
+    pool = mysql.createPool(poolConfig);
 
     // Test connection
     console.log('🔄 Testing database connection...');
